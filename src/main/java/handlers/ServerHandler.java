@@ -4,7 +4,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -21,6 +20,12 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
+    private final String baseBucketPath;
+
+    public ServerHandler(String baseBucketPath) {
+        this.baseBucketPath = baseBucketPath;
+    }
+
     @Override
     protected void channelRead0(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
         if (!request.decoderResult().isSuccess()) {
@@ -29,12 +34,14 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         final String uri = request.uri();
-        final String path = sanitizeUri(uri);
+        final String path = buildPath(baseBucketPath, uri);
         if (path == null) {
             this.sendError(context, FORBIDDEN, request);
             return;
         }
+
         System.out.println(path);
+
         File file = new File(path);
         if (file.isHidden() || !file.exists()) {
             this.sendError(context, NOT_FOUND, request);
@@ -96,13 +103,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         this.sendAndCleanupConnection(ctx, response, request);
     }
 
-    private static String sanitizeUri(String uri) {
+    private static String buildPath(String basePath, String uri) {
         uri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             return null;
         }
         uri = uri.replace('/', File.separatorChar);
-        return SystemPropertyUtil.get("user.dir") + uri;
+        return basePath + uri;
     }
 
     private void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response,

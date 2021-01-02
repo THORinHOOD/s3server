@@ -6,9 +6,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 public class Server {
 
     private final int port;
+    private final ServerInitializer serverInitializer;
 
-    public Server(int port) {
+    public Server(int port, String baseBucketPath) {
         this.port = port;
+        serverInitializer = new ServerInitializer(baseBucketPath);
     }
 
     public void run() throws Exception {
@@ -18,7 +20,7 @@ public class Server {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new ServerInitializer());
+                .childHandler(serverInitializer);
 
             Channel channel = bootstrap.bind(port).sync().channel();
             channel.closeFuture().sync();

@@ -7,12 +7,20 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 public class ServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final ServerHandler serverHandler;
+
+    public ServerInitializer(String baseBucketPath) {
+        serverHandler = new ServerHandler(baseBucketPath);
+    }
+
     @Override
     protected void initChannel(SocketChannel socketChannel) throws Exception {
         ChannelPipeline pipeline = socketChannel.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
         pipeline.addLast(new ChunkedWriteHandler());
-        pipeline.addLast(new ServerHandler());
+        pipeline.addLast(serverHandler);
     }
+
 }

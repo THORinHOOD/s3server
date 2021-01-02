@@ -18,6 +18,11 @@
             <artifactId>netty-all</artifactId>
             <version>4.1.10.Final</version>
         </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.0.3</version>
+        </dependency>
     </dependencies>
 
 </project>
