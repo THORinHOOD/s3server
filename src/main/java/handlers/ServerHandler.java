@@ -16,11 +16,10 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final List<Processor> processors;
     private HttpPostRequestDecoder httpDecoder;
 
-    public ServerHandler(String baseBucketPath) {
+    public ServerHandler(String basePath) {
         processors = new ArrayList<>();
-//        processors.add(new MenuProcessor());
-        processors.add(new GetObjectProcessor(baseBucketPath));
-        processors.add(new PutObjectProcessor(baseBucketPath, httpDecoder));
+        processors.add(new GetObjectProcessor(basePath));
+        processors.add(new PutObjectProcessor(basePath, httpDecoder));
     }
 
     @Override

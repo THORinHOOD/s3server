@@ -8,9 +8,9 @@ public class Server {
     private final int port;
     private final ServerInitializer serverInitializer;
 
-    public Server(int port, String baseBucketPath) {
+    public Server(int port, String basePath) {
         this.port = port;
-        serverInitializer = new ServerInitializer(baseBucketPath);
+        serverInitializer = new ServerInitializer(basePath);
     }
 
     public void run() throws Exception {

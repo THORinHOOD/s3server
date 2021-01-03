@@ -10,8 +10,8 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final ServerHandler serverHandler;
 
-    public ServerInitializer(String baseBucketPath) {
-        serverHandler = new ServerHandler(baseBucketPath);
+    public ServerInitializer(String basePath) {
+        serverHandler = new ServerHandler(basePath);
     }
 
     @Override

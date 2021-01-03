@@ -22,10 +22,10 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public abstract class Processor {
 
-    protected final String BASE_BUCKET_PATH;
+    protected final String BASE_PATH;
 
-    public Processor(String baseBucketPath) {
-        this.BASE_BUCKET_PATH = baseBucketPath;
+    public Processor(String basePath) {
+        this.BASE_PATH = basePath;
     }
 
     protected void sendError(ChannelHandlerContext ctx, HttpResponseStatus status, FullHttpRequest request) {
@@ -77,7 +77,7 @@ public abstract class Processor {
             sendError(context, FORBIDDEN, request);
             return Optional.empty();
         }
-        return Optional.of(BASE_BUCKET_PATH + File.separatorChar + bucket + key);
+        return Optional.of(BASE_PATH + File.separatorChar + bucket + key);
     }
 
     public void process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {

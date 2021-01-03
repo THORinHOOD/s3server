@@ -17,8 +17,8 @@ public class PutObjectProcessor extends Processor {
     private HttpPostRequestDecoder httpDecoder;
     private final HttpDataFactory factory = new DefaultHttpDataFactory(true);
 
-    public PutObjectProcessor(String baseBucketPath, HttpPostRequestDecoder httpDecoder) {
-        super(baseBucketPath);
+    public PutObjectProcessor(String basePath, HttpPostRequestDecoder httpDecoder) {
+        super(basePath);
         this.httpDecoder = httpDecoder;
     }
 
@@ -60,6 +60,7 @@ public class PutObjectProcessor extends Processor {
                     sendError(context, INTERNAL_SERVER_ERROR, request);
                     return;
                 }
+                //TODO RESPONSE
             }
         }
     }

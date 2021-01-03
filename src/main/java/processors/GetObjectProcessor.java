@@ -15,8 +15,8 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class GetObjectProcessor extends Processor {
 
-    public GetObjectProcessor(String baseBucketPath) {
-        super(baseBucketPath);
+    public GetObjectProcessor(String basePath) {
+        super(basePath);
     }
 
     @Override
@@ -91,6 +91,7 @@ public class GetObjectProcessor extends Processor {
         if (!keepAlive) {
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         }
+        //TODO NORMAL RESPONSE
     }
 
 }
