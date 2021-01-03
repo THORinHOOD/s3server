@@ -14,8 +14,8 @@ public class ArgumentParser {
                     return splitted;
                 })
                 .collect(Collectors.toMap(
-                        pair -> pair[0],
-                        pair -> pair[1]
+                    pair -> pair[0],
+                    pair -> pair[1]
                 ));
     }
 
