@@ -9,14 +9,24 @@ import io.netty.util.CharsetUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public abstract class Processor {
+
+    protected final String BASE_BUCKET_PATH;
+
+    public Processor(String baseBucketPath) {
+        this.BASE_BUCKET_PATH = baseBucketPath;
+    }
 
     protected void sendError(ChannelHandlerContext ctx, HttpResponseStatus status, FullHttpRequest request) {
         FullHttpResponse response = new DefaultFullHttpResponse(
@@ -45,6 +55,29 @@ public abstract class Processor {
         Path path = file.toPath();
         String mimeType = Files.probeContentType(path);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, mimeType);
+    }
+
+    protected String extractBucket(FullHttpRequest request) {
+        String host = request.headers().get(HttpHeaderNames.HOST);
+        return host.substring(0, host.indexOf("."));
+    }
+
+    protected String extractKey(FullHttpRequest request) {
+        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
+        if (uri.isEmpty() || uri.charAt(0) != '/') {
+            return null;
+        }
+        return uri.replace('/', File.separatorChar);
+    }
+
+    protected Optional<String> buildPath(ChannelHandlerContext context, FullHttpRequest request) {
+        final String bucket = extractBucket(request);
+        final String key = extractKey(request);
+        if (key == null) {
+            sendError(context, FORBIDDEN, request);
+            return Optional.empty();
+        }
+        return Optional.of(BASE_BUCKET_PATH + File.separatorChar + bucket + key);
     }
 
     public void process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {

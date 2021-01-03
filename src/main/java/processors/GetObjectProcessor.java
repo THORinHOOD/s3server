@@ -8,16 +8,15 @@ import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class GetObjectProcessor extends Processor {
 
-    private final String baseBucketPath;
-
     public GetObjectProcessor(String baseBucketPath) {
-        this.baseBucketPath = baseBucketPath;
+        super(baseBucketPath);
     }
 
     @Override
@@ -29,17 +28,18 @@ public class GetObjectProcessor extends Processor {
     }
 
     @Override
-    public void processInner(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
-        final String uri = request.uri();
-        final String path = buildPath(baseBucketPath, uri);
-        if (path == null) {
+    public void processInner(ChannelHandlerContext context, FullHttpRequest request)
+            throws Exception {
+
+        Optional<String> optionalPath = buildPath(context, request);
+        if (optionalPath.isEmpty()) {
             sendError(context, FORBIDDEN, request);
             return;
         }
-        final boolean keepAlive = HttpUtil.isKeepAlive(request);
-
+        final String path = optionalPath.get();
         System.out.println(path);
 
+        final boolean keepAlive = HttpUtil.isKeepAlive(request);
         File file = new File(path);
         if (file.isHidden() || !file.exists()) {
             this.sendError(context, NOT_FOUND, request);
@@ -93,12 +93,4 @@ public class GetObjectProcessor extends Processor {
         }
     }
 
-    private static String buildPath(String basePath, String uri) {
-        uri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
-        if (uri.isEmpty() || uri.charAt(0) != '/') {
-            return null;
-        }
-        uri = uri.replace('/', File.separatorChar);
-        return basePath + uri;
-    }
 }
