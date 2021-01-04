@@ -1,5 +1,6 @@
 package processors;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -13,6 +14,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
@@ -36,8 +38,15 @@ public abstract class Processor {
         sendAndCleanupConnection(ctx, response, request);
     }
 
+    protected void sendResponseWithoutContent(ChannelHandlerContext ctx, HttpResponseStatus status,
+                                              FullHttpRequest request, Map<String, Object> headers) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status);
+        headers.forEach((header, value) -> response.headers().set(header, value));
+        sendAndCleanupConnection(ctx, response, request);
+    }
+
     protected void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response,
-                                          FullHttpRequest request) {
+                                            FullHttpRequest request) {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         HttpUtil.setContentLength(response, response.content().readableBytes());
         if (!keepAlive) {
@@ -70,15 +79,7 @@ public abstract class Processor {
         return uri.replace('/', File.separatorChar);
     }
 
-    protected Optional<String> buildPath(ChannelHandlerContext context, FullHttpRequest request) {
-        final String bucket = extractBucket(request);
-        final String key = extractKey(request);
-        if (key == null) {
-            sendError(context, FORBIDDEN, request);
-            return Optional.empty();
-        }
-        return Optional.of(BASE_PATH + File.separatorChar + bucket + key);
-    }
+
 
     public void process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
         if (!request.decoderResult().isSuccess()) {

@@ -1,14 +1,11 @@
 package processors;
 
+import data.S3Object;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -28,30 +25,16 @@ public class GetObjectProcessor extends Processor {
     }
 
     @Override
-    public void processInner(ChannelHandlerContext context, FullHttpRequest request)
-            throws Exception {
-
-        Optional<String> optionalPath = buildPath(context, request);
-        if (optionalPath.isEmpty()) {
-            sendError(context, FORBIDDEN, request);
-            return;
-        }
-        final String path = optionalPath.get();
-        System.out.println(path);
-
+    public void processInner(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
-        File file = new File(path);
-        if (file.isHidden() || !file.exists()) {
-            this.sendError(context, NOT_FOUND, request);
-            return;
-        }
-        if (!file.isFile()) {
-            this.sendError(context, FORBIDDEN, request);
-            return;
-        }
+        String bucket = extractBucket(request);
+        String key = extractKey(request);
+        S3Object s3Object = S3Object.get(bucket, key, BASE_PATH);
+        System.out.println(s3Object.getAbsolutePath());
+
         RandomAccessFile raf;
         try {
-            raf = new RandomAccessFile(file, "r");
+            raf = new RandomAccessFile(s3Object.getFile(), "r");
         } catch (FileNotFoundException ignore) {
             sendError(context, NOT_FOUND, request);
             return;
@@ -59,7 +42,8 @@ public class GetObjectProcessor extends Processor {
         long fileLength = raf.length();
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         HttpUtil.setContentLength(response, fileLength);
-        setContentTypeHeader(response, file);
+        setContentTypeHeader(response, s3Object.getFile());
+        response.headers().set("ETag", s3Object.getETag());
 
         if (!keepAlive) {
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
