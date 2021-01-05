@@ -1,10 +1,15 @@
 package data;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import utils.DateTimeUtil;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.util.Optional;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class S3Object {
 
@@ -13,6 +18,7 @@ public class S3Object {
     private String ETag;
     private File file;
     private byte[] bytes;
+    private String lastModified;
 
     public static S3Object get(String bucket, String key, String basePath) throws IOException {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
@@ -35,7 +41,8 @@ public class S3Object {
                 .setKey(key)
                 .setAbsolutePath(absolutePath.get())
                 .setFile(file)
-                .setBytes(bytes);
+                .setBytes(bytes)
+                .setLastModified(DateTimeUtil.parseDateTime(file));
     }
 
     public static S3Object save(String bucket, String key, String basePath, byte[] bytes) throws IOException {
@@ -59,14 +66,12 @@ public class S3Object {
                     .setKey(key)
                     .setETag(calculateETag(bytes))
                     .setFile(file)
-                    .setBytes(bytes);
+                    .setBytes(bytes)
+                    .setLastModified(DateTimeUtil.parseDateTime(file));
         } else {
             //TODO
             return null;
         }
-    }
-
-    private S3Object() {
     }
 
     //TODO
@@ -77,8 +82,16 @@ public class S3Object {
         return Optional.of(basePath + File.separatorChar + bucket + key);
     }
 
+    private S3Object() {
+    }
+
+
     private static String calculateETag(byte[] bytes) {
         return DigestUtils.md5Hex(bytes);
+    }
+
+    public String getLastModified() {
+        return lastModified;
     }
 
     public String getAbsolutePath() {
@@ -123,6 +136,11 @@ public class S3Object {
 
     public S3Object setBytes(byte[] bytes) {
         this.bytes = bytes;
+        return this;
+    }
+
+    public S3Object setLastModified(String lastModified) {
+        this.lastModified = lastModified;
         return this;
     }
 }

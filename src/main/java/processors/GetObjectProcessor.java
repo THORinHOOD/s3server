@@ -3,6 +3,7 @@ package processors;
 import data.S3Object;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
+import utils.DateTimeUtil;
 
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
@@ -44,6 +45,8 @@ public class GetObjectProcessor extends Processor {
         HttpUtil.setContentLength(response, fileLength);
         setContentTypeHeader(response, s3Object.getFile());
         response.headers().set("ETag", s3Object.getETag());
+        response.headers().set("Last-Modified", s3Object.getLastModified());
+        response.headers().set("Date", DateTimeUtil.currentDateTime());
 
         if (!keepAlive) {
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);

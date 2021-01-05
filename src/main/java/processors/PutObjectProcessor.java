@@ -5,6 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.multipart.*;
+import utils.DateTimeUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,9 @@ public class PutObjectProcessor extends Processor {
                 System.out.println(s3Object.getAbsolutePath());
 
                 sendResponseWithoutContent(context, OK, request, Map.of(
-                    "ETag", s3Object.getETag()
+                    "ETag", s3Object.getETag(),
+                    "Last-Modified", s3Object.getLastModified(),
+                    "Date", DateTimeUtil.currentDateTime()
                 ));
                 //TODO RESPONSE
             }

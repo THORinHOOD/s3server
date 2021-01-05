@@ -1,6 +1,5 @@
 package processors;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -15,10 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Optional;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
-import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
@@ -78,8 +75,6 @@ public abstract class Processor {
         }
         return uri.replace('/', File.separatorChar);
     }
-
-
 
     public void process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
         if (!request.decoderResult().isSuccess()) {
