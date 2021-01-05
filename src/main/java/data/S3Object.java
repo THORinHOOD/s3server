@@ -1,14 +1,12 @@
 package data;
 
+import exceptions.S3Exception;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
 import utils.DateTimeUtil;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class S3Object {
@@ -20,7 +18,7 @@ public class S3Object {
     private byte[] bytes;
     private String lastModified;
 
-    public static S3Object get(String bucket, String key, String basePath) throws IOException {
+    public static S3Object get(String bucket, String key, String basePath) throws IOException, S3Exception {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -28,8 +26,12 @@ public class S3Object {
         }
         File file = new File(absolutePath.get());
         if (file.isHidden() || !file.exists()) {
-            //TODO
-            return null;
+            throw new S3Exception("File not found: " + absolutePath)
+                    .setStatus(HttpResponseStatus.NOT_FOUND)
+                    .setCode("NoSuchKey")
+                    .setMessage("The resource you requested does not exist")
+                    .setResource(File.separatorChar + bucket + key)
+                    .setRequestId("1");
         }
         if (!file.isFile()) {
             //TODO
@@ -53,11 +55,7 @@ public class S3Object {
         }
 
         File file = new File(absolutePath.get());
-        if (file.exists()) {
-            //TODO
-            return null;
-        }
-        if (file.createNewFile()) {
+        if (file.createNewFile() || file.exists()) {
             FileOutputStream outputStream = new FileOutputStream(file);
             outputStream.write(bytes);
             outputStream.close();
@@ -69,8 +67,12 @@ public class S3Object {
                     .setBytes(bytes)
                     .setLastModified(DateTimeUtil.parseDateTime(file));
         } else {
-            //TODO
-            return null;
+            throw new S3Exception("Can't create object: " + absolutePath)
+                    .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                    .setMessage("Internal error : can't create object")
+                    .setCode("InternalError")
+                    .setResource(File.separatorChar + bucket + key)
+                    .setRequestId("1");
         }
     }
 

@@ -1,5 +1,6 @@
 package processors;
 
+import exceptions.S3Exception;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -25,6 +26,13 @@ public abstract class Processor {
 
     public Processor(String basePath) {
         this.BASE_PATH = basePath;
+    }
+
+    protected void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HTTP_1_1, s3Exception.getStatus(), Unpooled.copiedBuffer(s3Exception.getXml(), CharsetUtil.UTF_8));
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
+        sendAndCleanupConnection(ctx, response, request);
     }
 
     protected void sendError(ChannelHandlerContext ctx, HttpResponseStatus status, FullHttpRequest request) {

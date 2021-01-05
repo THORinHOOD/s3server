@@ -1,6 +1,7 @@
 package processors;
 
 import data.S3Object;
+import exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import utils.DateTimeUtil;
@@ -30,7 +31,14 @@ public class GetObjectProcessor extends Processor {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         String bucket = extractBucket(request);
         String key = extractKey(request);
-        S3Object s3Object = S3Object.get(bucket, key, BASE_PATH);
+        S3Object s3Object;
+        try {
+            s3Object = S3Object.get(bucket, key, BASE_PATH);
+        } catch (S3Exception s3Exception) {
+            sendError(context, request, s3Exception);
+            s3Exception.printStackTrace();
+            return;
+        }
         System.out.println(s3Object.getAbsolutePath());
 
         RandomAccessFile raf;
