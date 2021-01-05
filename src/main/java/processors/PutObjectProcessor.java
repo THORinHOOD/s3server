@@ -1,6 +1,7 @@
 package processors;
 
 import data.S3Object;
+import data.S3ObjectUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -42,7 +43,7 @@ public class PutObjectProcessor extends Processor {
 
                 String bucket = extractBucket(request);
                 String key = extractKey(request);
-                S3Object s3Object = S3Object.save(bucket, key, BASE_PATH, fileUpload.get());
+                S3Object s3Object = S3ObjectUtil.save(bucket, key, BASE_PATH, fileUpload.get());
 
                 if (s3Object == null) {
                     sendError(context, INTERNAL_SERVER_ERROR, request);

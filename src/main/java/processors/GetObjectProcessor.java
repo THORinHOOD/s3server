@@ -1,6 +1,7 @@
 package processors;
 
 import data.S3Object;
+import data.S3ObjectUtil;
 import exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
@@ -33,7 +34,7 @@ public class GetObjectProcessor extends Processor {
         String key = extractKey(request);
         S3Object s3Object;
         try {
-            s3Object = S3Object.get(bucket, key, BASE_PATH);
+            s3Object = S3ObjectUtil.get(bucket, key, BASE_PATH);
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
             s3Exception.printStackTrace();
