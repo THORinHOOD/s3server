@@ -57,7 +57,6 @@ public class PutObjectProcessor extends Processor {
                     "Last-Modified", s3Object.getLastModified(),
                     "Date", DateTimeUtil.currentDateTime()
                 ));
-                //TODO RESPONSE
             }
         }
     }

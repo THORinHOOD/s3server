@@ -87,7 +87,6 @@ public class GetObjectProcessor extends Processor {
         if (!keepAlive) {
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         }
-        //TODO NORMAL RESPONSE
     }
 
 }

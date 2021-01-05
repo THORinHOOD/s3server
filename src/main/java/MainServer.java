@@ -6,6 +6,7 @@ import java.util.Set;
 public class MainServer {
 
     public static final String BASE_PATH = "basePath";
+    public static final String PORT = "port";
 
     public static void main(String[] args) throws Exception {
 //        try {
@@ -42,14 +43,23 @@ public class MainServer {
 //        } catch (MinioException e) {
 //            System.out.println("Error occurred: " + e);
 //        }
-
         Map<String, String> parsedArgs = ArgumentParser.parseArguments(args);
-        Set<String> missingArguments = ArgumentParser.checkArguments(parsedArgs, BASE_PATH);
+        Set<String> missingArguments = ArgumentParser.checkArguments(parsedArgs, BASE_PATH, PORT);
         if (!missingArguments.isEmpty()) {
             missingArguments.forEach(key -> System.out.println("Missing argument : " + key));
             return;
         }
-        new Server(9090, parsedArgs.get(BASE_PATH)).run();
+        int port;
+        try {
+            port = Integer.parseInt(parsedArgs.get(PORT));
+        } catch (NumberFormatException exception) {
+            System.out.println("\'--port\' is not int");
+            return;
+        }
+        Server server = new Server(port, parsedArgs.get(BASE_PATH));
+        System.out.println("port : " + port);
+        System.out.println("base path : " + parsedArgs.get(BASE_PATH));
+        server.run();
     }
 
 }
