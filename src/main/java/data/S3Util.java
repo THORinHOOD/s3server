@@ -12,9 +12,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public class S3ObjectUtil {
+public class S3Util {
 
-    public static S3Object get(String bucket, String key, String basePath) throws IOException, S3Exception {
+    public static void createBucket(String bucket, String basePath) throws S3Exception {
+        String absolutePath = basePath + File.separatorChar + bucket;
+        File bucketFile = new File(absolutePath);
+        if (bucketFile.exists()) {
+            throw new S3Exception("Bucket already exists : " + absolutePath)
+                    .setMessage("Your previous request to create the named bucket succeeded and you already own it.")
+                    .setStatus(HttpResponseStatus.CONFLICT)
+                    .setResource(File.separatorChar + bucket)
+                    .setCode("BucketAlreadyOwnedByYou")
+                    .setRequestId("1");
+        }
+        if (!bucketFile.mkdir()) {
+            throw new S3Exception("Can't create bucket: " + absolutePath)
+                    .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                    .setCode("InternalError")
+                    .setMessage("Internal error : can't create bucket")
+                    .setResource(File.separatorChar + bucket)
+                    .setRequestId("1");
+        }
+    }
+
+    public static S3Object getObject(String bucket, String key, String basePath) throws IOException, S3Exception {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -43,7 +64,7 @@ public class S3ObjectUtil {
                 .setLastModified(DateTimeUtil.parseDateTime(file));
     }
 
-    public static S3Object save(String bucket, String key, String basePath, byte[] bytes) throws IOException {
+    public static S3Object putObject(String bucket, String key, String basePath, byte[] bytes) throws IOException {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO

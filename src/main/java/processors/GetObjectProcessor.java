@@ -1,7 +1,7 @@
 package processors;
 
 import data.S3Object;
-import data.S3ObjectUtil;
+import data.S3Util;
 import exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
@@ -20,21 +20,21 @@ public class GetObjectProcessor extends Processor {
     }
 
     @Override
-    public boolean isThisProcessor(FullHttpRequest request) {
+    public ProcessorPreArguments isThisProcessor(FullHttpRequest request) {
         if (!request.method().equals(HttpMethod.GET)) {
-            return false;
+            return new ProcessorPreArguments(false);
         }
-        return true;
+        return new ProcessorPreArguments(true);
     }
 
     @Override
-    public void processInner(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
+    public void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments) throws Exception {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         String bucket = extractBucket(request);
         String key = extractKey(request);
         S3Object s3Object;
         try {
-            s3Object = S3ObjectUtil.get(bucket, key, BASE_PATH);
+            s3Object = S3Util.getObject(bucket, key, BASE_PATH);
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
             s3Exception.printStackTrace();

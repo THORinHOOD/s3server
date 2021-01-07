@@ -1,7 +1,7 @@
 package processors;
 
 import data.S3Object;
-import data.S3ObjectUtil;
+import data.S3Util;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
@@ -24,15 +24,15 @@ public class PutObjectProcessor extends Processor {
     }
 
     @Override
-    public boolean isThisProcessor(FullHttpRequest request) {
+    public ProcessorPreArguments isThisProcessor(FullHttpRequest request) {
         if (!request.method().equals(HttpMethod.PUT)) {
-            return false;
+            return new ProcessorPreArguments(false);
         }
-        return true;
+        return new ProcessorPreArguments(true);
     }
 
     @Override
-    protected void processInner(ChannelHandlerContext context, FullHttpRequest request)
+    protected void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments)
             throws Exception {
         httpDecoder = new HttpPostRequestDecoder(factory, request);
 
@@ -43,7 +43,7 @@ public class PutObjectProcessor extends Processor {
 
                 String bucket = extractBucket(request);
                 String key = extractKey(request);
-                S3Object s3Object = S3ObjectUtil.save(bucket, key, BASE_PATH, fileUpload.get());
+                S3Object s3Object = S3Util.putObject(bucket, key, BASE_PATH, fileUpload.get());
 
                 if (s3Object == null) {
                     sendError(context, INTERNAL_SERVER_ERROR, request);

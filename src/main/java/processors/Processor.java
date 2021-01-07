@@ -84,13 +84,14 @@ public abstract class Processor {
         return uri.replace('/', File.separatorChar);
     }
 
-    public void process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
+    public void process(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments) throws Exception {
         if (!request.decoderResult().isSuccess()) {
             sendError(context, BAD_REQUEST, request);
         }
-        processInner(context, request);
+        processInner(context, request, arguments);
     }
 
-    public abstract boolean isThisProcessor(FullHttpRequest request);
-    protected abstract void processInner(ChannelHandlerContext context, FullHttpRequest request) throws Exception;
+    public abstract ProcessorPreArguments isThisProcessor(FullHttpRequest request);
+    protected abstract void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments)
+            throws Exception;
 }
