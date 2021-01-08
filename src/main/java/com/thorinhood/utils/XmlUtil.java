@@ -1,4 +1,4 @@
-package utils;
+package com.thorinhood.utils;
 
 import io.netty.buffer.ByteBuf;
 import org.w3c.dom.Document;

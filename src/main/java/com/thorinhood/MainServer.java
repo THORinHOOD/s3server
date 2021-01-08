@@ -1,9 +1,15 @@
-import utils.ArgumentParser;
+package com.thorinhood;
+
+import com.thorinhood.utils.ArgumentParser;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Map;
 import java.util.Set;
 
 public class MainServer {
+
+    private static final Logger log = LogManager.getLogger(MainServer.class);
 
     public static final String BASE_PATH = "basePath";
     public static final String PORT = "port";
@@ -53,12 +59,12 @@ public class MainServer {
         try {
             port = Integer.parseInt(parsedArgs.get(PORT));
         } catch (NumberFormatException exception) {
-            System.out.println("\'--port\' is not int");
+            log.error("\'--port\' is not int");
             return;
         }
         Server server = new Server(port, parsedArgs.get(BASE_PATH));
-        System.out.println("port : " + port);
-        System.out.println("base path : " + parsedArgs.get(BASE_PATH));
+        log.info("port : {}", port);
+        log.info("base path : {}", parsedArgs.get(BASE_PATH));
         server.run();
     }
 

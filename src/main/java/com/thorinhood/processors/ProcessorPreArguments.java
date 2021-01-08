@@ -1,4 +1,4 @@
-package processors;
+package com.thorinhood.processors;
 
 public class ProcessorPreArguments {
 

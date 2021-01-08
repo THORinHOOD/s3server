@@ -1,15 +1,19 @@
-package handlers;
+package com.thorinhood.handlers;
 
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
-import processors.*;
+import com.thorinhood.processors.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @ChannelHandler.Sharable
 public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+
+    private static final Logger log = LogManager.getLogger(ServerHandler.class);
 
     private final List<Processor> processors;
     private HttpPostRequestDecoder httpDecoder;
@@ -31,7 +35,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     return;
                 }
             }
-            System.out.println("Not found any processor for request");
+            log.error("Not found any processor for request");
         } catch (Exception exception) {
             exception.printStackTrace();
         }

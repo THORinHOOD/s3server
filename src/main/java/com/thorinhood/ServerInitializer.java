@@ -1,4 +1,6 @@
-import handlers.ServerHandler;
+package com.thorinhood;
+
+import com.thorinhood.handlers.ServerHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;

@@ -1,9 +1,10 @@
-package exceptions;
+package com.thorinhood.exceptions;
 
+import com.thorinhood.data.S3ResponseErrorCodes;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import utils.XmlUtil;
+import com.thorinhood.utils.XmlUtil;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -16,6 +17,12 @@ public class S3Exception extends RuntimeException {
     private String message;
     private String resource;
     private String requestId;
+
+    public static S3Exception INTERNAL_ERROR(String message) {
+        return new S3Exception(message)
+                .setCode(S3ResponseErrorCodes.INTERNAL_ERROR)
+                .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+    }
 
     public S3Exception(String message) {
         super(message);

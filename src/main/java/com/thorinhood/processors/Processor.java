@@ -1,6 +1,6 @@
-package processors;
+package com.thorinhood.processors;
 
-import exceptions.S3Exception;
+import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

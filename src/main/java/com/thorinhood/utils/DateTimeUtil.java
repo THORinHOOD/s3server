@@ -1,4 +1,4 @@
-package utils;
+package com.thorinhood.utils;
 
 import java.io.File;
 import java.text.SimpleDateFormat;

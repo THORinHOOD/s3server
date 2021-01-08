@@ -1,9 +1,9 @@
-package data;
+package com.thorinhood.data;
 
-import exceptions.S3Exception;
+import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
-import utils.DateTimeUtil;
+import com.thorinhood.utils.DateTimeUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -21,20 +21,18 @@ public class S3Util {
                     .setMessage("Your previous request to create the named bucket succeeded and you already own it.")
                     .setStatus(HttpResponseStatus.CONFLICT)
                     .setResource(File.separatorChar + bucket)
-                    .setCode("BucketAlreadyOwnedByYou")
+                    .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
                     .setRequestId("1");
         }
         if (!bucketFile.mkdir()) {
-            throw new S3Exception("Can't create bucket: " + absolutePath)
-                    .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                    .setCode("InternalError")
-                    .setMessage("Internal error : can't create bucket")
+            throw S3Exception.INTERNAL_ERROR("Can't create bucket: " + absolutePath)
+                    .setMessage("Can't create bucket")
                     .setResource(File.separatorChar + bucket)
                     .setRequestId("1");
         }
     }
 
-    public static S3Object getObject(String bucket, String key, String basePath) throws IOException, S3Exception {
+    public static S3Object getObject(String bucket, String key, String basePath) throws S3Exception {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -44,7 +42,7 @@ public class S3Util {
         if (file.isHidden() || !file.exists()) {
             throw new S3Exception("File not found: " + absolutePath)
                     .setStatus(HttpResponseStatus.NOT_FOUND)
-                    .setCode("NoSuchKey")
+                    .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
                     .setResource(File.separatorChar + bucket + key)
                     .setRequestId("1");
@@ -53,7 +51,16 @@ public class S3Util {
             //TODO
             return null;
         }
-        byte[] bytes = Files.readAllBytes(file.toPath());
+        byte[] bytes;
+
+        try {
+            bytes = Files.readAllBytes(file.toPath());
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
+                    .setMessage("Internal error : can't create object")
+                    .setResource(File.separatorChar + bucket + key)
+                    .setRequestId("1");
+        }
         return new S3Object()
                 .setETag(calculateETag(bytes))
                 .setKey(key)
@@ -63,7 +70,7 @@ public class S3Util {
                 .setLastModified(DateTimeUtil.parseDateTime(file));
     }
 
-    public static S3Object putObject(String bucket, String key, String basePath, byte[] bytes) throws IOException {
+    public static S3Object putObject(String bucket, String key, String basePath, byte[] bytes) throws S3Exception {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -71,29 +78,32 @@ public class S3Util {
         }
         File file = new File(absolutePath.get());
         if (!processFolders(file, bucket)) {
-            throw new S3Exception("Can't create folders: " + absolutePath)
-                    .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
+            throw S3Exception.INTERNAL_ERROR("Can't create folders: " + absolutePath)
                     .setMessage("Internal error : can't create folder")
-                    .setCode("InternalError")
                     .setResource(File.separatorChar + bucket + key)
                     .setRequestId("1");
         }
-        if (file.createNewFile() || file.exists()) {
-            FileOutputStream outputStream = new FileOutputStream(file);
-            outputStream.write(bytes);
-            outputStream.close();
-            return new S3Object()
-                    .setAbsolutePath(absolutePath.get())
-                    .setKey(key)
-                    .setETag(calculateETag(bytes))
-                    .setFile(file)
-                    .setBytes(bytes)
-                    .setLastModified(DateTimeUtil.parseDateTime(file));
-        } else {
-            throw new S3Exception("Can't create object: " + absolutePath)
-                    .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
+        try {
+            if (file.createNewFile() || file.exists()) {
+                FileOutputStream outputStream = new FileOutputStream(file);
+                outputStream.write(bytes);
+                outputStream.close();
+                return new S3Object()
+                        .setAbsolutePath(absolutePath.get())
+                        .setKey(key)
+                        .setETag(calculateETag(bytes))
+                        .setFile(file)
+                        .setBytes(bytes)
+                        .setLastModified(DateTimeUtil.parseDateTime(file));
+            } else {
+                throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
+                        .setMessage("Internal error : can't create object")
+                        .setResource(File.separatorChar + bucket + key)
+                        .setRequestId("1");
+            }
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
-                    .setCode("InternalError")
                     .setResource(File.separatorChar + bucket + key)
                     .setRequestId("1");
         }

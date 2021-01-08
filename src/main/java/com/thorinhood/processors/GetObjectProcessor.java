@@ -1,11 +1,13 @@
-package processors;
+package com.thorinhood.processors;
 
-import data.S3Object;
-import data.S3Util;
-import exceptions.S3Exception;
+import com.thorinhood.data.S3Object;
+import com.thorinhood.data.S3Util;
+import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
-import utils.DateTimeUtil;
+import com.thorinhood.utils.DateTimeUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
@@ -14,6 +16,8 @@ import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class GetObjectProcessor extends Processor {
+
+    private static final Logger log = LogManager.getLogger(GetObjectProcessor.class);
 
     public GetObjectProcessor(String basePath) {
         super(basePath);
@@ -37,10 +41,9 @@ public class GetObjectProcessor extends Processor {
             s3Object = S3Util.getObject(bucket, key, BASE_PATH);
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
-            s3Exception.printStackTrace();
+            log.error(s3Exception.getMessage(), s3Exception);
             return;
         }
-        System.out.println(s3Object.getAbsolutePath());
 
         RandomAccessFile raf;
         try {
@@ -73,14 +76,14 @@ public class GetObjectProcessor extends Processor {
             @Override
             public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) {
                 if (total < 0) {
-                    System.out.println(future.channel() + " Transfer progress: " + progress);
+                    log.info(future.channel() + " Transfer progress: " + progress);
                 } else {
-                    System.out.println(future.channel() + " Transfer progress: " + progress + " / " + total);
+                    log.info(future.channel() + " Transfer progress: " + progress + " / " + total);
                 }
             }
             @Override
             public void operationComplete(ChannelProgressiveFuture future) {
-                System.out.println(future.channel() + " Transfer complete.");
+                log.info(future.channel() + " Transfer complete.");
             }
         });
 
