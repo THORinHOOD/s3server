@@ -10,7 +10,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-public class S3Exception extends RuntimeException {
+public class S3Exception extends RuntimeException implements HasStatus, HasCode, HasMessage, HasResource, HasRequestId {
 
     private HttpResponseStatus status;
     private String code;
@@ -18,13 +18,17 @@ public class S3Exception extends RuntimeException {
     private String resource;
     private String requestId;
 
-    public static S3Exception INTERNAL_ERROR(String message) {
-        return new S3Exception(message)
-                .setCode(S3ResponseErrorCodes.INTERNAL_ERROR)
-                .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+    public static HasMessage INTERNAL_ERROR(String message) {
+        return build(message)
+                .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                .setCode(S3ResponseErrorCodes.INTERNAL_ERROR);
     }
 
-    public S3Exception(String message) {
+    public static HasStatus build(String internalMessage) {
+        return new S3Exception(internalMessage);
+    }
+
+    private S3Exception(String message) {
         super(message);
     }
 
@@ -53,33 +57,20 @@ public class S3Exception extends RuntimeException {
         return element;
     }
 
-    public S3Exception setStatus(HttpResponseStatus status) {
+    @Override
+    public HasCode setStatus(HttpResponseStatus status) {
         this.status = status;
-        return this;
-    }
-
-    public S3Exception setCode(String code) {
-        this.code = code;
-        return this;
-    }
-
-    public S3Exception setMessage(String message) {
-        this.message = message;
-        return this;
-    }
-
-    public S3Exception setResource(String resource) {
-        this.resource = resource;
-        return this;
-    }
-
-    public S3Exception setRequestId(String requestId) {
-        this.requestId = requestId;
         return this;
     }
 
     public HttpResponseStatus getStatus() {
         return status;
+    }
+
+    @Override
+    public HasMessage setCode(String code) {
+        this.code = code;
+        return this;
     }
 
     public String getCode() {
@@ -90,8 +81,20 @@ public class S3Exception extends RuntimeException {
         return message;
     }
 
+    @Override
+    public HasRequestId setResource(String resource) {
+        this.resource = resource;
+        return this;
+    }
+
     public String getResource() {
         return resource;
+    }
+
+    @Override
+    public S3Exception setRequestId(String requestId) {
+        this.requestId = requestId;
+        return this;
     }
 
     public String getRequestId() {
@@ -100,5 +103,11 @@ public class S3Exception extends RuntimeException {
 
     public String getXml() {
         return buildXml(code, message, resource, requestId);
+    }
+
+    @Override
+    public HasResource setMessage(String message) {
+        this.message = message;
+        return this;
     }
 }

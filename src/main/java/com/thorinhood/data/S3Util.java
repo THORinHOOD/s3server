@@ -17,11 +17,11 @@ public class S3Util {
         String absolutePath = basePath + File.separatorChar + bucket;
         File bucketFile = new File(absolutePath);
         if (bucketFile.exists()) {
-            throw new S3Exception("Bucket already exists : " + absolutePath)
-                    .setMessage("Your previous request to create the named bucket succeeded and you already own it.")
+            throw S3Exception.build("Bucket already exists : " + absolutePath)
                     .setStatus(HttpResponseStatus.CONFLICT)
-                    .setResource(File.separatorChar + bucket)
                     .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
+                    .setMessage("Your previous request to create the named bucket succeeded and you already own it.")
+                    .setResource(File.separatorChar + bucket)
                     .setRequestId("1");
         }
         if (!bucketFile.mkdir()) {
@@ -40,7 +40,7 @@ public class S3Util {
         }
         File file = new File(absolutePath.get());
         if (file.isHidden() || !file.exists()) {
-            throw new S3Exception("File not found: " + absolutePath)
+            throw S3Exception.build("File not found: " + absolutePath)
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
