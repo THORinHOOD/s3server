@@ -61,12 +61,12 @@ public class S3Util {
                     .setResource(File.separatorChar + bucket + key)
                     .setRequestId("1");
         }
-        return new S3Object()
-                .setETag(calculateETag(bytes))
-                .setKey(key)
+        return S3Object.build()
                 .setAbsolutePath(absolutePath.get())
+                .setKey(key)
+                .setETag(calculateETag(bytes))
                 .setFile(file)
-                .setBytes(bytes)
+                .setRawBytes(bytes)
                 .setLastModified(DateTimeUtil.parseDateTime(file));
     }
 
@@ -88,12 +88,12 @@ public class S3Util {
                 FileOutputStream outputStream = new FileOutputStream(file);
                 outputStream.write(bytes);
                 outputStream.close();
-                return new S3Object()
+                return S3Object.build()
                         .setAbsolutePath(absolutePath.get())
                         .setKey(key)
                         .setETag(calculateETag(bytes))
                         .setFile(file)
-                        .setBytes(bytes)
+                        .setRawBytes(bytes)
                         .setLastModified(DateTimeUtil.parseDateTime(file));
             } else {
                 throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
