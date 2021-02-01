@@ -26,22 +26,6 @@ public class CreateBucketProcessor extends Processor {
     }
 
     @Override
-    public ProcessorPreArguments isThisProcessor(FullHttpRequest request) {
-        if (!request.method().equals(HttpMethod.PUT)) {
-            return new ProcessorPreArguments(false);
-        }
-        Optional<Document> content = XmlUtil.parseXmlFromByteBuf(request.content());
-        if (content.isEmpty()) {
-            return new ProcessorPreArguments(false);
-        }
-        NodeList nodeList = content.get().getChildNodes();
-        if (nodeList.getLength() != 1 || !nodeList.item(0).getNodeName().equals("CreateBucketConfiguration")) {
-            return new ProcessorPreArguments(false);
-        }
-        return new ProcessorPreArguments(true, content.get());
-    }
-
-    @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments)
             throws Exception {
         String bucket = extractBucket(request);

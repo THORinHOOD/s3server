@@ -29,14 +29,6 @@ public class PutObjectProcessor extends Processor {
     }
 
     @Override
-    public ProcessorPreArguments isThisProcessor(FullHttpRequest request) {
-        if (!request.method().equals(HttpMethod.PUT)) {
-            return new ProcessorPreArguments(false);
-        }
-        return new ProcessorPreArguments(true);
-    }
-
-    @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments)
             throws Exception {
         httpDecoder = new HttpPostRequestDecoder(factory, request);

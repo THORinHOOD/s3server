@@ -24,14 +24,6 @@ public class GetObjectProcessor extends Processor {
     }
 
     @Override
-    public ProcessorPreArguments isThisProcessor(FullHttpRequest request) {
-        if (!request.method().equals(HttpMethod.GET)) {
-            return new ProcessorPreArguments(false);
-        }
-        return new ProcessorPreArguments(true);
-    }
-
-    @Override
     public void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments) throws Exception {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         String bucket = extractBucket(request);
