@@ -23,6 +23,11 @@ jobs:
       run: mvn test
     - name: Package with Maven
       run: mvn package
+    - name: Save jar artifact
+      uses: actions/upload-artifact@master
+      with:
+        name: s3server
+        path: target/*.jar
 
   deploy:
     runs-on: ubuntu-latest
