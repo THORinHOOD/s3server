@@ -43,7 +43,7 @@ jobs:
         uses: garygrossgarten/github-action-scp@release
         with:
           local: target/*.jar
-          remote: github/s3server.jar
+          remote: github/
           host: ${{ secrets.HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
