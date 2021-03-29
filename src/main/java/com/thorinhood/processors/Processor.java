@@ -76,6 +76,23 @@ public abstract class Processor {
         return host.substring(0, host.indexOf("."));
     }
 
+    protected String extractBucketPath(FullHttpRequest request) {
+        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
+        if (uri.isEmpty() || uri.charAt(0) != '/') {
+            return null;
+        }
+        uri += "/";
+        return uri.substring(1, uri.indexOf("/", 1));
+    }
+
+    protected String extractKeyPath(FullHttpRequest request) {
+        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
+        if (uri.isEmpty() || uri.charAt(0) != '/') {
+            return null;
+        }
+        return uri.replace('/', File.separatorChar).substring(uri.indexOf("/", 1));
+    }
+
     protected String extractKey(FullHttpRequest request) {
         String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
         if (uri.isEmpty() || uri.charAt(0) != '/') {

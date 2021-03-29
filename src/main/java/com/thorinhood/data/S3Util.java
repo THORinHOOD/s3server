@@ -1,6 +1,7 @@
 package com.thorinhood.data;
 
 import com.thorinhood.exceptions.S3Exception;
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
 import com.thorinhood.utils.DateTimeUtil;
@@ -70,7 +71,7 @@ public class S3Util {
                 .setLastModified(DateTimeUtil.parseDateTime(file));
     }
 
-    public static S3Object putObject(String bucket, String key, String basePath, byte[] bytes) throws S3Exception {
+    public static S3Object putObject(String bucket, String key, String basePath, ByteBuf byteBuf) throws S3Exception {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -84,6 +85,8 @@ public class S3Util {
                     .setRequestId("1");
         }
         try {
+            byte[] bytes = new byte[byteBuf.readableBytes()];
+            byteBuf.readBytes(bytes);
             if (file.createNewFile() || file.exists()) {
                 FileOutputStream outputStream = new FileOutputStream(file);
                 outputStream.write(bytes);

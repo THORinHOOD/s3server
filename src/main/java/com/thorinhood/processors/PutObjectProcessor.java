@@ -11,6 +11,9 @@ import com.thorinhood.utils.DateTimeUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -33,28 +36,64 @@ public class PutObjectProcessor extends Processor {
             throws Exception {
         httpDecoder = new HttpPostRequestDecoder(factory, request);
 
-        List<InterfaceHttpData> datas = httpDecoder.getBodyHttpDatas();
-        for (InterfaceHttpData data : datas) {
-            if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
-                DiskFileUpload fileUpload = (DiskFileUpload) data;
+//        List<InterfaceHttpData> datas = httpDecoder.getBodyHttpDatas();
+        httpDecoder.offer(request);
+        readChunk(context);
 
-                String bucket = extractBucket(request);
-                String key = extractKey(request);
+        String bucket = extractBucketPath(request);
+        String key = extractKeyPath(request);
+        try {
+            S3Object s3Object = S3Util.putObject(bucket, key, BASE_PATH, request.content());
+            if (s3Object == null) {
+                sendError(context, INTERNAL_SERVER_ERROR, request);
+                return;
+            }
+            sendResponseWithoutContent(context, OK, request, Map.of(
+                    "ETag", s3Object.getETag(),
+                    "Last-Modified", s3Object.getLastModified(),
+                    "Date", DateTimeUtil.currentDateTime()
+            ));
+        } catch (S3Exception s3Exception) {
+            sendError(context, request, s3Exception);
+            log.error(s3Exception.getMessage(), s3Exception);
+            return;
+        }
+
+
+//        for (InterfaceHttpData data : datas) {
+//            if (data.getHttpDataType() == InterfaceHttpData.HttpDataType.FileUpload) {
+//                DiskFileUpload fileUpload = (DiskFileUpload) data;
+//
+//
+//            }
+//        }
+    }
+
+
+    private void readChunk(ChannelHandlerContext ctx) throws IOException {
+        while (httpDecoder.hasNext()) {
+            InterfaceHttpData data = httpDecoder.next();
+            if (data != null) {
                 try {
-                    S3Object s3Object = S3Util.putObject(bucket, key, BASE_PATH, fileUpload.get());
-                    if (s3Object == null) {
-                        sendError(context, INTERNAL_SERVER_ERROR, request);
-                        return;
+                    switch (data.getHttpDataType()) {
+                        case Attribute:
+                            break;
+                        case FileUpload:
+                            final FileUpload fileUpload = (FileUpload) data;
+                            //final File file = new File(FILE_UPLOAD_LOCN + fileUpload.getFilename());
+//                            if (!file.exists()) {
+//                                file.createNewFile();
+//                            }
+//                            System.out.println("Created file " + file);
+//                            try (FileChannel inputChannel = new FileInputStream(fileUpload.getFile()).getChannel();
+//                                 FileChannel outputChannel = new FileOutputStream(file).getChannel()) {
+//                                outputChannel.transferFrom(inputChannel, 0, inputChannel.size());
+//                                sendResponse(ctx, CREATED, "file name: " + file.getAbsolutePath());
+//                            }
+                            break;
                     }
-                    sendResponseWithoutContent(context, OK, request, Map.of(
-                            "ETag", s3Object.getETag(),
-                            "Last-Modified", s3Object.getLastModified(),
-                            "Date", DateTimeUtil.currentDateTime()
-                    ));
-                } catch (S3Exception s3Exception) {
-                    sendError(context, request, s3Exception);
-                    log.error(s3Exception.getMessage(), s3Exception);
-                    return;
+                } finally {
+                   // data.release();
                 }
             }
         }
