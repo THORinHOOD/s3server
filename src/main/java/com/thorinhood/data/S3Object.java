@@ -1,8 +1,9 @@
 package com.thorinhood.data;
 
 import java.io.*;
+import java.util.Map;
 
-public class S3Object implements HasAbsolutePath, HasKey, HasETag, HasFile, HasRawBytes, HasLastModified {
+public class S3Object implements HasAbsolutePath, HasKey, HasETag, HasFile, HasRawBytes, HasLastModified, HasMetaData {
 
     private String absolutePath;
     private String key;
@@ -10,6 +11,7 @@ public class S3Object implements HasAbsolutePath, HasKey, HasETag, HasFile, HasR
     private File file;
     private byte[] bytes;
     private String lastModified;
+    private Map<String, String> metadata;
 
     private S3Object() {
     }
@@ -49,7 +51,7 @@ public class S3Object implements HasAbsolutePath, HasKey, HasETag, HasFile, HasR
     }
 
     @Override
-    public S3Object setLastModified(String lastModified) {
+    public HasMetaData setLastModified(String lastModified) {
         this.lastModified = lastModified;
         return this;
     }
@@ -82,5 +84,16 @@ public class S3Object implements HasAbsolutePath, HasKey, HasETag, HasFile, HasR
     @Override
     public byte[] getRawBytes() {
         return bytes;
+    }
+
+    @Override
+    public S3Object setMetaData(Map<String, String> metadata) {
+        this.metadata = metadata;
+        return this;
+    }
+
+    @Override
+    public Map<String, String> getMetaData() {
+        return metadata;
     }
 }

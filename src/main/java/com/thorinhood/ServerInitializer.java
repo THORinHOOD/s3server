@@ -8,8 +8,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.stream.ChunkedWriteHandler;
 
 public class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -24,8 +22,8 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = socketChannel.pipeline();
         pipeline.addLast(new HttpRequestDecoder());
         pipeline.addLast(new HttpResponseEncoder());
-        pipeline.addLast(new HttpObjectAggregator(665536)); //TODO ограничение на размер
-        pipeline.addLast(new ChunkedWriteHandler());
+        pipeline.addLast(new HttpObjectAggregator(Integer.MAX_VALUE)); //TODO ограничение на размер
+//        pipeline.addLast(new ChunkedWriteHandler());
         pipeline.addLast(serverHandler);
     }
 

@@ -19,18 +19,18 @@ public class GetObjectProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(GetObjectProcessor.class);
 
-    public GetObjectProcessor(String basePath) {
-        super(basePath);
+    public GetObjectProcessor(String basePath, S3Util s3Util) {
+        super(basePath, s3Util);
     }
 
     @Override
     public void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments) throws Exception {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
-        String bucket = extractBucket(request);
-        String key = extractKey(request);
+        String bucket = extractBucketPath(request);
+        String key = extractKeyPath(request);
         S3Object s3Object;
         try {
-            s3Object = S3Util.getObject(bucket, key, BASE_PATH);
+            s3Object = S3_UTIL.getObject(bucket, key, BASE_PATH);
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
             log.error(s3Exception.getMessage(), s3Exception);
@@ -51,6 +51,8 @@ public class GetObjectProcessor extends Processor {
         response.headers().set("ETag", s3Object.getETag());
         response.headers().set("Last-Modified", s3Object.getLastModified());
         response.headers().set("Date", DateTimeUtil.currentDateTime());
+        s3Object.getMetaData().forEach((metaKey, metaValue) ->
+                response.headers().set("x-amz-meta-" + metaKey, metaValue));
 
         if (!keepAlive) {
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);

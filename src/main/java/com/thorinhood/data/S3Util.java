@@ -1,7 +1,7 @@
 package com.thorinhood.data;
 
+import com.thorinhood.db.H2DB;
 import com.thorinhood.exceptions.S3Exception;
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
 import com.thorinhood.utils.DateTimeUtil;
@@ -10,11 +10,19 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.sql.SQLException;
+import java.util.Map;
 import java.util.Optional;
 
 public class S3Util {
 
-    public static void createBucket(String bucket, String basePath) throws S3Exception {
+    private final H2DB h2DB;
+
+    public S3Util(H2DB h2DB) {
+        this.h2DB = h2DB;
+    }
+
+    public void createBucket(String bucket, String basePath) throws S3Exception {
         String absolutePath = basePath + File.separatorChar + bucket;
         File bucketFile = new File(absolutePath);
         if (bucketFile.exists()) {
@@ -33,7 +41,7 @@ public class S3Util {
         }
     }
 
-    public static S3Object getObject(String bucket, String key, String basePath) throws S3Exception {
+    public S3Object getObject(String bucket, String key, String basePath) throws S3Exception {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -56,22 +64,24 @@ public class S3Util {
 
         try {
             bytes = Files.readAllBytes(file.toPath());
-        } catch (IOException exception) {
+            return S3Object.build()
+                    .setAbsolutePath(absolutePath.get())
+                    .setKey(key)
+                    .setETag(calculateETag(bytes))
+                    .setFile(file)
+                    .setRawBytes(bytes)
+                    .setLastModified(DateTimeUtil.parseDateTime(file))
+                    .setMetaData(h2DB.getFileMetadata(absolutePath.get()));
+        } catch (IOException | SQLException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
                     .setResource(File.separatorChar + bucket + key)
                     .setRequestId("1");
         }
-        return S3Object.build()
-                .setAbsolutePath(absolutePath.get())
-                .setKey(key)
-                .setETag(calculateETag(bytes))
-                .setFile(file)
-                .setRawBytes(bytes)
-                .setLastModified(DateTimeUtil.parseDateTime(file));
     }
 
-    public static S3Object putObject(String bucket, String key, String basePath, ByteBuf byteBuf) throws S3Exception {
+    public S3Object putObject(String bucket, String key, String basePath, byte[] bytes, Map<String, String> metadata)
+            throws S3Exception {
         Optional<String> absolutePath = buildPath(bucket, key, basePath);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -85,26 +95,26 @@ public class S3Util {
                     .setRequestId("1");
         }
         try {
-            byte[] bytes = new byte[byteBuf.readableBytes()];
-            byteBuf.readBytes(bytes);
             if (file.createNewFile() || file.exists()) {
                 FileOutputStream outputStream = new FileOutputStream(file);
                 outputStream.write(bytes);
                 outputStream.close();
+                h2DB.setFileMetadata(absolutePath.get(), metadata);
                 return S3Object.build()
                         .setAbsolutePath(absolutePath.get())
                         .setKey(key)
                         .setETag(calculateETag(bytes))
                         .setFile(file)
                         .setRawBytes(bytes)
-                        .setLastModified(DateTimeUtil.parseDateTime(file));
+                        .setLastModified(DateTimeUtil.parseDateTime(file))
+                        .setMetaData(metadata);
             } else {
                 throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                         .setMessage("Internal error : can't create object")
                         .setResource(File.separatorChar + bucket + key)
                         .setRequestId("1");
             }
-        } catch (IOException exception) {
+        } catch (IOException | SQLException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
                     .setResource(File.separatorChar + bucket + key)
@@ -113,14 +123,14 @@ public class S3Util {
     }
 
     //TODO
-    private static Optional<String> buildPath(String bucket, String key, String basePath) {
+    private Optional<String> buildPath(String bucket, String key, String basePath) {
         if (key == null || bucket == null) {
             return Optional.empty();
         }
         return Optional.of(basePath + File.separatorChar + bucket + key);
     }
 
-    private static boolean processFolders(File file, String bucket) {
+    private boolean processFolders(File file, String bucket) {
         File folder = file.getParentFile();
         if (folder.exists() && folder.isDirectory()) {
             return true;
@@ -132,7 +142,7 @@ public class S3Util {
         return true;
     }
 
-    private static String calculateETag(byte[] bytes) {
+    private String calculateETag(byte[] bytes) {
         return DigestUtils.md5Hex(bytes);
     }
 

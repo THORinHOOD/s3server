@@ -1,5 +1,6 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.data.S3Util;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -23,9 +24,11 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 public abstract class Processor {
 
     protected final String BASE_PATH;
+    protected final S3Util S3_UTIL;
 
-    public Processor(String basePath) {
+    public Processor(String basePath, S3Util s3Util) {
         this.BASE_PATH = basePath;
+        this.S3_UTIL = s3Util;
     }
 
     protected void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
