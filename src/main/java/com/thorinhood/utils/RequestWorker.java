@@ -1,9 +1,11 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.data.ParsedRequest;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.PayloadSignType;
 import com.thorinhood.exceptions.S3Exception;
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -46,13 +48,13 @@ public class RequestWorker {
         }
     }
 
-    public static boolean checkPayload(PayloadSignType payloadSignType, byte[] payload, String xAmzContentSha256)
-            throws S3Exception {
-        if (payloadSignType == PayloadSignType.UNSIGNED_PAYLOAD) {
-            return true;
-        } else if (payloadSignType == PayloadSignType.SINGLE_CHUNK) {
-            String calculatedPayloadHash = DigestUtils.sha256Hex(payload);
-            if (!calculatedPayloadHash.equals(xAmzContentSha256)) {
+    public static ParsedRequest processRequest(PayloadSignType payloadSignType, FullHttpRequest request, String bucket,
+                                               String key) throws S3Exception {
+        byte[] bytes = convert(request.content().asReadOnly());
+
+        if (payloadSignType == PayloadSignType.SINGLE_CHUNK) {
+            String calculatedPayloadHash = DigestUtils.sha256Hex(bytes);
+            if (!calculatedPayloadHash.equals(request.headers().get(S3Headers.X_AMZ_CONTENT_SHA256))) {
                 throw S3Exception.build("calculated payload hash not equals with x-amz-content-sha256")
                         .setStatus(HttpResponseStatus.BAD_REQUEST)
                         .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
@@ -61,9 +63,36 @@ public class RequestWorker {
                         .setResource("1")
                         .setRequestId("1");
             }
-            return true;
         }
-        return false;
+
+        String publicKey = "AKIAJQGYR4BXLYFNLMPA"; // TODO
+        String secretKey = "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"; // TODO
+        Credential credential = Credential.parse(request);
+        String calculatedSignature = SignChecker.calcSignature(payloadSignType, request, bucket, key, credential,
+                secretKey);
+        String requestSignature = extractSignature(request);
+        if (!calculatedSignature.equals(requestSignature)) {
+            throw S3Exception.build("calculated payload hash not equals with x-amz-content-sha256")
+                    .setStatus(HttpResponseStatus.BAD_REQUEST)
+                    .setCode(S3ResponseErrorCodes.SIGNATURE_DOES_NOT_MATCH)
+                    .setMessage("Signature is invalid")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+
+        return new ParsedRequest(bytes, bucket, key, calculatedSignature);
     }
+
+    private static String extractSignature(FullHttpRequest request) {
+        String authorization = request.headers().get("Authorization");
+        return authorization.substring(authorization.indexOf("Signature=") + "Signature=".length());
+    }
+
+    private static byte[] convert(ByteBuf byteBuf) {
+        byte[] bytes = new byte[byteBuf.readableBytes()];
+        byteBuf.readBytes(bytes);
+        return bytes;
+    }
+
 
 }

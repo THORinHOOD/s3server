@@ -6,4 +6,5 @@ public class S3ResponseErrorCodes {
     public static final String NO_SUCH_KEY = "NoSuchKey";
     public static final String INVALID_REQUEST = "InvalidRequest";
     public static final String INVALID_ARGUMENT = "InvalidArgument";
+    public static final String SIGNATURE_DOES_NOT_MATCH = "SignatureDoesNotMatch";
 }
