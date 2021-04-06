@@ -17,9 +17,6 @@ public class PutObjectProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(PutObjectProcessor.class);
 
-    private HttpPostRequestDecoder httpDecoder;
-    private final HttpDataFactory factory = new DefaultHttpDataFactory(false);
-
     public PutObjectProcessor(String basePath, S3Util s3Util) {
         super(basePath, s3Util);
     }

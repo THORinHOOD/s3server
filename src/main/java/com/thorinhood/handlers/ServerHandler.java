@@ -2,23 +2,20 @@ package com.thorinhood.handlers;
 
 import com.thorinhood.data.S3Util;
 import com.thorinhood.db.H2DB;
+import com.thorinhood.processors.CreateBucketProcessor;
+import com.thorinhood.processors.GetObjectProcessor;
+import com.thorinhood.processors.PutObjectProcessor;
 import com.thorinhood.utils.XmlUtil;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.channel.*;
-import io.netty.handler.codec.http.*;
-import io.netty.handler.codec.http.multipart.*;
-import com.thorinhood.processors.*;
-import io.netty.handler.stream.ChunkedStream;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @ChannelHandler.Sharable
