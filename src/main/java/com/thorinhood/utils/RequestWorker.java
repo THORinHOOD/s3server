@@ -48,9 +48,11 @@ public class RequestWorker {
         }
     }
 
-    public static ParsedRequest processRequest(PayloadSignType payloadSignType, FullHttpRequest request, String bucket,
-                                               String key) throws S3Exception {
+    public static ParsedRequest processRequest(FullHttpRequest request, String bucket,
+                                               String key, String secretKey) throws S3Exception {
+        PayloadSignType payloadSignType = getPayloadSignType(request);
         byte[] bytes = convert(request.content().asReadOnly());
+        Credential credential = Credential.parse(request);
 
         if (payloadSignType == PayloadSignType.SINGLE_CHUNK) {
             String calculatedPayloadHash = DigestUtils.sha256Hex(bytes);
@@ -65,10 +67,7 @@ public class RequestWorker {
             }
         }
 
-        String publicKey = "AKIAJQGYR4BXLYFNLMPA"; // TODO
-        String secretKey = "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"; // TODO
-        Credential credential = Credential.parse(request);
-        String calculatedSignature = SignChecker.calcSignature(payloadSignType, request, bucket, key, credential,
+        String calculatedSignature = SignUtil.calcSignature(payloadSignType, request, bucket, key, credential,
                 secretKey);
         String requestSignature = extractSignature(request);
         if (!calculatedSignature.equals(requestSignature)) {
@@ -80,7 +79,17 @@ public class RequestWorker {
                     .setRequestId("1");
         }
 
-        return new ParsedRequest(bytes, bucket, key, calculatedSignature);
+        // TODO
+        String decodedContentLength = request.headers().get(S3Headers.X_AMZ_DECODED_CONTENT_LENGTH);
+
+        return new ParsedRequest(
+                bytes,
+                bucket,
+                key,
+                calculatedSignature,
+                credential,
+                decodedContentLength != null ? Integer.parseInt(decodedContentLength) : 0,
+                payloadSignType);
     }
 
     private static String extractSignature(FullHttpRequest request) {

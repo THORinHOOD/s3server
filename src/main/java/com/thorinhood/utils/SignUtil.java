@@ -18,11 +18,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-public class SignChecker {
+public class SignUtil {
 
     public static final String LINE_SEPARATOR = "\n";
     public static final Set<String> IGNORE_HEADERS = Set.of("connection", "x-amzn-trace-id", "user-agent", "expect",
             "authorization");
+
+    public static String calcPayloadSignature(FullHttpRequest request, Credential credential, String prevSignature,
+                                              byte[] currentChunkData, String secretKey) {
+        String stringToSign = createPayloadStringToSign(request, credential, prevSignature, currentChunkData);
+        byte[] signingKey = newSingingKey(
+                secretKey,
+                credential.getValue(Credential.DATE),
+                credential.getValue(Credential.REGION_NAME),
+                credential.getValue(Credential.SERVICE_NAME));
+        byte[] signature = computeSignature(stringToSign, signingKey);
+        return BinaryUtils.toHex(signature);
+    }
 
     public static String calcSignature(PayloadSignType payloadSignType, FullHttpRequest request, String bucket,
                                        String key, Credential credential, String secretKey) {
@@ -76,6 +88,23 @@ public class SignChecker {
                 LINE_SEPARATOR +
                 contentSha256;
         return result;
+    }
+
+    private static String createPayloadStringToSign(FullHttpRequest request, Credential credential,
+                                                    String prevSignature, byte[] currentChunkData) {
+        String formattedRequestSigningDateTime = request.headers().get(S3Headers.X_AMZ_DATE);
+        String stringToSign = "AWS4-HMAC-SHA256-PAYLOAD" +
+                LINE_SEPARATOR +
+                formattedRequestSigningDateTime +
+                LINE_SEPARATOR +
+                credential.getCredentialWithoutAccessKey() +
+                LINE_SEPARATOR +
+                prevSignature +
+                LINE_SEPARATOR +
+                BinaryUtils.toHex(DigestUtils.sha256("")) +
+                LINE_SEPARATOR +
+                DigestUtils.sha256Hex(currentChunkData);
+        return stringToSign;
     }
 
     private static String createStringToSign(String canonicalRequest,
