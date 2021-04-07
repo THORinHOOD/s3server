@@ -68,7 +68,9 @@ public class SignUtil {
         Map<String, String> headers = new TreeMap<>();
         for (Map.Entry<String, String> entry : request.headers().entries()) {
             if (!IGNORE_HEADERS.contains(entry.getKey().toLowerCase())) {
-                headers.put(entry.getKey().toLowerCase(), entry.getValue());
+                if (!(entry.getKey().equals("content-length") && Long.parseLong(entry.getValue()) == 0L)) {
+                    headers.put(entry.getKey().toLowerCase(), entry.getValue());
+                }
             }
         }
 

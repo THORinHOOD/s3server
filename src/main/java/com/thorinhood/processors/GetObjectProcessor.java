@@ -1,6 +1,8 @@
 package com.thorinhood.processors;
 
 import com.thorinhood.data.S3Object;
+import com.thorinhood.utils.ParsedRequest;
+import com.thorinhood.utils.RequestUtil;
 import com.thorinhood.utils.S3Util;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.*;
@@ -26,11 +28,15 @@ public class GetObjectProcessor extends Processor {
     @Override
     public void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments) throws Exception {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
-        String bucket = extractBucketPath(request);
-        String key = extractKeyPath(request);
+
+        String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
+
+        ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
+        RequestUtil.checkRequest(request, parsedRequest, secretKey);
+
         S3Object s3Object;
         try {
-            s3Object = S3_UTIL.getObject(bucket, key, BASE_PATH);
+            s3Object = S3_UTIL.getObject(parsedRequest.getBucket(), parsedRequest.getKey(), BASE_PATH);
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
             log.error(s3Exception.getMessage(), s3Exception);
