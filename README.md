@@ -2,7 +2,7 @@
 
 ## Методы
 
-> ### PutObject
+> ### **PutObject**
 
 PUT /< bucket >/< key to object > HTTP/1.1 \
 Host: < server host >
@@ -27,7 +27,7 @@ Content-Length: 195 **(общий размер передаваемого)**\
 Connection: Keep-Alive \
 
 
-> ### GetObject
+> ### **GetObject**
  
 GET /< bucket >/< key to file > HTTP/1.1 \
 Host: localhost:9090 
