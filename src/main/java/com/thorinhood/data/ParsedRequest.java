@@ -7,17 +7,17 @@ public class ParsedRequest {
     private byte[] bytes;
     private final String bucket;
     private final String key;
-    private final String seedSignature;
+    private final String signature;
     private final Credential credential;
-    private final int decodedContentLength;
+    private final Integer decodedContentLength;
     private final PayloadSignType payloadSignType;
 
-    public ParsedRequest(byte[] bytes, String bucket, String key, String seedSignature, Credential credential,
-                         int decodedContentLength, PayloadSignType payloadSignType) {
+    public ParsedRequest(byte[] bytes, String bucket, String key, String signature, Credential credential,
+                         Integer decodedContentLength, PayloadSignType payloadSignType) {
         this.bytes = bytes;
         this.bucket = bucket;
         this.key = key;
-        this.seedSignature = seedSignature;
+        this.signature = signature;
         this.credential = credential;
         this.decodedContentLength = decodedContentLength;
         this.payloadSignType = payloadSignType;
@@ -35,15 +35,15 @@ public class ParsedRequest {
         return key;
     }
 
-    public String getSeedSignature() {
-        return seedSignature;
+    public String getSignature() {
+        return signature;
     }
 
     public Credential getCredential() {
         return credential;
     }
 
-    public int getDecodedContentLength() {
+    public Integer getDecodedContentLength() {
         return decodedContentLength;
     }
 

@@ -5,7 +5,6 @@ import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
-import io.netty.handler.codec.http.multipart.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,22 +26,16 @@ public class PutObjectProcessor extends Processor {
         try {
             String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
 
-            String bucket = extractBucketPath(request);
-            String key = extractKeyPath(request);
-
-            ParsedRequest parsedRequest = RequestWorker.processRequest(request, bucket, key, secretKey);
+            ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
+            RequestUtil.checkRequest(request, parsedRequest, secretKey);
 
             if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK ||
                 parsedRequest.getPayloadSignType() == PayloadSignType.UNSIGNED_PAYLOAD) {
-                    singleChunkRead(parsedRequest, request, context);
+                singleChunkRead(parsedRequest, request, context);
             } else {
-                multipleChunksRead(
-                        parsedRequest,
-                        request,
-                        context,
-                        secretKey);
+                multipleChunksRead(parsedRequest, request, context, secretKey);
             }
-        } catch(S3Exception s3Exception) {
+        } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
             log.error(s3Exception.getMessage(), s3Exception);
         }
@@ -61,7 +54,7 @@ public class PutObjectProcessor extends Processor {
                     parsedRequest.getBucket(),
                     parsedRequest.getKey(),
                     BASE_PATH,
-                    parsedRequest.getBytes(), RequestWorker.extractMetaData(request));
+                    parsedRequest.getBytes(), RequestUtil.extractMetaData(request));
             if (s3Object == null) {
                 sendError(context, INTERNAL_SERVER_ERROR, request);
                 return;

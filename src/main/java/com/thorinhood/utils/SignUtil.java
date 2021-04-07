@@ -1,5 +1,6 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.data.ParsedRequest;
 import com.thorinhood.data.PayloadSignType;
 import com.thorinhood.data.S3Headers;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -36,12 +37,11 @@ public class SignUtil {
         return BinaryUtils.toHex(signature);
     }
 
-    public static String calcSignature(PayloadSignType payloadSignType, FullHttpRequest request, String bucket,
-                                       String key, Credential credential, String secretKey) {
+    public static String calcSignature(ParsedRequest parsedRequest, FullHttpRequest request, String secretKey) {
         String contentSha256 = "";
-        if (payloadSignType == PayloadSignType.SINGLE_CHUNK) {
+        if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK) {
             contentSha256 = request.headers().get(S3Headers.X_AMZ_CONTENT_SHA256);
-        } else if (payloadSignType == PayloadSignType.CHUNKED) {
+        } else if (parsedRequest.getPayloadSignType() == PayloadSignType.CHUNKED) {
             contentSha256 = PayloadSignType.CHUNKED.getValue();
         } else {
             contentSha256 = PayloadSignType.UNSIGNED_PAYLOAD.getValue();
@@ -49,16 +49,16 @@ public class SignUtil {
 
         String canonicalRequest = createCanonicalRequest(
                 request,
-                bucket + key,
+                parsedRequest.getBucket() + parsedRequest.getKey(),
                 contentSha256
         );
-        String stringToSign = createStringToSign(canonicalRequest, request, credential);
+        String stringToSign = createStringToSign(canonicalRequest, request, parsedRequest.getCredential());
 
         byte[] signingKey = newSingingKey(
                 secretKey,
-                credential.getValue(Credential.DATE),
-                credential.getValue(Credential.REGION_NAME),
-                credential.getValue(Credential.SERVICE_NAME));
+                parsedRequest.getCredential().getValue(Credential.DATE),
+                parsedRequest.getCredential().getValue(Credential.REGION_NAME),
+                parsedRequest.getCredential().getValue(Credential.SERVICE_NAME));
 
         byte[] signature = computeSignature(stringToSign, signingKey);
         return BinaryUtils.toHex(signature);
@@ -107,9 +107,7 @@ public class SignUtil {
         return stringToSign;
     }
 
-    private static String createStringToSign(String canonicalRequest,
-                                      FullHttpRequest request,
-                                      Credential credential) {
+    private static String createStringToSign(String canonicalRequest, FullHttpRequest request, Credential credential) {
         String formattedRequestSigningDateTime = request.headers().get(S3Headers.X_AMZ_DATE);
         String stringToSign = "AWS4-HMAC-SHA256" +
                 LINE_SEPARATOR +
@@ -139,7 +137,7 @@ public class SignUtil {
                 SigningAlgorithm.HmacSHA256);
     }
 
-    public static byte[] newSingingKey(String key, String dateStamp, String regionName, String serviceName) {
+    private static byte[] newSingingKey(String key, String dateStamp, String regionName, String serviceName) {
         byte[] kSecret = ("AWS4" + key).getBytes(StandardCharsets.UTF_8);
         byte[] kDate = sign(dateStamp, kSecret, SigningAlgorithm.HmacSHA256);
         byte[] kRegion = sign(regionName, kDate, SigningAlgorithm.HmacSHA256);
@@ -147,8 +145,7 @@ public class SignUtil {
         return sign(SignerConstant.AWS4_TERMINATOR, kService, SigningAlgorithm.HmacSHA256);
     }
 
-    private static byte[] sign(String stringData, byte[] key,
-                          SigningAlgorithm algorithm) throws SdkClientException {
+    private static byte[] sign(String stringData, byte[] key, SigningAlgorithm algorithm) throws SdkClientException {
         try {
             byte[] data = stringData.getBytes(StandardCharsets.UTF_8);
             return sign(data, key, algorithm);

@@ -13,7 +13,7 @@ public class ChunkReader {
 
     public static byte[] readChunks(FullHttpRequest request, ParsedRequest parsedRequest, String secretKey) 
             throws S3Exception {
-        String prevSignature = parsedRequest.getSeedSignature();
+        String prevSignature = parsedRequest.getSignature();
         byte[] result = new byte[parsedRequest.getDecodedContentLength()];
         int index = 0;
 

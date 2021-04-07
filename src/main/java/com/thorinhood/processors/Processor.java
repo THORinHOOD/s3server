@@ -96,14 +96,6 @@ public abstract class Processor {
         return uri.replace('/', File.separatorChar).substring(uri.indexOf("/", 1));
     }
 
-    protected String extractKey(FullHttpRequest request) {
-        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
-        if (uri.isEmpty() || uri.charAt(0) != '/') {
-            return null;
-        }
-        return uri.replace('/', File.separatorChar);
-    }
-
     public void process(ChannelHandlerContext context, FullHttpRequest request, Object... arguments) throws Exception {
         if (!request.decoderResult().isSuccess()) {
             sendError(context, BAD_REQUEST, request);
