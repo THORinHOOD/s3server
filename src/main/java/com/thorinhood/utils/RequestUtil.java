@@ -1,9 +1,7 @@
 package com.thorinhood.utils;
 
-import com.thorinhood.data.ParsedRequest;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3ResponseErrorCodes;
-import com.thorinhood.data.PayloadSignType;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpRequest;

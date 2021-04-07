@@ -1,6 +1,6 @@
 package com.thorinhood.processors;
 
-import com.thorinhood.data.S3Util;
+import com.thorinhood.utils.S3Util;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;

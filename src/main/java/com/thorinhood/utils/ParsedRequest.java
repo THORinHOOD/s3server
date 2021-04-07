@@ -1,6 +1,4 @@
-package com.thorinhood.data;
-
-import com.thorinhood.utils.Credential;
+package com.thorinhood.utils;
 
 public class ParsedRequest {
 

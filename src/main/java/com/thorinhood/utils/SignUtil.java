@@ -1,7 +1,5 @@
 package com.thorinhood.utils;
 
-import com.thorinhood.data.ParsedRequest;
-import com.thorinhood.data.PayloadSignType;
 import com.thorinhood.data.S3Headers;
 import io.netty.handler.codec.http.FullHttpRequest;
 import org.apache.commons.codec.digest.DigestUtils;

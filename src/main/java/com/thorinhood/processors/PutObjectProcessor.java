@@ -1,5 +1,6 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.chunks.ChunkReader;
 import com.thorinhood.data.*;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.*;

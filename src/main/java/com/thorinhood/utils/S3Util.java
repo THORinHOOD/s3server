@@ -1,5 +1,7 @@
-package com.thorinhood.data;
+package com.thorinhood.utils;
 
+import com.thorinhood.data.S3Object;
+import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.db.H2DB;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;

@@ -1,6 +1,6 @@
 package com.thorinhood.handlers;
 
-import com.thorinhood.data.S3Util;
+import com.thorinhood.utils.S3Util;
 import com.thorinhood.db.H2DB;
 import com.thorinhood.processors.CreateBucketProcessor;
 import com.thorinhood.processors.GetObjectProcessor;

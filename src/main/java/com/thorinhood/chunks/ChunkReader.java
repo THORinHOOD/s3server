@@ -1,8 +1,10 @@
-package com.thorinhood.utils;
+package com.thorinhood.chunks;
 
-import com.thorinhood.data.ParsedRequest;
+import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.utils.Credential;
+import com.thorinhood.utils.SignUtil;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -52,7 +54,7 @@ public class ChunkReader {
     }
 
     private static void checkChunk(String chunkSignature, String prevSignature, byte[] chunkData,
-                               FullHttpRequest request, Credential credential, String secretKey) throws S3Exception {
+                                   FullHttpRequest request, Credential credential, String secretKey) throws S3Exception {
         String calculatedChunkSignature = SignUtil.calcPayloadSignature(request, credential, prevSignature, chunkData,
                 secretKey);
         if (!calculatedChunkSignature.equals(chunkSignature)) {

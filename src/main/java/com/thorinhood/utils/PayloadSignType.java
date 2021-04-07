@@ -1,4 +1,4 @@
-package com.thorinhood.data;
+package com.thorinhood.utils;
 
 public enum PayloadSignType {
     CHUNKED("STREAMING-AWS4-HMAC-SHA256-PAYLOAD"),

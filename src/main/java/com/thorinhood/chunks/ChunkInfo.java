@@ -1,4 +1,4 @@
-package com.thorinhood.utils;
+package com.thorinhood.chunks;
 
 public class ChunkInfo {
 

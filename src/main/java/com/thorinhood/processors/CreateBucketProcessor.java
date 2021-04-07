@@ -1,22 +1,16 @@
 package com.thorinhood.processors;
 
-import com.thorinhood.data.S3Util;
-import com.thorinhood.db.H2DB;
+import com.thorinhood.utils.S3Util;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 import com.thorinhood.utils.DateTimeUtil;
-import com.thorinhood.utils.XmlUtil;
 
 import java.io.File;
 import java.util.Map;
-import java.util.Optional;
 
 public class CreateBucketProcessor extends Processor {
 
