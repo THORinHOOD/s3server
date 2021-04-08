@@ -16,6 +16,7 @@ public class H2DB {
     private final static String INSERT = String.format("INSERT INTO META (%s, %s, %s) " +
             "VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE %s = VALUES(%s)", KEY_FILE, KEY, VALUE, VALUE, VALUE);
     private final static String SELECT_ALL_BY_FILE = String.format("SELECT * FROM META WHERE %s = ?", KEY_FILE);
+    private final static String DELETE = String.format("DELETE FROM META WHERE %s = ?", KEY_FILE);
 
     private static H2DB h2db;
     private final Connection conn;
@@ -38,6 +39,9 @@ public class H2DB {
     }
 
     public void setFileMetadata(String keyFile, Map<String, String> metadata) throws SQLException {
+        PreparedStatement pstDlt = conn.prepareStatement(DELETE);
+        pstDlt.setString(1, keyFile);
+        pstDlt.execute();
         for (String key : metadata.keySet()) {
             String value = metadata.get(key);
             PreparedStatement pst = conn.prepareStatement(INSERT);
