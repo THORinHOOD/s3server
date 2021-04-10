@@ -46,10 +46,7 @@ public class RequestUtil {
                 credential,
                 decodedContentLength != null ? Integer.parseInt(decodedContentLength) : 0,
                 payloadSignType,
-                extractHeader(request, S3Headers.IF_MATCH, null),
-                extractHeader(request, S3Headers.IF_MODIFIED_SINCE, null),
-                extractHeader(request, S3Headers.IF_NONE_MATCH, null),
-                extractHeader(request, S3Headers.IF_UNMODIFIED_SINCE, null));
+                request.headers());
     }
 
     private static String extractHeader(FullHttpRequest request, String header, String dflt) {

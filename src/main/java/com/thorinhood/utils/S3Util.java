@@ -82,19 +82,19 @@ public class S3Util {
             bytes = Files.readAllBytes(file.toPath());
             String eTag = calculateETag(bytes);
             //TODO
-            if (request.getIfMatchHeader() != null) {
-                strSelectors.get(S3Headers.IF_MATCH).check(eTag, request.getIfMatchHeader());
+            if (request.containsHeader(S3Headers.IF_MATCH)) {
+                strSelectors.get(S3Headers.IF_MATCH).check(eTag, request.getHeader(S3Headers.IF_MATCH));
             }
-            if (request.getIfModifiedHeader() != null) {
+            if (request.containsHeader(S3Headers.IF_MODIFIED_SINCE)) {
                 dateSelectors.get(S3Headers.IF_MODIFIED_SINCE).check(new Date(file.lastModified()),
-                        DateTimeUtil.parseStrTime(request.getIfModifiedHeader())); //TODO
+                        DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_MODIFIED_SINCE))); //TODO
             }
-            if (request.getIfNoneMatchHeader() != null) {
-                strSelectors.get(S3Headers.IF_NONE_MATCH).check(eTag, request.getIfNoneMatchHeader());
+            if (request.containsHeader(S3Headers.IF_NONE_MATCH)) {
+                strSelectors.get(S3Headers.IF_NONE_MATCH).check(eTag, request.getHeader(S3Headers.IF_NONE_MATCH));
             }
-            if (request.getIfUnmodifiedSince() != null) {
+            if (request.containsHeader(S3Headers.IF_UNMODIFIED_SINCE)) {
                 dateSelectors.get(S3Headers.IF_UNMODIFIED_SINCE).check(new Date(file.lastModified()),
-                        DateTimeUtil.parseStrTime(request.getIfModifiedHeader())); // TODO
+                        DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_UNMODIFIED_SINCE))); // TODO
             }
 
             return S3Object.build()

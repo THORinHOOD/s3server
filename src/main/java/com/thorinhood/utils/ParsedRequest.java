@@ -1,5 +1,7 @@
 package com.thorinhood.utils;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 public class ParsedRequest {
 
     private byte[] bytes;
@@ -9,14 +11,10 @@ public class ParsedRequest {
     private final Credential credential;
     private final Integer decodedContentLength;
     private final PayloadSignType payloadSignType;
-    private final String ifMatchHeader;
-    private final String ifModifiedHeader;
-    private final String ifNoneMatchHeader;
-    private final String ifUnmodifiedSince;
+    private final HttpHeaders headers;
 
     public ParsedRequest(byte[] bytes, String bucket, String key, String signature, Credential credential,
-                         Integer decodedContentLength, PayloadSignType payloadSignType, String ifMatchHeader,
-                         String ifModifiedHeader, String ifNoneMatchHeader, String ifUnmodifiedSince) {
+                         Integer decodedContentLength, PayloadSignType payloadSignType, HttpHeaders headers) {
         this.bytes = bytes;
         this.bucket = bucket;
         this.key = key;
@@ -24,10 +22,7 @@ public class ParsedRequest {
         this.credential = credential;
         this.decodedContentLength = decodedContentLength;
         this.payloadSignType = payloadSignType;
-        this.ifMatchHeader = ifMatchHeader;
-        this.ifModifiedHeader = ifModifiedHeader;
-        this.ifNoneMatchHeader = ifNoneMatchHeader;
-        this.ifUnmodifiedSince = ifUnmodifiedSince;
+        this.headers = headers;
     }
 
     public byte[] getBytes() {
@@ -62,19 +57,11 @@ public class ParsedRequest {
         this.bytes = bytes;
     }
 
-    public String getIfMatchHeader() {
-        return ifMatchHeader;
+    public boolean containsHeader(String header) {
+        return headers.contains(header);
     }
 
-    public String getIfModifiedHeader() {
-        return ifModifiedHeader;
-    }
-
-    public String getIfNoneMatchHeader() {
-        return ifNoneMatchHeader;
-    }
-
-    public String getIfUnmodifiedSince() {
-        return ifUnmodifiedSince;
+    public String getHeader(String header) {
+        return headers.get(header);
     }
 }
