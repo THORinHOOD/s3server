@@ -7,4 +7,5 @@ public class S3ResponseErrorCodes {
     public static final String INVALID_REQUEST = "InvalidRequest";
     public static final String INVALID_ARGUMENT = "InvalidArgument";
     public static final String SIGNATURE_DOES_NOT_MATCH = "SignatureDoesNotMatch";
+    public static final String PRECONIDTION_FAILED = "PreconditionFailed";
 }

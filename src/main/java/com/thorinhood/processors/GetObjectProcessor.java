@@ -36,7 +36,7 @@ public class GetObjectProcessor extends Processor {
 
         S3Object s3Object;
         try {
-            s3Object = S3_UTIL.getObject(parsedRequest.getBucket(), parsedRequest.getKey(), BASE_PATH);
+            s3Object = S3_UTIL.getObject(parsedRequest, BASE_PATH);
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
             log.error(s3Exception.getMessage(), s3Exception);

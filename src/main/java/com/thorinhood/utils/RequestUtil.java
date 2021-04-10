@@ -45,7 +45,18 @@ public class RequestUtil {
                 requestSignature,
                 credential,
                 decodedContentLength != null ? Integer.parseInt(decodedContentLength) : 0,
-                payloadSignType);
+                payloadSignType,
+                extractHeader(request, S3Headers.IF_MATCH, null),
+                extractHeader(request, S3Headers.IF_MODIFIED_SINCE, null),
+                extractHeader(request, S3Headers.IF_NONE_MATCH, null),
+                extractHeader(request, S3Headers.IF_UNMODIFIED_SINCE, null));
+    }
+
+    private static String extractHeader(FullHttpRequest request, String header, String dflt) {
+        if (request.headers().contains(header)) {
+            return request.headers().get(header);
+        }
+        return dflt;
     }
 
     public static void checkRequest(FullHttpRequest request, ParsedRequest parsedRequest,
