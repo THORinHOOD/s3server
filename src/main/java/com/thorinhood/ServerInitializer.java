@@ -1,7 +1,6 @@
 package com.thorinhood;
 
 import com.thorinhood.db.AclDriver;
-import com.thorinhood.db.H2DB;
 import com.thorinhood.db.MetadataDriver;
 import com.thorinhood.handlers.ServerHandler;
 import io.netty.channel.ChannelInitializer;

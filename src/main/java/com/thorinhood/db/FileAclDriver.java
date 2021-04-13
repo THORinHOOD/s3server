@@ -9,7 +9,6 @@ import com.thorinhood.utils.XmlUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -18,7 +17,6 @@ import javax.xml.bind.Unmarshaller;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class FileAclDriver implements AclDriver {
 

@@ -2,27 +2,26 @@ package com.thorinhood.utils;
 
 import io.netty.handler.codec.http.HttpHeaders;
 
+import java.util.List;
+import java.util.Map;
+
 public class ParsedRequest {
 
     private byte[] bytes;
-    private final String bucket;
-    private final String key;
-    private final String signature;
-    private final Credential credential;
-    private final Integer decodedContentLength;
-    private final PayloadSignType payloadSignType;
-    private final HttpHeaders headers;
+    private String bucket;
+    private String key;
+    private String signature;
+    private Credential credential;
+    private Integer decodedContentLength;
+    private PayloadSignType payloadSignType;
+    private HttpHeaders headers;
+    private Map<String, List<String>> queryParams;
 
-    public ParsedRequest(byte[] bytes, String bucket, String key, String signature, Credential credential,
-                         Integer decodedContentLength, PayloadSignType payloadSignType, HttpHeaders headers) {
-        this.bytes = bytes;
-        this.bucket = bucket;
-        this.key = key;
-        this.signature = signature;
-        this.credential = credential;
-        this.decodedContentLength = decodedContentLength;
-        this.payloadSignType = payloadSignType;
-        this.headers = headers;
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private ParsedRequest() {
     }
 
     public byte[] getBytes() {
@@ -63,5 +62,66 @@ public class ParsedRequest {
 
     public String getHeader(String header) {
         return headers.get(header);
+    }
+
+    public Map<String, List<String>> getQueryParams() {
+        return queryParams;
+    }
+
+    public static class Builder {
+        private final ParsedRequest parsedRequest;
+
+        public Builder() {
+            parsedRequest = new ParsedRequest();
+        }
+
+        public Builder setBytes(byte[] bytes) {
+            parsedRequest.bytes = bytes;
+            return this;
+        }
+
+        public Builder setBucket(String bucket) {
+            parsedRequest.bucket = bucket;
+            return this;
+        }
+
+        public Builder setKey(String key) {
+            parsedRequest.key = key;
+            return this;
+        }
+
+        public Builder setSignature(String signature) {
+            parsedRequest.signature = signature;
+            return this;
+        }
+
+        public Builder setCredential(Credential credential) {
+            parsedRequest.credential = credential;
+            return this;
+        }
+
+        public Builder setDecodedContentLength(Integer decodedContentLength) {
+            parsedRequest.decodedContentLength = decodedContentLength;
+            return this;
+        }
+
+        public Builder setPayloadSignType(PayloadSignType payloadSignType) {
+            parsedRequest.payloadSignType = payloadSignType;
+            return this;
+        }
+
+        public Builder setHeaders(HttpHeaders headers) {
+            parsedRequest.headers = headers;
+            return this;
+        }
+
+        public Builder setQueryParams(Map<String, List<String>> queryParams) {
+            parsedRequest.queryParams = queryParams;
+            return this;
+        }
+
+        public ParsedRequest build() {
+            return parsedRequest;
+        }
     }
 }

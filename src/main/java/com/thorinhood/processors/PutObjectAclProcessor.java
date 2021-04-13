@@ -1,9 +1,7 @@
 package com.thorinhood.processors;
 
-import com.thorinhood.acl.AccessControlPolicy;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.utils.PayloadSignType;
 import com.thorinhood.utils.RequestUtil;
 import com.thorinhood.utils.S3Util;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,7 +24,7 @@ public class PutObjectAclProcessor extends Processor {
             String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
 
             ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
-//            RequestUtil.checkRequest(request, parsedRequest, secretKey);
+            RequestUtil.checkRequest(request, parsedRequest, secretKey);
 
             S3_UTIL.putObjectAcl(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getKey(), parsedRequest.getBytes());
         } catch (S3Exception s3Exception) {

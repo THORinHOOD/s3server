@@ -11,7 +11,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import java.io.File;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
@@ -38,15 +38,18 @@ public class RequestUtil {
         String decodedContentLength = request.headers().get(S3Headers.X_AMZ_DECODED_CONTENT_LENGTH);
         String bucket = extractBucketPath(request);
         String key = extractKeyPath(request);
-        return new ParsedRequest(
-                bytes,
-                bucket,
-                key,
-                requestSignature,
-                credential,
-                decodedContentLength != null ? Integer.parseInt(decodedContentLength) : 0,
-                payloadSignType,
-                request.headers());
+        Map<String, List<String>> queryParams = parseQueryParams(request);
+        return ParsedRequest.builder()
+                .setBucket(bucket)
+                .setKey(key)
+                .setBytes(bytes)
+                .setCredential(credential)
+                .setDecodedContentLength(decodedContentLength != null ? Integer.parseInt(decodedContentLength) : 0)
+                .setHeaders(request.headers())
+                .setPayloadSignType(payloadSignType)
+                .setSignature(requestSignature)
+                .setQueryParams(queryParams)
+                .build();
     }
 
     private static String extractHeader(FullHttpRequest request, String header, String dflt) {
@@ -80,6 +83,27 @@ public class RequestUtil {
                     .setResource("1")
                     .setRequestId("1");
         }
+    }
+
+    private static Map<String, List<String>> parseQueryParams(FullHttpRequest request) {
+        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
+        String params = uri.substring(uri.indexOf("?") + 1);
+        String[] splittedParams = params.split("&");
+        Map<String, List<String>> result = new HashMap<>();
+        for (String param : splittedParams) {
+            int ind = param.indexOf("=");
+            if (ind == -1) {
+                result.put(param, new ArrayList<>());
+            } else {
+                String key = param.substring(0, ind);
+                String values = param.substring(ind + 1);
+                result.put(key, new ArrayList<>(Arrays.asList(values.split(","))));
+            }
+            if (result.get(param).isEmpty()) {
+                result.get(param).add(null);
+            }
+        }
+        return result;
     }
 
     private static PayloadSignType getPayloadSignType(FullHttpRequest request) {

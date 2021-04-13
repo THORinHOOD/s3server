@@ -13,9 +13,7 @@ import software.amazon.awssdk.utils.http.SdkHttpUtils;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 public class SignUtil {
 
@@ -47,6 +45,7 @@ public class SignUtil {
 
         String canonicalRequest = createCanonicalRequest(
                 request,
+                parsedRequest,
                 parsedRequest.getBucket() + parsedRequest.getKey(),
                 contentSha256
         );
@@ -63,7 +62,8 @@ public class SignUtil {
     }
 
     //AbstractAws4Signer
-    private static String createCanonicalRequest(FullHttpRequest request, String relativePath, String contentSha256) {
+    private static String createCanonicalRequest(FullHttpRequest request, ParsedRequest parsedRequest,
+                                                 String relativePath, String contentSha256) {
 
         Map<String, String> headers = new TreeMap<>();
         for (Map.Entry<String, String> entry : request.headers().entries()) {
@@ -80,7 +80,7 @@ public class SignUtil {
                 getCanonicalizedResourcePath(relativePath, false) +
                 LINE_SEPARATOR +
                 // TODO
-                // getCanonicalizedQueryString(request.rawQueryParameters()) +
+                 getCanonicalizedQueryString(parsedRequest.getQueryParams()) +
                 LINE_SEPARATOR +
                 getCanonicalizedHeaderString(headers) +
                 LINE_SEPARATOR +
@@ -168,6 +168,24 @@ public class SignUtil {
                     .cause(e)
                     .build();
         }
+    }
+
+    private static String getCanonicalizedQueryString(Map<String, List<String>> parameters) {
+        SortedMap<String, List<String>> sorted = new TreeMap<>();
+        for (Map.Entry<String, List<String>> entry : parameters.entrySet()) {
+            String encodedParamName = SdkHttpUtils.urlEncode(entry.getKey());
+            List<String> paramValues = entry.getValue();
+            List<String> encodedValues = new ArrayList<>(paramValues.size());
+            for (String value : paramValues) {
+                String encodedValue = SdkHttpUtils.urlEncode(value);
+                String signatureFormattedEncodedValue = encodedValue == null ? "" : encodedValue;
+                encodedValues.add(signatureFormattedEncodedValue);
+            }
+            Collections.sort(encodedValues);
+            sorted.put(encodedParamName, encodedValues);
+
+        }
+        return SdkHttpUtils.flattenQueryParameters(sorted).orElse("");
     }
 
     private static String getCanonicalizedHeaderString(Map<String, String> headers) {

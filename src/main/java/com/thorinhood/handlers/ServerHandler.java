@@ -4,7 +4,6 @@ import com.thorinhood.db.AclDriver;
 import com.thorinhood.db.MetadataDriver;
 import com.thorinhood.processors.PutObjectAclProcessor;
 import com.thorinhood.utils.S3Util;
-import com.thorinhood.db.H2DB;
 import com.thorinhood.processors.CreateBucketProcessor;
 import com.thorinhood.processors.GetObjectProcessor;
 import com.thorinhood.processors.PutObjectProcessor;

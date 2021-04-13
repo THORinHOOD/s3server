@@ -1,7 +1,6 @@
 package com.thorinhood.utils;
 
 import com.thorinhood.exceptions.S3Exception;
-import com.thorinhood.utils.XmlUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;

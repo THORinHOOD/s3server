@@ -1,6 +1,5 @@
 package com.thorinhood.db;
 
-import com.thorinhood.acl.AccessControlPolicy;
 import com.thorinhood.exceptions.S3Exception;
 
 import java.io.*;
