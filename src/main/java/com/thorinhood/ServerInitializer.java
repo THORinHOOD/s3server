@@ -1,6 +1,8 @@
 package com.thorinhood;
 
+import com.thorinhood.db.AclDriver;
 import com.thorinhood.db.H2DB;
+import com.thorinhood.db.MetadataDriver;
 import com.thorinhood.handlers.ServerHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -13,8 +15,8 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final ServerHandler serverHandler;
 
-    public ServerInitializer(String basePath, H2DB h2Db) {
-        serverHandler = new ServerHandler(basePath, h2Db);
+    public ServerInitializer(String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
+        serverHandler = new ServerHandler(basePath, metadataDriver, aclDriver);
     }
 
     @Override

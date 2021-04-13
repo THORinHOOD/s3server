@@ -1,19 +1,22 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.acl.AccessControlPolicy;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
-import com.thorinhood.db.H2DB;
+import com.thorinhood.db.AclDriver;
+import com.thorinhood.db.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Map;
@@ -21,12 +24,16 @@ import java.util.Optional;
 
 public class S3Util {
 
-    private final H2DB h2DB;
+    private final MetadataDriver metadataDriver;
+    private final AclDriver aclDriver;
     private final Map<String, Selector<String>> strSelectors;
     private final Map<String, Selector<Date>> dateSelectors;
 
-    public S3Util(H2DB h2DB) {
-        this.h2DB = h2DB;
+    private static final Logger log = LogManager.getLogger(S3Util.class);
+
+    public S3Util(MetadataDriver metadataDriver, AclDriver aclDriver) {
+        this.metadataDriver = metadataDriver;
+        this.aclDriver = aclDriver;
         strSelectors = Map.of(
                 S3Headers.IF_MATCH, new IfMatch(),
                 S3Headers.IF_NONE_MATCH, new IfNoneMatch()
@@ -35,6 +42,31 @@ public class S3Util {
                 S3Headers.IF_MODIFIED_SINCE, new IfModifiedSince(),
                 S3Headers.IF_UNMODIFIED_SINCE, new IfUnmodifiedSince()
         );
+    }
+
+    public AccessControlPolicy getObjectAcl(String basePath, String bucket, String key) throws S3Exception {
+        Optional<String> path = buildPath(basePath, bucket, key);
+        if (path.isEmpty()) {
+            //TODO
+            throw S3Exception.INTERNAL_ERROR("Can't build path to object")
+                    .setMessage("Can't build path to object")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+        return aclDriver.getObjectAcl(path.get());
+    }
+
+    public void putObjectAcl(String basePath, String bucket, String key, byte[] bytes)
+            throws S3Exception {
+        Optional<String> path = buildPath(basePath, bucket, key);
+        if (path.isEmpty()) {
+            //TODO
+            throw S3Exception.INTERNAL_ERROR("Can't build path to object")
+                    .setMessage("Can't build path to object")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+        aclDriver.putObjectAcl(path.get(), aclDriver.parseFromBytes(bytes));
     }
 
     public void createBucket(String bucket, String basePath) throws S3Exception {
@@ -57,7 +89,7 @@ public class S3Util {
     }
 
     public S3Object getObject(ParsedRequest request, String basePath) throws S3Exception {
-        Optional<String> absolutePath = buildPath(request.getBucket(), request.getKey(), basePath);
+        Optional<String> absolutePath = buildPath(basePath, request.getBucket(), request.getKey());
         if (absolutePath.isEmpty()) {
             //TODO
             return null;
@@ -81,22 +113,7 @@ public class S3Util {
         try {
             bytes = Files.readAllBytes(file.toPath());
             String eTag = calculateETag(bytes);
-            //TODO
-            if (request.containsHeader(S3Headers.IF_MATCH)) {
-                strSelectors.get(S3Headers.IF_MATCH).check(eTag, request.getHeader(S3Headers.IF_MATCH));
-            }
-            if (request.containsHeader(S3Headers.IF_MODIFIED_SINCE)) {
-                dateSelectors.get(S3Headers.IF_MODIFIED_SINCE).check(new Date(file.lastModified()),
-                        DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_MODIFIED_SINCE))); //TODO
-            }
-            if (request.containsHeader(S3Headers.IF_NONE_MATCH)) {
-                strSelectors.get(S3Headers.IF_NONE_MATCH).check(eTag, request.getHeader(S3Headers.IF_NONE_MATCH));
-            }
-            if (request.containsHeader(S3Headers.IF_UNMODIFIED_SINCE)) {
-                dateSelectors.get(S3Headers.IF_UNMODIFIED_SINCE).check(new Date(file.lastModified()),
-                        DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_UNMODIFIED_SINCE))); // TODO
-            }
-
+            checkSelectors(request, eTag, file);
             return S3Object.build()
                     .setAbsolutePath(absolutePath.get())
                     .setKey(request.getKey())
@@ -104,8 +121,8 @@ public class S3Util {
                     .setFile(file)
                     .setRawBytes(bytes)
                     .setLastModified(DateTimeUtil.parseDateTime(file))
-                    .setMetaData(h2DB.getFileMetadata(absolutePath.get()));
-        } catch (IOException | SQLException | ParseException exception) {
+                    .setMetaData(metadataDriver.getObjectMetadata(absolutePath.get()));
+        } catch (IOException | ParseException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
                     .setResource(File.separatorChar + request.getBucket() + request.getKey())
@@ -113,9 +130,27 @@ public class S3Util {
         }
     }
 
+    private void checkSelectors(ParsedRequest request, String eTag, File file) throws ParseException {
+        //TODO
+        if (request.containsHeader(S3Headers.IF_MATCH)) {
+            strSelectors.get(S3Headers.IF_MATCH).check(eTag, request.getHeader(S3Headers.IF_MATCH));
+        }
+        if (request.containsHeader(S3Headers.IF_MODIFIED_SINCE)) {
+            dateSelectors.get(S3Headers.IF_MODIFIED_SINCE).check(new Date(file.lastModified()),
+                    DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_MODIFIED_SINCE))); //TODO
+        }
+        if (request.containsHeader(S3Headers.IF_NONE_MATCH)) {
+            strSelectors.get(S3Headers.IF_NONE_MATCH).check(eTag, request.getHeader(S3Headers.IF_NONE_MATCH));
+        }
+        if (request.containsHeader(S3Headers.IF_UNMODIFIED_SINCE)) {
+            dateSelectors.get(S3Headers.IF_UNMODIFIED_SINCE).check(new Date(file.lastModified()),
+                    DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_UNMODIFIED_SINCE))); // TODO
+        }
+    }
+
     public S3Object putObject(String bucket, String key, String basePath, byte[] bytes, Map<String, String> metadata)
             throws S3Exception {
-        Optional<String> absolutePath = buildPath(bucket, key, basePath);
+        Optional<String> absolutePath = buildPath(basePath, bucket, key);
         if (absolutePath.isEmpty()) {
             //TODO
             return null;
@@ -128,11 +163,12 @@ public class S3Util {
                     .setRequestId("1");
         }
         try {
+            log.info("Starting creating file : " + file.getAbsolutePath() + " # " + file.getPath());
             if (file.createNewFile() || file.exists()) {
                 FileOutputStream outputStream = new FileOutputStream(file);
                 outputStream.write(bytes);
                 outputStream.close();
-                h2DB.setFileMetadata(absolutePath.get(), metadata);
+                metadataDriver.setObjectMetadata(absolutePath.get(), metadata);
                 return S3Object.build()
                         .setAbsolutePath(absolutePath.get())
                         .setKey(key)
@@ -147,16 +183,16 @@ public class S3Util {
                         .setResource(File.separatorChar + bucket + key)
                         .setRequestId("1");
             }
-        } catch (IOException | SQLException exception) {
+        } catch (IOException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                    .setMessage("Internal error : can't create object")
+                    .setMessage(exception.getMessage())
                     .setResource(File.separatorChar + bucket + key)
                     .setRequestId("1");
         }
     }
 
     //TODO
-    private Optional<String> buildPath(String bucket, String key, String basePath) {
+    private Optional<String> buildPath(String basePath, String bucket, String key) {
         if (key == null || bucket == null) {
             return Optional.empty();
         }

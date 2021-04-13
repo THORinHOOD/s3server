@@ -1,6 +1,7 @@
 package com.thorinhood;
 
-import com.thorinhood.db.H2DB;
+import com.thorinhood.db.AclDriver;
+import com.thorinhood.db.MetadataDriver;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -11,9 +12,9 @@ public class Server {
     private final int port;
     private final ServerInitializer serverInitializer;
 
-    public Server(int port, String basePath, H2DB h2Db) {
+    public Server(int port, String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
         this.port = port;
-        serverInitializer = new ServerInitializer(basePath, h2Db);
+        serverInitializer = new ServerInitializer(basePath, metadataDriver, aclDriver);
     }
 
     public void run() throws Exception {

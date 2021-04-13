@@ -120,7 +120,9 @@ public class RequestUtil {
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             return null;
         }
-        return uri.replace('/', File.separatorChar).substring(uri.indexOf("/", 1));
+        int paramsIndex = uri.indexOf("?");
+        return uri.replace('/', File.separatorChar).substring(uri.indexOf("/", 1),
+                paramsIndex != -1 ? paramsIndex : uri.length());
     }
 
     private static byte[] convert(ByteBuf byteBuf) {

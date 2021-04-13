@@ -1,10 +1,12 @@
 package com.thorinhood.db;
 
+import com.thorinhood.exceptions.S3Exception;
+
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class H2DB {
+public class H2DB implements MetadataDriver {
 
     private final static String TYPE = "jdbc:h2:file:";
     private final static String KEY = "META_KEY";
@@ -33,37 +35,51 @@ public class H2DB {
         return h2db;
     }
 
-    public boolean init() throws SQLException {
+    public boolean init() throws Exception {
         Statement st = conn.createStatement();
         return st.execute(QUERY_CREATE_TABLE);
     }
 
-    public void setFileMetadata(String keyFile, Map<String, String> metadata) throws SQLException {
-        PreparedStatement pstDlt = conn.prepareStatement(DELETE);
-        pstDlt.setString(1, keyFile);
-        pstDlt.execute();
-        for (String key : metadata.keySet()) {
-            String value = metadata.get(key);
-            PreparedStatement pst = conn.prepareStatement(INSERT);
-            pst.setString(1, keyFile);
-            pst.setString(2, key);
-            pst.setString(3, value);
-            pst.execute();
+    public void setObjectMetadata(String keyFile, Map<String, String> metadata) throws S3Exception {
+        try {
+            PreparedStatement pstDlt = conn.prepareStatement(DELETE);
+            pstDlt.setString(1, keyFile);
+            pstDlt.execute();
+            for (String key : metadata.keySet()) {
+                String value = metadata.get(key);
+                PreparedStatement pst = conn.prepareStatement(INSERT);
+                pst.setString(1, keyFile);
+                pst.setString(2, key);
+                pst.setString(3, value);
+                pst.execute();
+            }
+        } catch (SQLException exception) {
+            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
+                    .setMessage(exception.getMessage())
+                    .setResource("1")
+                    .setRequestId("1");
         }
     }
 
-    public Map<String, String> getFileMetadata(String keyFile) throws SQLException {
-        PreparedStatement pst = conn.prepareStatement(SELECT_ALL_BY_FILE);
-        pst.setString(1, keyFile);
-        Map<String, String> metadata = new HashMap<>();
-        try (ResultSet rs = pst.executeQuery()) {
-            while (rs.next()) {
-                String key = rs.getString(KEY);
-                String value = rs.getString(VALUE);
-                metadata.put(key, value);
+    public Map<String, String> getObjectMetadata(String key) throws S3Exception {
+        try {
+            PreparedStatement pst = conn.prepareStatement(SELECT_ALL_BY_FILE);
+            pst.setString(1, key);
+            Map<String, String> metadata = new HashMap<>();
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    String keyMeta = rs.getString(KEY);
+                    String valueMeta = rs.getString(VALUE);
+                    metadata.put(keyMeta, valueMeta);
+                }
             }
+            return metadata;
+        } catch (SQLException exception) {
+            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
+                    .setMessage(exception.getMessage())
+                    .setResource("1")
+                    .setRequestId("1");
         }
-        return metadata;
     }
 
 }

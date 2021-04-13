@@ -1,5 +1,6 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.ByteBuf;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -45,4 +46,16 @@ public class XmlUtil {
         }
     }
 
+    public static Document parseXmlFromBytes(byte[] bytes) throws S3Exception {
+        try {
+            DocumentBuilder dBuilder = DocumentBuilderFactory.newInstance()
+                    .newDocumentBuilder();
+            return dBuilder.parse(new InputSource(new StringReader(new String(bytes))));
+        } catch (Exception exception) {
+            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
+                    .setMessage(exception.getMessage())
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+    }
 }
