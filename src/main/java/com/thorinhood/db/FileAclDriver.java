@@ -5,6 +5,7 @@ import com.thorinhood.acl.AccessControlPolicy;
 import com.thorinhood.acl.Grant;
 import com.thorinhood.acl.Owner;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -42,12 +43,18 @@ public class FileAclDriver implements AclDriver {
     }
 
     @Override
-    public void putObjectAcl(String key, AccessControlPolicy acl) throws S3Exception {
+    public String putObjectAcl(String key, AccessControlPolicy acl) throws S3Exception {
         String pathToMetafile = getPathToAclFile(key);
         String xml = acl.buildXml();
+        File metaFile = new File(pathToMetafile);
+        String lastModified = null;
+        if (metaFile.exists()) {
+            lastModified = DateTimeUtil.parseDateTime(metaFile);
+        }
         try (FileOutputStream writer = new FileOutputStream(pathToMetafile)) {
             writer.write(xml.getBytes());
             writer.flush();
+            return lastModified != null ? lastModified : DateTimeUtil.parseDateTime(new File(pathToMetafile)); // TODO
         } catch (IOException e) {
             throw S3Exception.INTERNAL_ERROR(e.getMessage())
                     .setMessage(e.getMessage())

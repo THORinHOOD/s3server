@@ -56,7 +56,7 @@ public class S3Util {
         return aclDriver.getObjectAcl(path.get());
     }
 
-    public void putObjectAcl(String basePath, String bucket, String key, byte[] bytes)
+    public String putObjectAcl(String basePath, String bucket, String key, byte[] bytes)
             throws S3Exception {
         Optional<String> path = buildPath(basePath, bucket, key);
         if (path.isEmpty()) {
@@ -66,7 +66,7 @@ public class S3Util {
                     .setResource("1")
                     .setRequestId("1");
         }
-        aclDriver.putObjectAcl(path.get(), aclDriver.parseFromBytes(bytes));
+        return aclDriver.putObjectAcl(path.get(), aclDriver.parseFromBytes(bytes));
     }
 
     public void createBucket(String bucket, String basePath) throws S3Exception {
