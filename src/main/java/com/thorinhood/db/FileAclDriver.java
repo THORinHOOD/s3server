@@ -55,9 +55,9 @@ public class FileAclDriver implements AclDriver {
     }
 
     @Override
-    public String putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
+    public void putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
         String pathToMetafile = getPathToBucketAclFile(basePath, bucket);
-        return putAcl(pathToMetafile, acl);
+        putAcl(pathToMetafile, acl);
     }
 
     @Override

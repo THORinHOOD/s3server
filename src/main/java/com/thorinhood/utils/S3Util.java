@@ -78,12 +78,12 @@ public class S3Util {
         return aclDriver.getObjectAcl(path.get());
     }
 
-    public String putBucketAcl(String basePath, String bucket, byte[] bytes) throws S3Exception {
-        return putBucketAcl(basePath, bucket, aclDriver.parseFromBytes(bytes));
+    public void putBucketAcl(String basePath, String bucket, byte[] bytes) throws S3Exception {
+        putBucketAcl(basePath, bucket, aclDriver.parseFromBytes(bytes));
     }
 
-    public String putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
-        return aclDriver.putBucketAcl(basePath, bucket, acl);
+    public void putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
+        aclDriver.putBucketAcl(basePath, bucket, acl);
     }
 
     public String putObjectAcl(String basePath, String bucket, String key, byte[] bytes) throws S3Exception {

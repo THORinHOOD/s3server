@@ -56,15 +56,15 @@ public class GetObjectProcessor extends Processor {
         s3Object.getMetaData().forEach((metaKey, metaValue) ->
                 response.headers().set("x-amz-meta-" + metaKey, metaValue));
 
-        if (!keepAlive) {
-            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        }
+//        if (!keepAlive) {
+//            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+//        }
 
         context.write(response);
         ChannelFuture sendFileFuture;
         ChannelFuture lastContentFuture;
 
-        sendFileFuture = context.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength),
+        sendFileFuture = context.write(new DefaultFileRegion(raf.getChannel(), 0, s3Object.getFile().length()),
                 context.newProgressivePromise());
         lastContentFuture = context.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 

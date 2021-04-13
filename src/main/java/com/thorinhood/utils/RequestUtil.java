@@ -36,12 +36,11 @@ public class RequestUtil {
         Credential credential = Credential.parse(request);
         String requestSignature = extractSignature(request);
         String decodedContentLength = request.headers().get(S3Headers.X_AMZ_DECODED_CONTENT_LENGTH);
-        String bucket = extractBucketPath(request);
-        String key = extractKeyPath(request);
+        String[] bucketKey = extractBucketKey(request);
         Map<String, List<String>> queryParams = parseQueryParams(request);
         return ParsedRequest.builder()
-                .setBucket(bucket)
-                .setKey(key)
+                .setBucket(bucketKey[0])
+                .setKey(bucketKey[1])
                 .setBytes(bytes)
                 .setCredential(credential)
                 .setDecodedContentLength(decodedContentLength != null ? Integer.parseInt(decodedContentLength) : 0)
@@ -50,13 +49,6 @@ public class RequestUtil {
                 .setSignature(requestSignature)
                 .setQueryParams(queryParams)
                 .build();
-    }
-
-    private static String extractHeader(FullHttpRequest request, String header, String dflt) {
-        if (request.headers().contains(header)) {
-            return request.headers().get(header);
-        }
-        return dflt;
     }
 
     public static void checkRequest(FullHttpRequest request, ParsedRequest parsedRequest,
@@ -134,23 +126,25 @@ public class RequestUtil {
         return authorization.substring(authorization.indexOf("Signature=") + "Signature=".length());
     }
 
-    private static String extractBucketPath(FullHttpRequest request) {
+    private static String[] extractBucketKey(FullHttpRequest request) throws S3Exception {
         String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
         if (uri.isEmpty() || uri.charAt(0) != '/') {
-            return null;
+            throw S3Exception.build("Incorrect uri path")
+                    .setStatus(BAD_REQUEST)
+                    .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
+                    .setMessage("Invalid uri path")
+                    .setResource("1")
+                    .setRequestId("1");
         }
-        uri += "/";
-        return uri.substring(1, uri.indexOf("/", 1));
-    }
-
-    private static String extractKeyPath(FullHttpRequest request) {
-        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
-        if (uri.isEmpty() || uri.charAt(0) != '/') {
-            return null;
+        int paramsStart = uri.indexOf("?");
+        if (paramsStart != -1) {
+            uri = uri.substring(0, paramsStart);
         }
-        int paramsIndex = uri.indexOf("?");
-        return uri.replace('/', File.separatorChar).substring(uri.indexOf("/", 1),
-                paramsIndex != -1 ? paramsIndex : uri.length());
+        int secondSlash = uri.indexOf("/", 1);
+        if (secondSlash != -1) {
+            return new String[]{ uri.substring(1, secondSlash), uri.substring(secondSlash) };
+        }
+        return new String[] { uri.substring(1), "" };
     }
 
     private static byte[] convert(ByteBuf byteBuf) {

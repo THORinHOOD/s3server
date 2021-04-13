@@ -2,13 +2,11 @@ package com.thorinhood.handlers;
 
 import com.thorinhood.db.AclDriver;
 import com.thorinhood.db.MetadataDriver;
-import com.thorinhood.processors.PutObjectAclProcessor;
+import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.processors.*;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
 import com.thorinhood.utils.S3Util;
-import com.thorinhood.processors.CreateBucketProcessor;
-import com.thorinhood.processors.GetObjectProcessor;
-import com.thorinhood.processors.PutObjectProcessor;
 import com.thorinhood.utils.XmlUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,6 +32,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final CreateBucketProcessor createBucketProcessor;
     private final PutObjectProcessor putObjectProcessor;
     private final PutObjectAclProcessor putObjectAclProcessor;
+    private final PutBucketAclProcessor putBucketAclProcessor;
 
     public ServerHandler(String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
         S3Util s3Util = new S3Util(metadataDriver, aclDriver);
@@ -41,6 +40,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         createBucketProcessor = new CreateBucketProcessor(basePath, s3Util);
         putObjectProcessor = new PutObjectProcessor(basePath, s3Util);
         putObjectAclProcessor = new PutObjectAclProcessor(basePath, s3Util);
+        putBucketAclProcessor = new PutBucketAclProcessor(basePath, s3Util);
     }
 
     @Override
@@ -48,7 +48,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         try {
             boolean processed = process(context, request);
             if (!processed) {
-                log.error("Not found any processor for request");
+                log.error("Not found any processor for request or error occurred");
             }
             //TODO
         } catch (Exception exception) {
@@ -66,8 +66,14 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
 
+
         ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
-        RequestUtil.checkRequest(request, parsedRequest, secretKey);
+        try {
+            RequestUtil.checkRequest(request, parsedRequest, secretKey);
+        } catch (S3Exception exception) {
+            getObjectProcessor.sendError(context, request, exception); // TODO
+            return false;
+        }
 
         if (request.method().equals(HttpMethod.GET)) {
             getObjectProcessor.process(context, request, parsedRequest);
@@ -77,7 +83,11 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
             Map<String, List<String>> params = queryStringDecoder.parameters();
             if (params.containsKey("acl")) {
-                putObjectAclProcessor.process(context, request, parsedRequest);
+                if (!parsedRequest.getKey().equals("")) {
+                    putObjectAclProcessor.process(context, request, parsedRequest);
+                } else {
+                    putBucketAclProcessor.process(context, request, parsedRequest);
+                }
                 return true;
             }
         }
@@ -99,5 +109,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
         return false;
     }
+
+
 
 }

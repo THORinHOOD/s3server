@@ -32,7 +32,7 @@ public abstract class Processor {
         this.S3_UTIL = s3Util;
     }
 
-    protected void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
+    public void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, s3Exception.getStatus(), Unpooled.copiedBuffer(s3Exception.buildXmlText(), CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");

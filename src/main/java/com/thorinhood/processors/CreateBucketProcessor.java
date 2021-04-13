@@ -25,12 +25,11 @@ public class CreateBucketProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments)
             throws Exception {
-        String bucket = extractBucketPath(request);
         try {
-            S3_UTIL.createBucket(bucket, BASE_PATH);
+            S3_UTIL.createBucket(parsedRequest.getBucket(), BASE_PATH);
             sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime(),
-                "Location", File.separatorChar + bucket
+                "Location", File.separatorChar + parsedRequest.getBucket()
             ));
         } catch (S3Exception exception) {
             sendError(context, request, exception);
