@@ -1,9 +1,5 @@
 package com.thorinhood.processors;
 
-import com.thorinhood.acl.AccessControlPolicy;
-import com.thorinhood.acl.Grant;
-import com.thorinhood.acl.Grantee;
-import com.thorinhood.acl.Owner;
 import com.thorinhood.chunks.ChunkReader;
 import com.thorinhood.data.*;
 import com.thorinhood.exceptions.S3Exception;
@@ -21,8 +17,8 @@ public class PutObjectProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(PutObjectProcessor.class);
 
-    public PutObjectProcessor(String basePath, S3Util s3Util) {
-        super(basePath, s3Util);
+    public PutObjectProcessor(String basePath, S3Driver s3Driver) {
+        super(basePath, s3Driver);
     }
 
     @Override
@@ -50,7 +46,7 @@ public class PutObjectProcessor extends Processor {
 
     private void singleChunkRead(ParsedRequest parsedRequest, FullHttpRequest request, ChannelHandlerContext context)
         throws S3Exception {
-            S3Object s3Object = S3_UTIL.putObject(
+            S3Object s3Object = S3_DRIVER.putObject(
                     parsedRequest.getBucket(),
                     parsedRequest.getKey(),
                     BASE_PATH,

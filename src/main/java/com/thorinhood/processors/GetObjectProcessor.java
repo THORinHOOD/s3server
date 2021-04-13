@@ -2,8 +2,7 @@ package com.thorinhood.processors;
 
 import com.thorinhood.data.S3Object;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.utils.RequestUtil;
-import com.thorinhood.utils.S3Util;
+import com.thorinhood.utils.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
@@ -21,8 +20,8 @@ public class GetObjectProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(GetObjectProcessor.class);
 
-    public GetObjectProcessor(String basePath, S3Util s3Util) {
-        super(basePath, s3Util);
+    public GetObjectProcessor(String basePath, S3Driver s3Driver) {
+        super(basePath, s3Driver);
     }
 
     @Override
@@ -32,7 +31,7 @@ public class GetObjectProcessor extends Processor {
 
         S3Object s3Object;
         try {
-            s3Object = S3_UTIL.getObject(parsedRequest, BASE_PATH);
+            s3Object = S3_DRIVER.getObject(parsedRequest, BASE_PATH);
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);
             log.error(s3Exception.getMessage(), s3Exception);

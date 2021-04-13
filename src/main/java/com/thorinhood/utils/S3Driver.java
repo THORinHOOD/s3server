@@ -4,8 +4,8 @@ import com.thorinhood.acl.*;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
-import com.thorinhood.db.AclDriver;
-import com.thorinhood.db.MetadataDriver;
+import com.thorinhood.drivers.AclDriver;
+import com.thorinhood.drivers.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -23,7 +23,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 
-public class S3Util {
+public class S3Driver {
 
     private final MetadataDriver metadataDriver;
     private final AclDriver aclDriver;
@@ -47,9 +47,9 @@ public class S3Util {
             .build();
 
 
-    private static final Logger log = LogManager.getLogger(S3Util.class);
+    private static final Logger log = LogManager.getLogger(S3Driver.class);
 
-    public S3Util(MetadataDriver metadataDriver, AclDriver aclDriver) {
+    public S3Driver(MetadataDriver metadataDriver, AclDriver aclDriver) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
         strSelectors = Map.of(

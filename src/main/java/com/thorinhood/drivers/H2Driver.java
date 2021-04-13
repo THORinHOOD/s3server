@@ -1,4 +1,4 @@
-package com.thorinhood.db;
+package com.thorinhood.drivers;
 
 import com.thorinhood.exceptions.S3Exception;
 
@@ -6,7 +6,7 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class H2DB implements MetadataDriver {
+public class H2Driver implements MetadataDriver {
 
     private final static String TYPE = "jdbc:h2:file:";
     private final static String KEY = "META_KEY";
@@ -20,19 +20,19 @@ public class H2DB implements MetadataDriver {
     private final static String SELECT_ALL_BY_FILE = String.format("SELECT * FROM META WHERE %s = ?", KEY_FILE);
     private final static String DELETE = String.format("DELETE FROM META WHERE %s = ?", KEY_FILE);
 
-    private static H2DB h2db;
+    private static H2Driver h2Driver;
     private final Connection conn;
 
-    private H2DB(Connection conn) {
+    private H2Driver(Connection conn) {
         this.conn = conn;
     }
 
-    public static H2DB getInstance(String url, String user, String password) throws SQLException {
-        if (h2db == null) {
+    public static H2Driver getInstance(String url, String user, String password) throws SQLException {
+        if (h2Driver == null) {
             Connection conn = DriverManager.getConnection(TYPE + url + ";mode=MySQL", user, password);
-            h2db = new H2DB(conn);
+            h2Driver = new H2Driver(conn);
         }
-        return h2db;
+        return h2Driver;
     }
 
     public boolean init() throws Exception {

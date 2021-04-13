@@ -1,7 +1,7 @@
 package com.thorinhood.processors;
 
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.utils.S3Util;
+import com.thorinhood.utils.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -17,8 +17,8 @@ public class CreateBucketProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(CreateBucketProcessor.class);
 
-    public CreateBucketProcessor(String basePath, S3Util s3Util) {
-        super(basePath, s3Util);
+    public CreateBucketProcessor(String basePath, S3Driver s3Driver) {
+        super(basePath, s3Driver);
     }
 
     @Override
@@ -26,7 +26,7 @@ public class CreateBucketProcessor extends Processor {
                                 Object[] arguments)
             throws Exception {
         try {
-            S3_UTIL.createBucket(parsedRequest.getBucket(), BASE_PATH);
+            S3_DRIVER.createBucket(parsedRequest.getBucket(), BASE_PATH);
             sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime(),
                 "Location", File.separatorChar + parsedRequest.getBucket()

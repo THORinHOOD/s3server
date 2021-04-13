@@ -1,7 +1,7 @@
 package com.thorinhood;
 
-import com.thorinhood.db.AclDriver;
-import com.thorinhood.db.MetadataDriver;
+import com.thorinhood.drivers.AclDriver;
+import com.thorinhood.drivers.MetadataDriver;
 import com.thorinhood.handlers.ServerHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;

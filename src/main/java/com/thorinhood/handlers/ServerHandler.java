@@ -1,12 +1,12 @@
 package com.thorinhood.handlers;
 
-import com.thorinhood.db.AclDriver;
-import com.thorinhood.db.MetadataDriver;
+import com.thorinhood.drivers.AclDriver;
+import com.thorinhood.drivers.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.*;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
-import com.thorinhood.utils.S3Util;
+import com.thorinhood.utils.S3Driver;
 import com.thorinhood.utils.XmlUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,12 +35,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final PutBucketAclProcessor putBucketAclProcessor;
 
     public ServerHandler(String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
-        S3Util s3Util = new S3Util(metadataDriver, aclDriver);
-        getObjectProcessor = new GetObjectProcessor(basePath, s3Util);
-        createBucketProcessor = new CreateBucketProcessor(basePath, s3Util);
-        putObjectProcessor = new PutObjectProcessor(basePath, s3Util);
-        putObjectAclProcessor = new PutObjectAclProcessor(basePath, s3Util);
-        putBucketAclProcessor = new PutBucketAclProcessor(basePath, s3Util);
+        S3Driver s3Driver = new S3Driver(metadataDriver, aclDriver);
+        getObjectProcessor = new GetObjectProcessor(basePath, s3Driver);
+        createBucketProcessor = new CreateBucketProcessor(basePath, s3Driver);
+        putObjectProcessor = new PutObjectProcessor(basePath, s3Driver);
+        putObjectAclProcessor = new PutObjectAclProcessor(basePath, s3Driver);
+        putBucketAclProcessor = new PutBucketAclProcessor(basePath, s3Driver);
     }
 
     @Override

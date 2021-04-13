@@ -1,4 +1,4 @@
-package com.thorinhood.db;
+package com.thorinhood.drivers;
 
 import com.thorinhood.exceptions.S3Exception;
 

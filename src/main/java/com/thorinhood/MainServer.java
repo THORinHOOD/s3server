@@ -1,6 +1,6 @@
 package com.thorinhood;
 
-import com.thorinhood.db.*;
+import com.thorinhood.drivers.*;
 import com.thorinhood.utils.ArgumentParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -44,11 +44,11 @@ public class MainServer {
 
     private static MetadataDriver metadataDriverInit(Map<String, String> parsedArgs) throws Exception {
         if (parsedArgs.get(DB_TYPE).equals("h2")) {
-            H2DB h2Db = H2DB.getInstance(parsedArgs.get(DB_PATH), parsedArgs.get(DB_USER), parsedArgs.get(DB_PASSWORD));
-            h2Db.init();
+            H2Driver h2Driver = H2Driver.getInstance(parsedArgs.get(DB_PATH), parsedArgs.get(DB_USER), parsedArgs.get(DB_PASSWORD));
+            h2Driver.init();
             log.info("database type : h2");
             log.info("database path : {}", parsedArgs.get(DB_PATH));
-            return h2Db;
+            return h2Driver;
         } else if (parsedArgs.get(DB_TYPE).equals("files")) {
             FileMetadataDriver fileMetadataDriver = new FileMetadataDriver();
             fileMetadataDriver.init();

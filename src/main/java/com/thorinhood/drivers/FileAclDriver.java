@@ -1,4 +1,4 @@
-package com.thorinhood.db;
+package com.thorinhood.drivers;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.thorinhood.acl.AccessControlPolicy;

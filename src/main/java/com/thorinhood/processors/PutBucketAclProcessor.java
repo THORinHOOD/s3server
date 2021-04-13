@@ -3,7 +3,7 @@ package com.thorinhood.processors;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.utils.S3Util;
+import com.thorinhood.utils.S3Driver;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import org.apache.logging.log4j.LogManager;
@@ -17,15 +17,15 @@ public class PutBucketAclProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(PutBucketAclProcessor.class);
 
-    public PutBucketAclProcessor(String basePath, S3Util s3Util) {
-        super(basePath, s3Util);
+    public PutBucketAclProcessor(String basePath, S3Driver s3Driver) {
+        super(basePath, s3Driver);
     }
 
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         try {
-            S3_UTIL.putBucketAcl(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getBytes());
+            S3_DRIVER.putBucketAcl(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getBytes());
             sendResponseWithoutContent(context, OK, request, Map.of(
                     "Date", DateTimeUtil.currentDateTime(),
                     "Content-Length", 0
