@@ -1,5 +1,6 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.S3Util;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,7 +22,8 @@ public class CreateBucketProcessor extends Processor {
     }
 
     @Override
-    protected void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments)
+    protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
+                                Object[] arguments)
             throws Exception {
         String bucket = extractBucketPath(request);
         try {

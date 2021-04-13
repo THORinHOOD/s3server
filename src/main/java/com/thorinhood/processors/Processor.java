@@ -1,5 +1,6 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.S3Util;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.Unpooled;
@@ -96,13 +97,14 @@ public abstract class Processor {
         return uri.replace('/', File.separatorChar).substring(uri.indexOf("/", 1));
     }
 
-    public void process(ChannelHandlerContext context, FullHttpRequest request, Object... arguments) throws Exception {
+    public void process(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
+                        Object... arguments) throws Exception {
         if (!request.decoderResult().isSuccess()) {
             sendError(context, BAD_REQUEST, request);
         }
-        processInner(context, request, arguments);
+        processInner(context, request, parsedRequest, arguments);
     }
 
-    protected abstract void processInner(ChannelHandlerContext context, FullHttpRequest request, Object... arguments)
-            throws Exception;
+    protected abstract void processInner(ChannelHandlerContext context, FullHttpRequest request,
+                                         ParsedRequest parsedRequest, Object... arguments) throws Exception;
 }

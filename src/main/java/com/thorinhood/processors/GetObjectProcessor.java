@@ -26,13 +26,9 @@ public class GetObjectProcessor extends Processor {
     }
 
     @Override
-    public void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments) throws Exception {
+    public void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
+                             Object[] arguments) throws Exception {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
-
-        String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
-
-        ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
-        RequestUtil.checkRequest(request, parsedRequest, secretKey);
 
         S3Object s3Object;
         try {

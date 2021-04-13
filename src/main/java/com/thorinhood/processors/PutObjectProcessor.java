@@ -26,19 +26,14 @@ public class PutObjectProcessor extends Processor {
     }
 
     @Override
-    protected void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments)
-            throws Exception {
+    protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
+                                Object[] arguments) throws Exception {
         try {
-            String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
-
-            ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
-            RequestUtil.checkRequest(request, parsedRequest, secretKey);
-
             if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK ||
                 parsedRequest.getPayloadSignType() == PayloadSignType.UNSIGNED_PAYLOAD) {
                 singleChunkRead(parsedRequest, request, context);
             } else {
-                multipleChunksRead(parsedRequest, request, context, secretKey);
+                multipleChunksRead(parsedRequest, request, context, (String) arguments[0]);
             }
         } catch (S3Exception s3Exception) {
             sendError(context, request, s3Exception);

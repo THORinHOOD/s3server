@@ -3,6 +3,8 @@ package com.thorinhood.handlers;
 import com.thorinhood.db.AclDriver;
 import com.thorinhood.db.MetadataDriver;
 import com.thorinhood.processors.PutObjectAclProcessor;
+import com.thorinhood.utils.ParsedRequest;
+import com.thorinhood.utils.RequestUtil;
 import com.thorinhood.utils.S3Util;
 import com.thorinhood.processors.CreateBucketProcessor;
 import com.thorinhood.processors.GetObjectProcessor;
@@ -61,15 +63,21 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     }
 
     private boolean process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
+
+        String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
+
+        ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
+        RequestUtil.checkRequest(request, parsedRequest, secretKey);
+
         if (request.method().equals(HttpMethod.GET)) {
-            getObjectProcessor.process(context, request);
+            getObjectProcessor.process(context, request, parsedRequest);
             return true;
         }
         if (request.method().equals(HttpMethod.PUT)) {
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
             Map<String, List<String>> params = queryStringDecoder.parameters();
             if (params.containsKey("acl")) {
-                putObjectAclProcessor.process(context, request);
+                putObjectAclProcessor.process(context, request, parsedRequest);
                 return true;
             }
         }
@@ -80,13 +88,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 NodeList nodeList = content.get().getChildNodes();
                 if (nodeList.getLength() == 1 && nodeList.item(0).getNodeName()
                         .equals("CreateBucketConfiguration")) {
-                    createBucketProcessor.process(context, request, content.get());
+                    createBucketProcessor.process(context, request, parsedRequest, content.get());
                     return true;
                 }
             }
         }
         if (request.method().equals(HttpMethod.PUT)) {
-            putObjectProcessor.process(context, request);
+            putObjectProcessor.process(context, request, parsedRequest, secretKey);
             return true;
         }
         return false;

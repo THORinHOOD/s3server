@@ -24,14 +24,9 @@ public class PutObjectAclProcessor extends Processor {
     }
 
     @Override
-    protected void processInner(ChannelHandlerContext context, FullHttpRequest request, Object... arguments)
-            throws Exception {
+    protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
+                                Object... arguments) throws Exception {
         try {
-            String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
-
-            ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
-            RequestUtil.checkRequest(request, parsedRequest, secretKey);
-
             String lastModified = S3_UTIL.putObjectAcl(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getKey(),
                     parsedRequest.getBytes());
             sendResponseWithoutContent(context, OK, request, Map.of(
