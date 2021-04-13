@@ -12,7 +12,7 @@ import java.util.Map;
 
 public interface XmlObject {
 
-    default String buildXml() throws S3Exception {
+    default String buildXmlText() throws S3Exception {
         try {
             DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder docBuilder = docFactory.newDocumentBuilder();

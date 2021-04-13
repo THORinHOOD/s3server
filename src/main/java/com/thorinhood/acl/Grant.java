@@ -9,12 +9,8 @@ import java.io.Serializable;
 
 public class Grant implements Serializable, XmlObject {
 
-    enum Permission {
-        FULL_CONTROL, WRITE, WRITE_ACP, READ, READ_ACP;
-    }
-
     private Grantee grantee;
-    private String permission;
+    private Permission permission;
 
     public static Grant buildFromNode(Node node) {
         return new Builder().setFromRootNode(node).build();
@@ -31,7 +27,7 @@ public class Grant implements Serializable, XmlObject {
         return grantee;
     }
 
-    public String getPermission() {
+    public Permission getPermission() {
         return permission;
     }
 
@@ -39,7 +35,7 @@ public class Grant implements Serializable, XmlObject {
     public Element buildXmlRootNode(Document doc) {
         return createElement(doc, "Grant",
                 grantee != null ? grantee.buildXmlRootNode(doc) : null,
-                permission != null ? createElement(doc, "Permission", doc.createTextNode(permission)) : null);
+                permission != null ? createElement(doc, "Permission", doc.createTextNode(permission.name())) : null);
     }
 
     public static class Builder {
@@ -54,7 +50,7 @@ public class Grant implements Serializable, XmlObject {
             return this;
         }
 
-        public Builder setPermission(String permission) {
+        public Builder setPermission(Permission permission) {
             grant.permission = permission;
             return this;
         }
@@ -63,7 +59,7 @@ public class Grant implements Serializable, XmlObject {
             for (int i = 0; i < node.getChildNodes().getLength(); i++) {
                 Node child = node.getChildNodes().item(i);
                 if (child.getNodeName().equals("Permission")) {
-                    grant.permission = child.getChildNodes().item(0).getNodeValue();
+                    grant.permission = Permission.valueOf(child.getChildNodes().item(0).getNodeValue());
                 } else if (child.getNodeName().equals("Grantee")) {
                     grant.grantee = Grantee.buildFromNode(child);
                 }

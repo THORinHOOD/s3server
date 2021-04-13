@@ -33,7 +33,7 @@ public abstract class Processor {
 
     protected void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
         FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, s3Exception.getStatus(), Unpooled.copiedBuffer(s3Exception.buildXml(), CharsetUtil.UTF_8));
+                HTTP_1_1, s3Exception.getStatus(), Unpooled.copiedBuffer(s3Exception.buildXmlText(), CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
         sendAndCleanupConnection(ctx, response, request);
     }

@@ -1,9 +1,6 @@
 package com.thorinhood.utils;
 
-import com.thorinhood.acl.AccessControlPolicy;
-import com.thorinhood.acl.Grant;
-import com.thorinhood.acl.Grantee;
-import com.thorinhood.acl.Owner;
+import com.thorinhood.acl.*;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
@@ -32,6 +29,23 @@ public class S3Util {
     private final AclDriver aclDriver;
     private final Map<String, Selector<String>> strSelectors;
     private final Map<String, Selector<Date>> dateSelectors;
+    private final AccessControlPolicy defaultOwnerAcl = AccessControlPolicy.builder()    // TODO
+            .setOwner(Owner.builder()
+                    .setId("1")
+                    .setDisplayName("asgar")
+                    .build())
+            .setAccessControlList(Collections.singletonList(
+                    Grant.builder()
+                            .setGrantee(Grantee.builder()
+                                    .setDisplayName("asgar")
+                                    .setId("1")
+                                    .setType("Canonical User")
+                                    .build())
+                            .setPermission(Permission.FULL_CONTROL)
+                            .build()
+            ))
+            .build();
+
 
     private static final Logger log = LogManager.getLogger(S3Util.class);
 
@@ -48,6 +62,10 @@ public class S3Util {
         );
     }
 
+    public AccessControlPolicy getBucketAcl(String basePath, String bucket) throws S3Exception {
+        return aclDriver.getBucketAcl(basePath, bucket);
+    }
+
     public AccessControlPolicy getObjectAcl(String basePath, String bucket, String key) throws S3Exception {
         Optional<String> path = buildPath(basePath, bucket, key);
         if (path.isEmpty()) {
@@ -60,13 +78,19 @@ public class S3Util {
         return aclDriver.getObjectAcl(path.get());
     }
 
-    public String putObjectAcl(String basePath, String bucket, String key, byte[] bytes)
-            throws S3Exception {
+    public String putBucketAcl(String basePath, String bucket, byte[] bytes) throws S3Exception {
+        return putBucketAcl(basePath, bucket, aclDriver.parseFromBytes(bytes));
+    }
+
+    public String putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
+        return aclDriver.putBucketAcl(basePath, bucket, acl);
+    }
+
+    public String putObjectAcl(String basePath, String bucket, String key, byte[] bytes) throws S3Exception {
         return putObjectAcl(basePath, bucket, key, aclDriver.parseFromBytes(bytes));
     }
 
-    public String putObjectAcl(String basePath, String bucket, String key, AccessControlPolicy acl)
-            throws S3Exception {
+    public String putObjectAcl(String basePath, String bucket, String key, AccessControlPolicy acl) throws S3Exception {
         Optional<String> path = buildPath(basePath, bucket, key);
         if (path.isEmpty()) {
             //TODO
@@ -95,6 +119,7 @@ public class S3Util {
                     .setResource(File.separatorChar + bucket)
                     .setRequestId("1");
         }
+        putBucketAcl(basePath, bucket, defaultOwnerAcl);
     }
 
     public S3Object getObject(ParsedRequest request, String basePath) throws S3Exception {
@@ -178,23 +203,7 @@ public class S3Util {
                 outputStream.write(bytes);
                 outputStream.close();
                 metadataDriver.setObjectMetadata(absolutePath.get(), metadata);
-                putObjectAcl(basePath, bucket, key,
-                        AccessControlPolicy.builder()    // TODO
-                                .setOwner(Owner.builder()
-                                        .setId("1")
-                                        .setDisplayName("asgar")
-                                        .build())
-                                .setAccessControlList(Collections.singletonList(
-                                        Grant.builder()
-                                                .setGrantee(Grantee.builder()
-                                                        .setDisplayName("asgar")
-                                                        .setId("1")
-                                                        .setType("Canonical User")
-                                                        .build())
-                                                .setPermission("FULL_CONTROL")
-                                                .build()
-                                ))
-                                .build());
+                putObjectAcl(basePath, bucket, key, defaultOwnerAcl);
                 return S3Object.build()
                         .setAbsolutePath(absolutePath.get())
                         .setKey(key)

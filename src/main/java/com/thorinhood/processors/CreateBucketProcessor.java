@@ -23,7 +23,7 @@ public class CreateBucketProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, Object[] arguments)
             throws Exception {
-        String bucket = extractBucket(request);
+        String bucket = extractBucketPath(request);
         try {
             S3_UTIL.createBucket(bucket, BASE_PATH);
             sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(

@@ -44,8 +44,30 @@ public class FileAclDriver implements AclDriver {
 
     @Override
     public String putObjectAcl(String key, AccessControlPolicy acl) throws S3Exception {
-        String pathToMetafile = getPathToAclFile(key);
-        String xml = acl.buildXml();
+        String pathToMetafile = getPathToObjectAclFile(key);
+        return putAcl(pathToMetafile, acl);
+    }
+
+    @Override
+    public AccessControlPolicy getObjectAcl(String key) throws S3Exception {
+        String pathToMetafile = getPathToObjectAclFile(key);
+        return getAcl(pathToMetafile);
+    }
+
+    @Override
+    public String putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
+        String pathToMetafile = getPathToBucketAclFile(basePath, bucket);
+        return putAcl(pathToMetafile, acl);
+    }
+
+    @Override
+    public AccessControlPolicy getBucketAcl(String basePath, String bucket) throws S3Exception {
+        String pathToMetafile = getPathToBucketAclFile(basePath, bucket);
+        return getAcl(pathToMetafile);
+    }
+
+    private String putAcl(String pathToMetafile, AccessControlPolicy acl) {
+        String xml = acl.buildXmlText();
         File metaFile = new File(pathToMetafile);
         String lastModified = null;
         if (metaFile.exists()) {
@@ -63,24 +85,28 @@ public class FileAclDriver implements AclDriver {
         }
     }
 
-    @Override
-    public AccessControlPolicy getObjectAcl(String key) throws S3Exception {
-        String pathToMetafile = getPathToAclFile(key);
-        File file = new File(pathToMetafile);
+    private AccessControlPolicy getAcl(String pathToMetaFile) {
+        File file = new File(pathToMetaFile);
         if (!file.exists()) {
             return null; // TODO
         }
         try {
-            return xmlMapper.readValue(inputStreamToString(new FileInputStream(file)), AccessControlPolicy.class);
+            byte[] bytes = new FileInputStream(file).readAllBytes();
+            Document document = XmlUtil.parseXmlFromBytes(bytes);
+            return AccessControlPolicy.buildFromNode(document.getDocumentElement());
         } catch (IOException exception) {
             throw S3Exception.INTERNAL_ERROR(exception.getMessage())
-                .setMessage(exception.getMessage())
-                .setResource("1")
-                .setRequestId("1");
+                    .setMessage(exception.getMessage())
+                    .setResource("1")
+                    .setRequestId("1");
         }
     }
 
-    private String getPathToAclFile(String key) {
+    private String getPathToBucketAclFile(String basePath, String bucket) {
+        return basePath + File.separatorChar + bucket + ".acl";
+    }
+
+    private String getPathToObjectAclFile(String key) {
         return key.substring(0, key.lastIndexOf(".")) + ".acl";
     }
 
@@ -114,30 +140,5 @@ public class FileAclDriver implements AclDriver {
         }
         return sb.toString();
     }
-
-//    public class MyNamespaceMapper extends NamespacePrefixMapper {
-//
-//        private static final String FOO_PREFIX = ""; // DEFAULT NAMESPACE
-//        private static final String FOO_URI = "http://www.example.com/FOO";
-//
-//        private static final String BAR_PREFIX = "bar";
-//        private static final String BAR_URI = "http://www.example.com/BAR";
-//
-//        @Override
-//        public String getPreferredPrefix(String namespaceUri, String suggestion, boolean requirePrefix) {
-//            if(FOO_URI.equals(namespaceUri)) {
-//                return FOO_PREFIX;
-//            } else if(BAR_URI.equals(namespaceUri)) {
-//                return BAR_PREFIX;
-//            }
-//            return suggestion;
-//        }
-//
-//        @Override
-//        public String[] getPreDeclaredNamespaceUris() {
-//            return new String[] { FOO_URI, BAR_URI };
-//        }
-//
-//    }
 
 }
