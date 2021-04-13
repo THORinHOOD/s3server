@@ -34,8 +34,8 @@ public class Owner implements Serializable, XmlObject {
     @Override
     public Element buildXmlRootNode(Document doc) {
         return createElement(doc, "Owner",
-                    createElement(doc, "ID", doc.createTextNode(id)),
-                    createElement(doc, "DisplayName", doc.createTextNode(displayName)));
+                id != null ? createElement(doc, "ID", doc.createTextNode(id)) : null,
+                displayName != null ? createElement(doc, "DisplayName", doc.createTextNode(displayName)) : null);
     }
 
     public static class Builder {

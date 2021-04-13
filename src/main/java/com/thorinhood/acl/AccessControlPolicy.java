@@ -12,7 +12,7 @@ public class AccessControlPolicy implements Serializable, XmlObject {
 
     private Owner owner;
     private List<Grant> accessControlList;
-    private String xmlns;
+    private String xmlns = "http://s3.amazonaws.com/doc/2006-03-01/";
 
     public static Builder builder() {
         return new Builder();
@@ -36,12 +36,12 @@ public class AccessControlPolicy implements Serializable, XmlObject {
     @Override
     public Element buildXmlRootNode(Document doc) {
         Element accessControlListNode = doc.createElement("AccessControlList");
-        Element root = createElement(doc, "AccessControlPolicy",
-                createElement(doc, "Owner", owner.buildXmlRootNode(doc)),
-                accessControlListNode);
         accessControlList.forEach(grant -> {
             accessControlListNode.appendChild(grant.buildXmlRootNode(doc));
         });
+        Element root = createElement(doc, "AccessControlPolicy",
+                owner != null ? createElement(doc, "Owner", owner.buildXmlRootNode(doc)) : null,
+                accessControlList != null && !accessControlList.isEmpty() ? accessControlListNode : null);
         return appendAttributes(root, Map.of(
             "xmlns", xmlns
         ));

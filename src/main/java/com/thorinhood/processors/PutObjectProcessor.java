@@ -1,5 +1,9 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.acl.AccessControlPolicy;
+import com.thorinhood.acl.Grant;
+import com.thorinhood.acl.Grantee;
+import com.thorinhood.acl.Owner;
 import com.thorinhood.chunks.ChunkReader;
 import com.thorinhood.data.*;
 import com.thorinhood.exceptions.S3Exception;
@@ -56,6 +60,7 @@ public class PutObjectProcessor extends Processor {
                     parsedRequest.getKey(),
                     BASE_PATH,
                     parsedRequest.getBytes(), RequestUtil.extractMetaData(request));
+
             if (s3Object == null) {
                 sendError(context, INTERNAL_SERVER_ERROR, request);
                 return;

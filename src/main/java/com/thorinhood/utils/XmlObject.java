@@ -30,15 +30,20 @@ public interface XmlObject {
 
     default Element createElement(Document doc, String key, Node... values) {
         Element element = doc.createElement(key);
-        doc.createTextNode("");
         for (Node child : values) {
-            element.appendChild(child);
+            if (child != null) {
+                element.appendChild(child);
+            }
         }
         return element;
     }
 
     default Element appendAttributes(Element element, Map<String, String> attributes) {
-        attributes.forEach(element::setAttribute);
+        attributes.forEach((key, value) -> {
+            if (value != null) {
+                element.setAttribute(key, value);
+            }
+        });
         return element;
     }
 

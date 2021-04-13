@@ -1,6 +1,9 @@
 package com.thorinhood.utils;
 
 import com.thorinhood.acl.AccessControlPolicy;
+import com.thorinhood.acl.Grant;
+import com.thorinhood.acl.Grantee;
+import com.thorinhood.acl.Owner;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
@@ -18,6 +21,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.text.ParseException;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -58,6 +62,11 @@ public class S3Util {
 
     public String putObjectAcl(String basePath, String bucket, String key, byte[] bytes)
             throws S3Exception {
+        return putObjectAcl(basePath, bucket, key, aclDriver.parseFromBytes(bytes));
+    }
+
+    public String putObjectAcl(String basePath, String bucket, String key, AccessControlPolicy acl)
+            throws S3Exception {
         Optional<String> path = buildPath(basePath, bucket, key);
         if (path.isEmpty()) {
             //TODO
@@ -66,7 +75,7 @@ public class S3Util {
                     .setResource("1")
                     .setRequestId("1");
         }
-        return aclDriver.putObjectAcl(path.get(), aclDriver.parseFromBytes(bytes));
+        return aclDriver.putObjectAcl(path.get(), acl);
     }
 
     public void createBucket(String bucket, String basePath) throws S3Exception {
@@ -169,6 +178,23 @@ public class S3Util {
                 outputStream.write(bytes);
                 outputStream.close();
                 metadataDriver.setObjectMetadata(absolutePath.get(), metadata);
+                putObjectAcl(basePath, bucket, key,
+                        AccessControlPolicy.builder()    // TODO
+                                .setOwner(Owner.builder()
+                                        .setId("1")
+                                        .setDisplayName("asgar")
+                                        .build())
+                                .setAccessControlList(Collections.singletonList(
+                                        Grant.builder()
+                                                .setGrantee(Grantee.builder()
+                                                        .setDisplayName("asgar")
+                                                        .setId("1")
+                                                        .setType("Canonical User")
+                                                        .build())
+                                                .setPermission("FULL_CONTROL")
+                                                .build()
+                                ))
+                                .build());
                 return S3Object.build()
                         .setAbsolutePath(absolutePath.get())
                         .setKey(key)

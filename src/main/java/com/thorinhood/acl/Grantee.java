@@ -18,7 +18,7 @@ public class Grantee implements Serializable, XmlObject {
     private String emailAddress;
     private String id;
     private String type;
-    private String xsi;
+    private String xsi = "http://www.w3.org/2001/XMLSchema-instance";
 
     public static Grantee buildFromNode(Node node) {
         return new Builder().setFromRootNode(node).build();
@@ -54,9 +54,9 @@ public class Grantee implements Serializable, XmlObject {
     @Override
     public Element buildXmlRootNode(Document doc) {
         Element root = createElement(doc, "Grantee",
-                createElement(doc, "DisplayName", doc.createTextNode(displayName)),
-                createElement(doc, "EmailAddress", doc.createTextNode(emailAddress)),
-                createElement(doc, "ID", doc.createTextNode(id)));
+                displayName != null ? createElement(doc, "DisplayName", doc.createTextNode(displayName)) : null,
+                emailAddress != null ? createElement(doc, "EmailAddress", doc.createTextNode(emailAddress)) : null,
+                id != null ? createElement(doc, "ID", doc.createTextNode(id)) : null);
         return appendAttributes(root, Map.of(
                 "xmlns:xsi", xsi,
                 "xsi:type", type

@@ -38,8 +38,8 @@ public class Grant implements Serializable, XmlObject {
     @Override
     public Element buildXmlRootNode(Document doc) {
         return createElement(doc, "Grant",
-                grantee.buildXmlRootNode(doc),
-                createElement(doc, "Permission", doc.createTextNode(permission)));
+                grantee != null ? grantee.buildXmlRootNode(doc) : null,
+                permission != null ? createElement(doc, "Permission", doc.createTextNode(permission)) : null);
     }
 
     public static class Builder {

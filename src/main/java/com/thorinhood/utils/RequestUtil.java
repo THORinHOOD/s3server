@@ -87,7 +87,11 @@ public class RequestUtil {
 
     private static Map<String, List<String>> parseQueryParams(FullHttpRequest request) {
         String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
-        String params = uri.substring(uri.indexOf("?") + 1);
+        int indexStart = uri.indexOf("?");
+        if (indexStart == -1) {
+            return Map.of();
+        }
+        String params = uri.substring(indexStart + 1);
         String[] splittedParams = params.split("&");
         Map<String, List<String>> result = new HashMap<>();
         for (String param : splittedParams) {
