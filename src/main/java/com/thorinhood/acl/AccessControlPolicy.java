@@ -42,11 +42,13 @@ public class AccessControlPolicy implements Serializable, XmlObject {
     @Override
     public Element buildXmlRootNode(Document doc) {
         Element accessControlListNode = doc.createElement("AccessControlList");
-        accessControlList.forEach(grant -> {
-            accessControlListNode.appendChild(grant.buildXmlRootNode(doc));
-        });
+        if (accessControlList != null) {
+            accessControlList.forEach(grant -> {
+                accessControlListNode.appendChild(grant.buildXmlRootNode(doc));
+            });
+        }
         Element root = createElement(doc, "AccessControlPolicy",
-                owner != null ? createElement(doc, "Owner", owner.buildXmlRootNode(doc)) : null,
+                owner != null ? owner.buildXmlRootNode(doc) : null,
                 accessControlList != null && !accessControlList.isEmpty() ? accessControlListNode : null);
         return appendAttributes(root, Map.of(
             "xmlns", xmlns
@@ -76,17 +78,19 @@ public class AccessControlPolicy implements Serializable, XmlObject {
         }
 
         public Builder setFromRootNode(Node node) {
-            Node child = node.getChildNodes().item(0);
-            if (child.getNodeName().equals("Owner")) {
-                accessControlPolicy.owner = Owner.buildFromNode(child.getChildNodes().item(0));
-            } else if (child.getNodeName().equals("AccessControlList")) {
-                List<Grant> grants = new ArrayList<>();
-                Node list = child.getChildNodes().item(0);
-                for (int i = 0; i < list.getChildNodes().getLength(); i++) {
-                    Node grantNode = list.getChildNodes().item(i);
-                    grants.add(Grant.buildFromNode(grantNode));
+            for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+                Node child = node.getChildNodes().item(i);
+                if (child.getNodeName().equals("Owner")) {
+                    accessControlPolicy.owner = Owner.buildFromNode(child);
+                } else if (child.getNodeName().equals("AccessControlList")) {
+                    List<Grant> grants = new ArrayList<>();
+                    for (int j = 0; j < child.getChildNodes().getLength(); j++) {
+                        if (child.getChildNodes().item(j).getNodeName().equals("Grant")) {
+                                grants.add(Grant.buildFromNode(child.getChildNodes().item(j)));
+                        }
+                    }
+                    accessControlPolicy.accessControlList = grants;
                 }
-                accessControlPolicy.accessControlList = grants;
             }
             accessControlPolicy.xmlns = node.getAttributes().getNamedItem("xmlns").getNodeValue();
             return this;

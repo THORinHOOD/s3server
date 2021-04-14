@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
@@ -30,6 +31,14 @@ public abstract class Processor {
     public Processor(String basePath, S3Driver s3Driver) {
         this.BASE_PATH = basePath;
         this.S3_DRIVER = s3Driver;
+    }
+
+    public void sendResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus httpResponseStatus,
+                             Consumer<FullHttpResponse> headersSetter, String content) {
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HTTP_1_1, httpResponseStatus, Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
+        headersSetter.accept(response);
+        sendAndCleanupConnection(ctx, response, request);
     }
 
     public void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {

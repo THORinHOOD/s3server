@@ -55,10 +55,6 @@ public class GetObjectProcessor extends Processor {
         s3Object.getMetaData().forEach((metaKey, metaValue) ->
                 response.headers().set("x-amz-meta-" + metaKey, metaValue));
 
-//        if (!keepAlive) {
-//            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-//        }
-
         context.write(response);
         ChannelFuture sendFileFuture;
         ChannelFuture lastContentFuture;

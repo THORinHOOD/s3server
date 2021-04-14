@@ -4,6 +4,9 @@ import com.thorinhood.drivers.AclDriver;
 import com.thorinhood.drivers.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.*;
+import com.thorinhood.processors.acl.GetObjectAclProcessor;
+import com.thorinhood.processors.acl.PutBucketAclProcessor;
+import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
 import com.thorinhood.utils.S3Driver;
@@ -33,6 +36,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final PutObjectProcessor putObjectProcessor;
     private final PutObjectAclProcessor putObjectAclProcessor;
     private final PutBucketAclProcessor putBucketAclProcessor;
+    private final GetObjectAclProcessor getObjectAclProcessor;
 
     public ServerHandler(String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
         S3Driver s3Driver = new S3Driver(metadataDriver, aclDriver);
@@ -41,6 +45,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         putObjectProcessor = new PutObjectProcessor(basePath, s3Driver);
         putObjectAclProcessor = new PutObjectAclProcessor(basePath, s3Driver);
         putBucketAclProcessor = new PutBucketAclProcessor(basePath, s3Driver);
+        getObjectAclProcessor = new GetObjectAclProcessor(basePath, s3Driver);
     }
 
     @Override
@@ -76,13 +81,23 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
 
         if (request.method().equals(HttpMethod.GET)) {
+            if (isAclRequest(request)) {
+                if (!parsedRequest.getKey().equals("")) {
+                    getObjectAclProcessor.process(context, request, parsedRequest);
+                } else {
+//                    putBucketAclProcessor.process(context, request, parsedRequest); // TODO
+                }
+                return true;
+            }
+        }
+
+        if (request.method().equals(HttpMethod.GET)) {
             getObjectProcessor.process(context, request, parsedRequest);
             return true;
         }
+
         if (request.method().equals(HttpMethod.PUT)) {
-            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
-            Map<String, List<String>> params = queryStringDecoder.parameters();
-            if (params.containsKey("acl")) {
+            if (isAclRequest(request)) {
                 if (!parsedRequest.getKey().equals("")) {
                     putObjectAclProcessor.process(context, request, parsedRequest);
                 } else {
@@ -110,6 +125,10 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         return false;
     }
 
-
+    private boolean isAclRequest(FullHttpRequest request) {
+        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+        Map<String, List<String>> params = queryStringDecoder.parameters();
+        return params.containsKey("acl");
+    }
 
 }

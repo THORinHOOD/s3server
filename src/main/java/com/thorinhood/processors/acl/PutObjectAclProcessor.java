@@ -1,6 +1,7 @@
-package com.thorinhood.processors;
+package com.thorinhood.processors.acl;
 
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.S3Driver;
@@ -13,11 +14,11 @@ import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
-public class PutBucketAclProcessor extends Processor {
+public class PutObjectAclProcessor extends Processor {
 
-    private static final Logger log = LogManager.getLogger(PutBucketAclProcessor.class);
+    private static final Logger log = LogManager.getLogger(PutObjectAclProcessor.class);
 
-    public PutBucketAclProcessor(String basePath, S3Driver s3Driver) {
+    public PutObjectAclProcessor(String basePath, S3Driver s3Driver) {
         super(basePath, s3Driver);
     }
 
@@ -25,8 +26,10 @@ public class PutBucketAclProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         try {
-            S3_DRIVER.putBucketAcl(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getBytes());
+            String lastModified = S3_DRIVER.putObjectAcl(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getKey(),
+                    parsedRequest.getBytes());
             sendResponseWithoutContent(context, OK, request, Map.of(
+                    "Last-Modified", lastModified,
                     "Date", DateTimeUtil.currentDateTime(),
                     "Content-Length", 0
             ));
@@ -35,4 +38,5 @@ public class PutBucketAclProcessor extends Processor {
             log.error(s3Exception.getMessage(), s3Exception);
         }
     }
+
 }
