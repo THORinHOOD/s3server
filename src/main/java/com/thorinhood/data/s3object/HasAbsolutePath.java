@@ -1,4 +1,4 @@
-package com.thorinhood.data;
+package com.thorinhood.data.s3object;
 
 public interface HasAbsolutePath {
     HasKey setAbsolutePath(String absolutePath);

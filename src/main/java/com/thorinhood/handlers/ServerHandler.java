@@ -1,16 +1,17 @@
 package com.thorinhood.handlers;
 
-import com.thorinhood.drivers.AclDriver;
-import com.thorinhood.drivers.MetadataDriver;
+import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.*;
 import com.thorinhood.processors.acl.GetBucketAclProcessor;
 import com.thorinhood.processors.acl.GetObjectAclProcessor;
 import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
+import com.thorinhood.processors.actions.CreateBucketProcessor;
+import com.thorinhood.processors.actions.GetObjectProcessor;
+import com.thorinhood.processors.actions.PutObjectProcessor;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
-import com.thorinhood.drivers.S3Driver;
 import com.thorinhood.utils.XmlUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -40,8 +41,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final GetObjectAclProcessor getObjectAclProcessor;
     private final GetBucketAclProcessor getBucketAclProcessor;
 
-    public ServerHandler(String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
-        S3Driver s3Driver = new S3Driver(metadataDriver, aclDriver);
+    public ServerHandler(String basePath, S3Driver s3Driver) {
         getObjectProcessor = new GetObjectProcessor(basePath, s3Driver);
         createBucketProcessor = new CreateBucketProcessor(basePath, s3Driver);
         putObjectProcessor = new PutObjectProcessor(basePath, s3Driver);
@@ -73,12 +73,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private boolean process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
 
         String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
-
         ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
+
         try {
             RequestUtil.checkRequest(parsedRequest, secretKey);
         } catch (S3Exception exception) {
-            getObjectProcessor.sendError(context, request, exception); // TODO
+            Processor.sendError(context, request, exception);
             return false;
         }
 
@@ -120,10 +120,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 }
             }
         }
+
         if (request.method().equals(HttpMethod.PUT)) {
             putObjectProcessor.process(context, request, parsedRequest, secretKey);
             return true;
         }
+
         return false;
     }
 

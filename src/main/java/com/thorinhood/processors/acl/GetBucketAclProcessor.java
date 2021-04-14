@@ -1,11 +1,11 @@
 package com.thorinhood.processors.acl;
 
 import com.thorinhood.acl.AccessControlPolicy;
+import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.drivers.S3Driver;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -28,20 +28,23 @@ public class GetBucketAclProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        try {
-            AccessControlPolicy accessControlPolicy = S3_DRIVER.getBucketAcl(BASE_PATH, parsedRequest.getBucket());
-            String xml = accessControlPolicy.buildXmlText();
-            sendResponse(context, request, OK, response -> {
-                HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
-                response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
-                //        response.headers().set("Last-Modified", s3Object.getLastModified()); // TODO
-                response.headers().set("Date", DateTimeUtil.currentDateTime());
-            }, xml);
-        } catch (S3Exception s3Exception) {
-            sendError(context, request, s3Exception);
-            log.error(s3Exception.getMessage(), s3Exception);
-            return;
+        if (!S3_DRIVER.checkBucketPermission(BASE_PATH, parsedRequest.getBucket(), METHOD_NAME)) {
+            throw S3Exception.ACCESS_DENIED()
+                    .setResource("1")
+                    .setRequestId("1");
         }
+        AccessControlPolicy accessControlPolicy = S3_DRIVER.getBucketAcl(BASE_PATH, parsedRequest.getBucket());
+        String xml = accessControlPolicy.buildXmlText();
+        sendResponse(context, request, OK, response -> {
+            HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
+            //        response.headers().set("Last-Modified", s3Object.getLastModified()); // TODO
+            response.headers().set("Date", DateTimeUtil.currentDateTime());
+        }, xml);
     }
 
+    @Override
+    protected Logger getLogger() {
+        return log;
+    }
 }

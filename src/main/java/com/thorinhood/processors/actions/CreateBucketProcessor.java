@@ -1,8 +1,8 @@
-package com.thorinhood.processors;
+package com.thorinhood.processors.actions;
 
+import com.thorinhood.drivers.main.S3Driver;
+import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.drivers.S3Driver;
-import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -23,17 +23,16 @@ public class CreateBucketProcessor extends Processor {
 
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
-                                Object[] arguments)
-            throws Exception {
-        try {
-            S3_DRIVER.createBucket(parsedRequest.getBucket(), BASE_PATH);
-            sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
+                                Object[] arguments) throws Exception {
+        S3_DRIVER.createBucket(parsedRequest.getBucket(), BASE_PATH);
+        sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime(),
                 "Location", File.separatorChar + parsedRequest.getBucket()
-            ));
-        } catch (S3Exception exception) {
-            sendError(context, request, exception);
-            log.error(exception.getMessage(), exception);
-        }
+        ));
+    }
+
+    @Override
+    protected Logger getLogger() {
+        return log;
     }
 }

@@ -15,6 +15,13 @@ public class S3Exception extends RuntimeException implements HasStatus, HasCode,
     private String resource;
     private String requestId;
 
+    public static HasResource ACCESS_DENIED() {
+        return build("Access denied")
+                .setStatus(HttpResponseStatus.FORBIDDEN)
+                .setCode(S3ResponseErrorCodes.ACCESS_DENIED)
+                .setMessage("Access denied");
+    }
+
     public static HasMessage INTERNAL_ERROR(String message) {
         return build(message)
                 .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)

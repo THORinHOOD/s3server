@@ -1,4 +1,4 @@
-package com.thorinhood.drivers;
+package com.thorinhood.drivers.acl;
 
 import com.thorinhood.acl.AccessControlPolicy;
 import com.thorinhood.exceptions.S3Exception;

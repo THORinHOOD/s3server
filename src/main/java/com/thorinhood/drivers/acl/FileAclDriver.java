@@ -1,9 +1,9 @@
-package com.thorinhood.drivers;
+package com.thorinhood.drivers.acl;
 
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.thorinhood.acl.AccessControlPolicy;
 import com.thorinhood.acl.Grant;
 import com.thorinhood.acl.Owner;
+import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
@@ -11,31 +11,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileAclDriver implements AclDriver {
-
-    private final XmlMapper xmlMapper;
-    private Marshaller marshaller;
-    private Unmarshaller unmarshaller;
-
-    public FileAclDriver() {
-        xmlMapper = new XmlMapper();
-        try {
-            JAXBContext context = JAXBContext.newInstance(AccessControlPolicy.class);
-            marshaller = context.createMarshaller();
-            unmarshaller = context.createUnmarshaller();
-            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-        } catch (JAXBException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public boolean init() throws Exception {

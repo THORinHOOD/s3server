@@ -1,7 +1,6 @@
 package com.thorinhood;
 
-import com.thorinhood.drivers.AclDriver;
-import com.thorinhood.drivers.MetadataDriver;
+import com.thorinhood.drivers.main.S3Driver;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -12,9 +11,9 @@ public class Server {
     private final int port;
     private final ServerInitializer serverInitializer;
 
-    public Server(int port, String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
+    public Server(int port, String basePath, S3Driver s3Driver) {
         this.port = port;
-        serverInitializer = new ServerInitializer(basePath, metadataDriver, aclDriver);
+        serverInitializer = new ServerInitializer(basePath, s3Driver);
     }
 
     public void run() throws Exception {

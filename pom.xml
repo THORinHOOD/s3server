@@ -43,12 +43,13 @@
             <version>2.16.33</version>
         </dependency>
 
-        <!-- jackson serialzation/deserialization -->
+        <!-- jackson json serialzation/deserialization -->
         <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-xml</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
             <version>2.11.1</version>
         </dependency>
+
         <!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
         <dependency>
             <groupId>javax.xml.bind</groupId>

@@ -1,6 +1,13 @@
 package com.thorinhood;
 
-import com.thorinhood.drivers.*;
+import com.thorinhood.drivers.acl.AclDriver;
+import com.thorinhood.drivers.acl.FileAclDriver;
+import com.thorinhood.drivers.config.ConfigDriver;
+import com.thorinhood.drivers.config.FileConfigDriver;
+import com.thorinhood.drivers.metadata.FileMetadataDriver;
+import com.thorinhood.drivers.metadata.H2Driver;
+import com.thorinhood.drivers.metadata.MetadataDriver;
+import com.thorinhood.drivers.main.S3DriverImpl;
 import com.thorinhood.utils.ArgumentParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,12 +41,24 @@ public class MainServer {
             log.error("\'--port\' is not int");
             return;
         }
-        MetadataDriver metadataDriver = metadataDriverInit(parsedArgs);
-        AclDriver aclDriver = aclDriverInit();
-        Server server = new Server(port, parsedArgs.get(BASE_PATH), metadataDriver, aclDriver);
+        S3DriverImpl s3DriverImpl = null;
+        try {
+            s3DriverImpl = s3DriverInit(parsedArgs);
+        } catch (Exception exception) {
+            log.error(exception.getMessage());
+            return;
+        }
+        Server server = new Server(port, parsedArgs.get(BASE_PATH), s3DriverImpl);
         log.info("port : {}", port);
         log.info("base path : {}", parsedArgs.get(BASE_PATH));
         server.run();
+    }
+
+    private static S3DriverImpl s3DriverInit(Map<String, String> parsedArgs) throws Exception {
+        MetadataDriver metadataDriver = metadataDriverInit(parsedArgs);
+        AclDriver aclDriver = aclDriverInit();
+        ConfigDriver configDriver = configDriverInit(parsedArgs.get(BASE_PATH));
+        return new S3DriverImpl(metadataDriver, aclDriver, configDriver);
     }
 
     private static MetadataDriver metadataDriverInit(Map<String, String> parsedArgs) throws Exception {
@@ -57,6 +76,12 @@ public class MainServer {
         } else {
             throw new Exception("Wrong value dbType flag");
         }
+    }
+
+    private static ConfigDriver configDriverInit(String baseFolderPath) throws Exception {
+        ConfigDriver configDriver = new FileConfigDriver(baseFolderPath);
+        configDriver.init();
+        return configDriver;
     }
 
     private static AclDriver aclDriverInit() {

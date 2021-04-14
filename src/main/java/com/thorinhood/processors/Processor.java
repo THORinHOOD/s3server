@@ -1,7 +1,7 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.drivers.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -9,6 +9,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,10 +28,29 @@ public abstract class Processor {
 
     protected final String BASE_PATH;
     protected final S3Driver S3_DRIVER;
+    protected final String METHOD_NAME;
 
     public Processor(String basePath, S3Driver s3Driver) {
         this.BASE_PATH = basePath;
         this.S3_DRIVER = s3Driver;
+        METHOD_NAME = "s3:" + this.getClass().getSimpleName().substring(0,
+                this.getClass().getSimpleName().indexOf("Processor"));
+    }
+
+    private void wrapProcess(Logger log, ChannelHandlerContext ctx, FullHttpRequest request, Process process) {
+        try {
+            process.process();
+        } catch (S3Exception s3Exception) {
+            sendError(ctx, request, s3Exception);
+            log.error(s3Exception.getMessage(), s3Exception);
+        } catch (Exception exception) {
+            S3Exception s3Exception = S3Exception.INTERNAL_ERROR(exception.getMessage())
+                    .setMessage(exception.getMessage())
+                    .setResource("1")
+                    .setRequestId("1");
+            sendError(ctx, request, s3Exception);
+            log.error(exception.getMessage(), exception);
+        }
     }
 
     public void sendResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus httpResponseStatus,
@@ -41,7 +61,7 @@ public abstract class Processor {
         sendAndCleanupConnection(ctx, response, request);
     }
 
-    public void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
+    public static void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, s3Exception.getStatus(), Unpooled.copiedBuffer(s3Exception.buildXmlText(), CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
@@ -63,7 +83,7 @@ public abstract class Processor {
         sendAndCleanupConnection(ctx, response, request);
     }
 
-    protected void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response,
+    protected static void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response,
                                             FullHttpRequest request) {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
         HttpUtil.setContentLength(response, response.content().readableBytes());
@@ -110,10 +130,12 @@ public abstract class Processor {
                         Object... arguments) throws Exception {
         if (!request.decoderResult().isSuccess()) {
             sendError(context, BAD_REQUEST, request);
+            return;
         }
-        processInner(context, request, parsedRequest, arguments);
+        wrapProcess(getLogger(), context, request, () -> processInner(context, request, parsedRequest, arguments));
     }
 
     protected abstract void processInner(ChannelHandlerContext context, FullHttpRequest request,
                                          ParsedRequest parsedRequest, Object... arguments) throws Exception;
+    protected abstract Logger getLogger();
 }

@@ -1,9 +1,12 @@
-package com.thorinhood.drivers;
+package com.thorinhood.drivers.main;
 
 import com.thorinhood.acl.*;
 import com.thorinhood.data.S3Headers;
-import com.thorinhood.data.S3Object;
+import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
+import com.thorinhood.drivers.acl.AclDriver;
+import com.thorinhood.drivers.config.ConfigDriver;
+import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import com.thorinhood.utils.DateTimeUtil;
@@ -18,15 +21,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.text.ParseException;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
 
-public class S3Driver {
+public class S3DriverImpl implements S3Driver {
 
     private final MetadataDriver metadataDriver;
     private final AclDriver aclDriver;
+    private final ConfigDriver configDriver;
     private final Map<String, Selector<String>> strSelectors;
     private final Map<String, Selector<Date>> dateSelectors;
     private final AccessControlPolicy defaultOwnerAcl = AccessControlPolicy.builder()    // TODO
@@ -46,12 +48,12 @@ public class S3Driver {
             ))
             .build();
 
+    private static final Logger log = LogManager.getLogger(S3DriverImpl.class);
 
-    private static final Logger log = LogManager.getLogger(S3Driver.class);
-
-    public S3Driver(MetadataDriver metadataDriver, AclDriver aclDriver) {
+    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, ConfigDriver configDriver) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
+        this.configDriver = configDriver;
         strSelectors = Map.of(
                 S3Headers.IF_MATCH, new IfMatch(),
                 S3Headers.IF_NONE_MATCH, new IfNoneMatch()
@@ -62,10 +64,35 @@ public class S3Driver {
         );
     }
 
+    @Override
+    public boolean checkBucketPermission(String basePath, String bucket, String methodName) throws S3Exception {
+        AccessControlPolicy acl = getBucketAcl(basePath, bucket);
+        return checkPermission(Permission::getMethodsBucket, acl, methodName);
+    }
+
+    @Override
+    public boolean checkObjectPermission(String basePath, String bucket, String key, String methodName)
+            throws S3Exception {
+        AccessControlPolicy acl = getObjectAcl(basePath, bucket, key);
+        return checkPermission(Permission::getMethodsObject, acl, methodName);
+    }
+
+    private boolean checkPermission(Function<Permission, Set<String>> methodsGetter, AccessControlPolicy acl,
+                                    String methodName) {
+        return acl.getAccessControlList().stream()
+                .map(Grant::getPermission)
+                .map(methodsGetter)
+                .flatMap(Collection::stream)
+                .distinct()
+                .anyMatch(name -> name.equals(methodName));
+    }
+
+    @Override
     public AccessControlPolicy getBucketAcl(String basePath, String bucket) throws S3Exception {
         return aclDriver.getBucketAcl(basePath, bucket);
     }
 
+    @Override
     public AccessControlPolicy getObjectAcl(String basePath, String bucket, String key) throws S3Exception {
         Optional<String> path = buildPath(basePath, bucket, key);
         if (path.isEmpty()) {
@@ -78,19 +105,21 @@ public class S3Driver {
         return aclDriver.getObjectAcl(path.get());
     }
 
+    @Override
     public void putBucketAcl(String basePath, String bucket, byte[] bytes) throws S3Exception {
         putBucketAcl(basePath, bucket, aclDriver.parseFromBytes(bytes));
     }
 
-    public void putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
+    private void putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
         aclDriver.putBucketAcl(basePath, bucket, acl);
     }
 
+    @Override
     public String putObjectAcl(String basePath, String bucket, String key, byte[] bytes) throws S3Exception {
         return putObjectAcl(basePath, bucket, key, aclDriver.parseFromBytes(bytes));
     }
 
-    public String putObjectAcl(String basePath, String bucket, String key, AccessControlPolicy acl) throws S3Exception {
+    private String putObjectAcl(String basePath, String bucket, String key, AccessControlPolicy acl) throws S3Exception {
         Optional<String> path = buildPath(basePath, bucket, key);
         if (path.isEmpty()) {
             //TODO
@@ -102,6 +131,7 @@ public class S3Driver {
         return aclDriver.putObjectAcl(path.get(), acl);
     }
 
+    @Override
     public void createBucket(String bucket, String basePath) throws S3Exception {
         String absolutePath = basePath + File.separatorChar + bucket;
         File bucketFile = new File(absolutePath);
@@ -122,6 +152,7 @@ public class S3Driver {
         putBucketAcl(basePath, bucket, defaultOwnerAcl);
     }
 
+    @Override
     public S3Object getObject(ParsedRequest request, String basePath) throws S3Exception {
         Optional<String> absolutePath = buildPath(basePath, request.getBucket(), request.getKey());
         if (absolutePath.isEmpty()) {
@@ -182,6 +213,7 @@ public class S3Driver {
         }
     }
 
+    @Override
     public S3Object putObject(String bucket, String key, String basePath, byte[] bytes, Map<String, String> metadata)
             throws S3Exception {
         Optional<String> absolutePath = buildPath(basePath, bucket, key);

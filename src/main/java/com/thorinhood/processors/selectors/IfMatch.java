@@ -11,7 +11,7 @@ public class IfMatch implements Selector<String> {
         if (!actual.equals(expected)) {
             throw S3Exception.build("IfMatch failed")
                     .setStatus(HttpResponseStatus.PRECONDITION_FAILED)
-                    .setCode(S3ResponseErrorCodes.PRECONIDTION_FAILED)
+                    .setCode(S3ResponseErrorCodes.PRECONDITION_FAILED)
                     .setMessage("At least one of the pre-conditions you specified did not hold")
                     .setResource("1")
                     .setRequestId("1");

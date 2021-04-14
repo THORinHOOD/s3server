@@ -1,8 +1,9 @@
-package com.thorinhood.processors;
+package com.thorinhood.processors.actions;
 
-import com.thorinhood.data.S3Object;
+import com.thorinhood.data.s3object.S3Object;
+import com.thorinhood.drivers.main.S3Driver;
+import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.drivers.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
@@ -27,22 +28,23 @@ public class GetObjectProcessor extends Processor {
     @Override
     public void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                              Object[] arguments) throws Exception {
+        if (!S3_DRIVER.checkObjectPermission(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getKey(),
+                METHOD_NAME)) {
+            throw S3Exception.ACCESS_DENIED()
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
+
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
 
-        S3Object s3Object;
-        try {
-            s3Object = S3_DRIVER.getObject(parsedRequest, BASE_PATH);
-        } catch (S3Exception s3Exception) {
-            sendError(context, request, s3Exception);
-            log.error(s3Exception.getMessage(), s3Exception);
-            return;
-        }
+        S3Object s3Object = S3_DRIVER.getObject(parsedRequest, BASE_PATH);
 
         RandomAccessFile raf;
         try {
             raf = new RandomAccessFile(s3Object.getFile(), "r");
-        } catch (FileNotFoundException ignore) {
+        } catch (FileNotFoundException exception) {
             sendError(context, NOT_FOUND, request);
+            log.error(exception.getMessage(), exception);
             return;
         }
         long fileLength = raf.length();
@@ -72,6 +74,7 @@ public class GetObjectProcessor extends Processor {
                     log.info(future.channel() + " Transfer progress: " + progress + " / " + total);
                 }
             }
+
             @Override
             public void operationComplete(ChannelProgressiveFuture future) {
                 log.info(future.channel() + " Transfer complete.");
@@ -81,6 +84,11 @@ public class GetObjectProcessor extends Processor {
         if (!keepAlive) {
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         }
+
     }
 
+    @Override
+    protected Logger getLogger() {
+        return log;
+    }
 }

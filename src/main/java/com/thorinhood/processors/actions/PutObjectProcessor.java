@@ -1,9 +1,10 @@
-package com.thorinhood.processors;
+package com.thorinhood.processors.actions;
 
 import com.thorinhood.chunks.ChunkReader;
-import com.thorinhood.data.*;
-import com.thorinhood.drivers.S3Driver;
+import com.thorinhood.data.s3object.S3Object;
+import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
@@ -25,17 +26,22 @@ public class PutObjectProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments) throws Exception {
-        try {
-            if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK ||
-                parsedRequest.getPayloadSignType() == PayloadSignType.UNSIGNED_PAYLOAD) {
-                singleChunkRead(parsedRequest, request, context);
-            } else {
-                multipleChunksRead(parsedRequest, request, context, (String) arguments[0]);
-            }
-        } catch (S3Exception s3Exception) {
-            sendError(context, request, s3Exception);
-            log.error(s3Exception.getMessage(), s3Exception);
+        if (!S3_DRIVER.checkBucketPermission(BASE_PATH, parsedRequest.getBucket(), METHOD_NAME)) {
+            throw S3Exception.ACCESS_DENIED()
+                    .setResource("1")
+                    .setRequestId("1");
         }
+        if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK ||
+            parsedRequest.getPayloadSignType() == PayloadSignType.UNSIGNED_PAYLOAD) {
+            singleChunkRead(parsedRequest, request, context);
+        } else {
+            multipleChunksRead(parsedRequest, request, context, (String) arguments[0]);
+        }
+    }
+
+    @Override
+    protected Logger getLogger() {
+        return log;
     }
 
     private void multipleChunksRead(ParsedRequest parsedRequest, FullHttpRequest request, ChannelHandlerContext context,
@@ -63,5 +69,4 @@ public class PutObjectProcessor extends Processor {
                     "Date", DateTimeUtil.currentDateTime()
             ));
     }
-
 }
