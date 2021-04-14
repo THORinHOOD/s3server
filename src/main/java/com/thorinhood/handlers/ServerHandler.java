@@ -4,6 +4,7 @@ import com.thorinhood.drivers.AclDriver;
 import com.thorinhood.drivers.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.*;
+import com.thorinhood.processors.acl.GetBucketAclProcessor;
 import com.thorinhood.processors.acl.GetObjectAclProcessor;
 import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
@@ -37,6 +38,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final PutObjectAclProcessor putObjectAclProcessor;
     private final PutBucketAclProcessor putBucketAclProcessor;
     private final GetObjectAclProcessor getObjectAclProcessor;
+    private final GetBucketAclProcessor getBucketAclProcessor;
 
     public ServerHandler(String basePath, MetadataDriver metadataDriver, AclDriver aclDriver) {
         S3Driver s3Driver = new S3Driver(metadataDriver, aclDriver);
@@ -46,6 +48,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         putObjectAclProcessor = new PutObjectAclProcessor(basePath, s3Driver);
         putBucketAclProcessor = new PutBucketAclProcessor(basePath, s3Driver);
         getObjectAclProcessor = new GetObjectAclProcessor(basePath, s3Driver);
+        getBucketAclProcessor = new GetBucketAclProcessor(basePath, s3Driver);
     }
 
     @Override
@@ -85,7 +88,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 if (!parsedRequest.getKey().equals("")) {
                     getObjectAclProcessor.process(context, request, parsedRequest);
                 } else {
-//                    putBucketAclProcessor.process(context, request, parsedRequest); // TODO
+                    getBucketAclProcessor.process(context, request, parsedRequest);
                 }
                 return true;
             }
