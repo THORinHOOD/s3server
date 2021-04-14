@@ -2,7 +2,7 @@ package com.thorinhood.processors;
 
 import com.thorinhood.data.S3Object;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.utils.S3Driver;
+import com.thorinhood.drivers.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;

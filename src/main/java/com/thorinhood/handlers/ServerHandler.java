@@ -10,7 +10,7 @@ import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
-import com.thorinhood.utils.S3Driver;
+import com.thorinhood.drivers.S3Driver;
 import com.thorinhood.utils.XmlUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -74,10 +74,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         String secretKey = "m+I32QXn2PPwpb6JyMO96qoKAeRbfOknY80GenIm"; // TODO
 
-
         ParsedRequest parsedRequest = RequestUtil.parseRequest(request);
         try {
-            RequestUtil.checkRequest(request, parsedRequest, secretKey);
+            RequestUtil.checkRequest(parsedRequest, secretKey);
         } catch (S3Exception exception) {
             getObjectProcessor.sendError(context, request, exception); // TODO
             return false;

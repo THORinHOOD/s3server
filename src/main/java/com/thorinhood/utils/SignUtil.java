@@ -33,10 +33,10 @@ public class SignUtil {
         return BinaryUtils.toHex(signature);
     }
 
-    public static String calcSignature(ParsedRequest parsedRequest, FullHttpRequest request, String secretKey) {
+    public static String calcSignature(ParsedRequest parsedRequest, String secretKey) {
         String contentSha256 = "";
         if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK) {
-            contentSha256 = request.headers().get(S3Headers.X_AMZ_CONTENT_SHA256);
+            contentSha256 = parsedRequest.getHeader(S3Headers.X_AMZ_CONTENT_SHA256);
         } else if (parsedRequest.getPayloadSignType() == PayloadSignType.CHUNKED) {
             contentSha256 = PayloadSignType.CHUNKED.getValue();
         } else {
@@ -44,12 +44,11 @@ public class SignUtil {
         }
 
         String canonicalRequest = createCanonicalRequest(
-                request,
                 parsedRequest,
                 parsedRequest.getBucket() + parsedRequest.getKey(),
                 contentSha256
         );
-        String stringToSign = createStringToSign(canonicalRequest, request, parsedRequest.getCredential());
+        String stringToSign = createStringToSign(canonicalRequest, parsedRequest);
 
         byte[] signingKey = newSingingKey(
                 secretKey,
@@ -61,39 +60,33 @@ public class SignUtil {
         return BinaryUtils.toHex(signature);
     }
 
-    //AbstractAws4Signer
-    private static String createCanonicalRequest(FullHttpRequest request, ParsedRequest parsedRequest,
-                                                 String relativePath, String contentSha256) {
-
+    private static String createCanonicalRequest(ParsedRequest parsedRequest, String relativePath,
+                                                 String contentSha256) {
         Map<String, String> headers = new TreeMap<>();
-        for (Map.Entry<String, String> entry : request.headers().entries()) {
+        for (Map.Entry<String, String> entry : parsedRequest.getHeaders().entries()) {
             if (!IGNORE_HEADERS.contains(entry.getKey().toLowerCase())) {
                 if (!(entry.getKey().equals("content-length") && Long.parseLong(entry.getValue()) == 0L)) {
                     headers.put(entry.getKey().toLowerCase(), entry.getValue());
                 }
             }
         }
-
-        String result = request.method().toString() +
+        return parsedRequest.getMethod().toString() +
                 LINE_SEPARATOR +
-                // This would optionally double url-encode the resource path
                 getCanonicalizedResourcePath(relativePath, false) +
                 LINE_SEPARATOR +
-                // TODO
-                 getCanonicalizedQueryString(parsedRequest.getQueryParams()) +
+                getCanonicalizedQueryString(parsedRequest.getQueryParams()) +
                 LINE_SEPARATOR +
                 getCanonicalizedHeaderString(headers) +
                 LINE_SEPARATOR +
                 getSignedHeadersString(headers) +
                 LINE_SEPARATOR +
                 contentSha256;
-        return result;
     }
 
     private static String createPayloadStringToSign(FullHttpRequest request, Credential credential,
                                                     String prevSignature, byte[] currentChunkData) {
         String formattedRequestSigningDateTime = request.headers().get(S3Headers.X_AMZ_DATE);
-        String stringToSign = "AWS4-HMAC-SHA256-PAYLOAD" +
+        return "AWS4-HMAC-SHA256-PAYLOAD" +
                 LINE_SEPARATOR +
                 formattedRequestSigningDateTime +
                 LINE_SEPARATOR +
@@ -104,19 +97,16 @@ public class SignUtil {
                 BinaryUtils.toHex(DigestUtils.sha256("")) +
                 LINE_SEPARATOR +
                 DigestUtils.sha256Hex(currentChunkData);
-        return stringToSign;
     }
 
-    private static String createStringToSign(String canonicalRequest, FullHttpRequest request, Credential credential) {
-        String formattedRequestSigningDateTime = request.headers().get(S3Headers.X_AMZ_DATE);
-        String stringToSign = "AWS4-HMAC-SHA256" +
+    private static String createStringToSign(String canonicalRequest, ParsedRequest parsedRequest) {
+        return "AWS4-HMAC-SHA256" +
                 LINE_SEPARATOR +
-                formattedRequestSigningDateTime +
+                parsedRequest.getHeader(S3Headers.X_AMZ_DATE) +
                 LINE_SEPARATOR +
-                credential.getCredentialWithoutAccessKey() +
+                parsedRequest.getCredential().getCredentialWithoutAccessKey() +
                 LINE_SEPARATOR +
                 BinaryUtils.toHex(DigestUtils.sha256(canonicalRequest));
-        return stringToSign;
     }
 
     private static String getCanonicalizedResourcePath(String resourcePath, boolean urlEncode) {

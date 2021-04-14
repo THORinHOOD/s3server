@@ -1,13 +1,13 @@
-package com.thorinhood.utils;
+package com.thorinhood.drivers;
 
 import com.thorinhood.acl.*;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
-import com.thorinhood.drivers.AclDriver;
-import com.thorinhood.drivers.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
+import com.thorinhood.utils.DateTimeUtil;
+import com.thorinhood.utils.ParsedRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.logging.log4j.LogManager;

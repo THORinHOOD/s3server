@@ -48,14 +48,14 @@ public class RequestUtil {
                 .setPayloadSignType(payloadSignType)
                 .setSignature(requestSignature)
                 .setQueryParams(queryParams)
+                .setMethod(request.method())
                 .build();
     }
 
-    public static void checkRequest(FullHttpRequest request, ParsedRequest parsedRequest,
-                                    String secretKey) throws S3Exception {
+    public static void checkRequest(ParsedRequest parsedRequest, String secretKey) throws S3Exception {
         if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK) {
             String calculatedPayloadHash = DigestUtils.sha256Hex(parsedRequest.getBytes());
-            if (!calculatedPayloadHash.equals(request.headers().get(S3Headers.X_AMZ_CONTENT_SHA256))) {
+            if (!calculatedPayloadHash.equals(parsedRequest.getHeader(S3Headers.X_AMZ_CONTENT_SHA256))) {
                 throw S3Exception.build("calculated payload hash not equals with x-amz-content-sha256")
                         .setStatus(HttpResponseStatus.BAD_REQUEST)
                         .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
@@ -66,7 +66,7 @@ public class RequestUtil {
             }
         }
 
-        String calculatedSignature = SignUtil.calcSignature(parsedRequest, request, secretKey);
+        String calculatedSignature = SignUtil.calcSignature(parsedRequest, secretKey);
         if (!calculatedSignature.equals(parsedRequest.getSignature())) {
             throw S3Exception.build("calculated payload hash not equals with x-amz-content-sha256")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)

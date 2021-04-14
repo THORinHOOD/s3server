@@ -1,6 +1,7 @@
 package com.thorinhood.utils;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ public class ParsedRequest {
     private PayloadSignType payloadSignType;
     private HttpHeaders headers;
     private Map<String, List<String>> queryParams;
+    private HttpMethod method;
 
     public static Builder builder() {
         return new Builder();
@@ -62,6 +64,14 @@ public class ParsedRequest {
 
     public String getHeader(String header) {
         return headers.get(header);
+    }
+
+    public HttpHeaders getHeaders() {
+        return headers;
+    }
+
+    public HttpMethod getMethod() {
+        return method;
     }
 
     public Map<String, List<String>> getQueryParams() {
@@ -117,6 +127,11 @@ public class ParsedRequest {
 
         public Builder setQueryParams(Map<String, List<String>> queryParams) {
             parsedRequest.queryParams = queryParams;
+            return this;
+        }
+
+        public Builder setMethod(HttpMethod method) {
+            parsedRequest.method = method;
             return this;
         }
 
