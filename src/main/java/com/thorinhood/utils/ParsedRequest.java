@@ -26,6 +26,10 @@ public class ParsedRequest {
     private ParsedRequest() {
     }
 
+    public boolean isPathToObject() {
+        return !key.equals("");
+    }
+
     public byte[] getBytes() {
         return bytes;
     }

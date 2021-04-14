@@ -84,7 +84,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         if (request.method().equals(HttpMethod.GET)) {
             if (isAclRequest(request)) {
-                if (!parsedRequest.getKey().equals("")) {
+                if (parsedRequest.isPathToObject()) {
                     getObjectAclProcessor.process(context, request, parsedRequest);
                 } else {
                     getBucketAclProcessor.process(context, request, parsedRequest);
@@ -100,7 +100,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         if (request.method().equals(HttpMethod.PUT)) {
             if (isAclRequest(request)) {
-                if (!parsedRequest.getKey().equals("")) {
+                if (parsedRequest.isPathToObject()) {
                     putObjectAclProcessor.process(context, request, parsedRequest);
                 } else {
                     putBucketAclProcessor.process(context, request, parsedRequest);
