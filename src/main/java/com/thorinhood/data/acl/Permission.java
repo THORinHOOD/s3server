@@ -1,4 +1,4 @@
-package com.thorinhood.acl;
+package com.thorinhood.data.acl;
 
 import com.google.common.collect.ImmutableSet;
 

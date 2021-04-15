@@ -1,9 +1,8 @@
 package com.thorinhood.drivers.acl;
 
-import com.thorinhood.acl.AccessControlPolicy;
-import com.thorinhood.acl.Grant;
-import com.thorinhood.acl.Owner;
-import com.thorinhood.drivers.acl.AclDriver;
+import com.thorinhood.data.acl.AccessControlPolicy;
+import com.thorinhood.data.acl.Grant;
+import com.thorinhood.data.acl.Owner;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;

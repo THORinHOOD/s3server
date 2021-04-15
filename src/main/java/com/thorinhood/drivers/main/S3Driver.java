@@ -1,6 +1,6 @@
 package com.thorinhood.drivers.main;
 
-import com.thorinhood.acl.AccessControlPolicy;
+import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.ParsedRequest;

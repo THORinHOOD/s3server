@@ -1,6 +1,6 @@
 package com.thorinhood.drivers.acl;
 
-import com.thorinhood.acl.AccessControlPolicy;
+import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.exceptions.S3Exception;
 
 public interface AclDriver {

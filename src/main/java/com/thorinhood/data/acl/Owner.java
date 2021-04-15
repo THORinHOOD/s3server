@@ -1,4 +1,4 @@
-package com.thorinhood.acl;
+package com.thorinhood.data.acl;
 
 import com.thorinhood.utils.XmlObject;
 import org.w3c.dom.Document;

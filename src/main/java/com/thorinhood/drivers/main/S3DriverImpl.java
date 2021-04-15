@@ -1,6 +1,6 @@
 package com.thorinhood.drivers.main;
 
-import com.thorinhood.acl.*;
+import com.thorinhood.data.acl.*;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
