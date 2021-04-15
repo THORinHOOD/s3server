@@ -4,6 +4,7 @@ import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.acl.FileAclDriver;
 import com.thorinhood.drivers.config.ConfigDriver;
 import com.thorinhood.drivers.config.FileConfigDriver;
+import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.metadata.FileMetadataDriver;
 import com.thorinhood.drivers.metadata.H2Driver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -41,24 +42,31 @@ public class MainServer {
             log.error("\'--port\' is not int");
             return;
         }
-        S3DriverImpl s3DriverImpl = null;
+
+        ConfigDriver configDriver = null;
         try {
-            s3DriverImpl = s3DriverInit(parsedArgs);
+            configDriver = configDriverInit(parsedArgs.get(BASE_PATH));
         } catch (Exception exception) {
             log.error(exception.getMessage());
             return;
         }
-        Server server = new Server(port, parsedArgs.get(BASE_PATH), s3DriverImpl);
+        S3Driver s3Driver = null;
+        try {
+            s3Driver = s3DriverInit(parsedArgs);
+        } catch (Exception exception) {
+            log.error(exception.getMessage());
+            return;
+        }
+        Server server = new Server(port, parsedArgs.get(BASE_PATH), s3Driver, configDriver);
         log.info("port : {}", port);
         log.info("base path : {}", parsedArgs.get(BASE_PATH));
         server.run();
     }
 
-    private static S3DriverImpl s3DriverInit(Map<String, String> parsedArgs) throws Exception {
+    private static S3Driver s3DriverInit(Map<String, String> parsedArgs) throws Exception {
         MetadataDriver metadataDriver = metadataDriverInit(parsedArgs);
         AclDriver aclDriver = aclDriverInit();
-        ConfigDriver configDriver = configDriverInit(parsedArgs.get(BASE_PATH));
-        return new S3DriverImpl(metadataDriver, aclDriver, configDriver);
+        return new S3DriverImpl(metadataDriver, aclDriver);
     }
 
     private static MetadataDriver metadataDriverInit(Map<String, String> parsedArgs) throws Exception {

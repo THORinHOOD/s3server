@@ -13,8 +13,7 @@ import java.io.IOException;
 
 public class ChunkReader {
 
-    public static byte[] readChunks(FullHttpRequest request, ParsedRequest parsedRequest, String secretKey) 
-            throws S3Exception {
+    public static byte[] readChunks(FullHttpRequest request, ParsedRequest parsedRequest) throws S3Exception {
         String prevSignature = parsedRequest.getSignature();
         byte[] result = new byte[parsedRequest.getDecodedContentLength()];
         int index = 0;
@@ -33,7 +32,7 @@ public class ChunkReader {
                         chunk,
                         request,
                         parsedRequest.getCredential(),
-                        secretKey
+                        parsedRequest.getS3User().getSecretKey()
                     );
 
                     if (chunkInfo.getChunkSize() >= 0) {
@@ -54,7 +53,8 @@ public class ChunkReader {
     }
 
     private static void checkChunk(String chunkSignature, String prevSignature, byte[] chunkData,
-                                   FullHttpRequest request, Credential credential, String secretKey) throws S3Exception {
+                                   FullHttpRequest request, Credential credential, String secretKey)
+            throws S3Exception {
         String calculatedChunkSignature = SignUtil.calcPayloadSignature(request, credential, prevSignature, chunkData,
                 secretKey);
         if (!calculatedChunkSignature.equals(chunkSignature)) {

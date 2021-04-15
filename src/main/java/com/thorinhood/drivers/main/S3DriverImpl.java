@@ -1,11 +1,11 @@
 package com.thorinhood.drivers.main;
 
+import com.thorinhood.data.S3User;
 import com.thorinhood.data.acl.*;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.drivers.acl.AclDriver;
-import com.thorinhood.drivers.config.ConfigDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
@@ -28,32 +28,30 @@ public class S3DriverImpl implements S3Driver {
 
     private final MetadataDriver metadataDriver;
     private final AclDriver aclDriver;
-    private final ConfigDriver configDriver;
     private final Map<String, Selector<String>> strSelectors;
     private final Map<String, Selector<Date>> dateSelectors;
-    private final AccessControlPolicy defaultOwnerAcl = AccessControlPolicy.builder()    // TODO
-            .setOwner(Owner.builder()
-                    .setId("1")
-                    .setDisplayName("asgar")
-                    .build())
-            .setAccessControlList(Collections.singletonList(
-                    Grant.builder()
-                            .setGrantee(Grantee.builder()
-                                    .setDisplayName("asgar")
-                                    .setId("1")
-                                    .setType("Canonical User")
-                                    .build())
-                            .setPermission(Permission.FULL_CONTROL)
-                            .build()
-            ))
-            .build();
+//    private final AccessControlPolicy defaultOwnerAcl = AccessControlPolicy.builder()    // TODO
+//            .setOwner(Owner.builder()
+//                    .setId("1")
+//                    .setDisplayName("asgar")
+//                    .build())
+//            .setAccessControlList(Collections.singletonList(
+//                    Grant.builder()
+//                            .setGrantee(Grantee.builder()
+//                                    .setDisplayName("asgar")
+//                                    .setId("1")
+//                                    .setType("Canonical User")
+//                                    .build())
+//                            .setPermission(Permission.FULL_CONTROL)
+//                            .build()
+//            ))
+//            .build();
 
     private static final Logger log = LogManager.getLogger(S3DriverImpl.class);
 
-    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, ConfigDriver configDriver) {
+    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
-        this.configDriver = configDriver;
         strSelectors = Map.of(
                 S3Headers.IF_MATCH, new IfMatch(),
                 S3Headers.IF_NONE_MATCH, new IfNoneMatch()
@@ -65,21 +63,24 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkBucketPermission(String basePath, String bucket, String methodName) throws S3Exception {
+    public boolean checkBucketPermission(String basePath, String bucket, String methodName, S3User s3User)
+            throws S3Exception {
         AccessControlPolicy acl = getBucketAcl(basePath, bucket);
-        return checkPermission(Permission::getMethodsBucket, acl, methodName);
+        return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
     }
 
     @Override
-    public boolean checkObjectPermission(String basePath, String bucket, String key, String methodName)
+    public boolean checkObjectPermission(String basePath, String bucket, String key, String methodName, S3User s3User)
             throws S3Exception {
         AccessControlPolicy acl = getObjectAcl(basePath, bucket, key);
-        return checkPermission(Permission::getMethodsObject, acl, methodName);
+        return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
     }
 
     private boolean checkPermission(Function<Permission, Set<String>> methodsGetter, AccessControlPolicy acl,
-                                    String methodName) {
+                                    String methodName, S3User s3User) {
         return acl.getAccessControlList().stream()
+                .filter(grant -> grant.getGrantee().getDisplayName().equals(s3User.getAccountName()) &&
+                                 grant.getGrantee().getId().equals(s3User.getCanonicalUserId()))
                 .map(Grant::getPermission)
                 .map(methodsGetter)
                 .flatMap(Collection::stream)
@@ -132,7 +133,7 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public void createBucket(String bucket, String basePath) throws S3Exception {
+    public void createBucket(String bucket, String basePath, S3User s3User) throws S3Exception {
         String absolutePath = basePath + File.separatorChar + bucket;
         File bucketFile = new File(absolutePath);
         if (bucketFile.exists()) {
@@ -149,7 +150,7 @@ public class S3DriverImpl implements S3Driver {
                     .setResource(File.separatorChar + bucket)
                     .setRequestId("1");
         }
-        putBucketAcl(basePath, bucket, defaultOwnerAcl);
+        putBucketAcl(basePath, bucket, createDefaultAccessControlPolicy(s3User));
     }
 
     @Override
@@ -214,8 +215,8 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public S3Object putObject(String bucket, String key, String basePath, byte[] bytes, Map<String, String> metadata)
-            throws S3Exception {
+    public S3Object putObject(String bucket, String key, String basePath, byte[] bytes, Map<String, String> metadata,
+                              S3User s3User) throws S3Exception {
         Optional<String> absolutePath = buildPath(basePath, bucket, key);
         if (absolutePath.isEmpty()) {
             //TODO
@@ -235,7 +236,7 @@ public class S3DriverImpl implements S3Driver {
                 outputStream.write(bytes);
                 outputStream.close();
                 metadataDriver.setObjectMetadata(absolutePath.get(), metadata);
-                putObjectAcl(basePath, bucket, key, defaultOwnerAcl);
+                putObjectAcl(basePath, bucket, key, createDefaultAccessControlPolicy(s3User));
                 return S3Object.build()
                         .setAbsolutePath(absolutePath.get())
                         .setKey(key)
@@ -256,6 +257,25 @@ public class S3DriverImpl implements S3Driver {
                     .setResource(File.separatorChar + bucket + key)
                     .setRequestId("1");
         }
+    }
+
+    private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {
+        return AccessControlPolicy.builder()
+                .setOwner(Owner.builder()
+                        .setDisplayName(s3User.getAccountName())
+                        .setId(s3User.getCanonicalUserId())
+                        .build())
+                .setAccessControlList(Collections.singletonList(
+                        Grant.builder()
+                                .setGrantee(Grantee.builder()
+                                        .setDisplayName(s3User.getAccountName())
+                                        .setId(s3User.getCanonicalUserId())
+                                        .setType("Canonical User") // TODO enum (Canonical User, Group)
+                                        .build())
+                                .setPermission(Permission.FULL_CONTROL)
+                                .build()
+                ))
+                .build();
     }
 
     //TODO

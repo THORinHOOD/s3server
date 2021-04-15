@@ -28,7 +28,8 @@ public class GetBucketAclProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        if (!S3_DRIVER.checkBucketPermission(BASE_PATH, parsedRequest.getBucket(), METHOD_NAME)) {
+        if (!S3_DRIVER.checkBucketPermission(BASE_PATH, parsedRequest.getBucket(), METHOD_NAME,
+                parsedRequest.getS3User())) {
             throw S3Exception.ACCESS_DENIED()
                     .setResource("1")
                     .setRequestId("1");

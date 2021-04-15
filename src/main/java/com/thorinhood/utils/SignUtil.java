@@ -33,7 +33,7 @@ public class SignUtil {
         return BinaryUtils.toHex(signature);
     }
 
-    public static String calcSignature(ParsedRequest parsedRequest, String secretKey) {
+    public static String calcSignature(ParsedRequest parsedRequest) {
         String contentSha256 = "";
         if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK) {
             contentSha256 = parsedRequest.getHeader(S3Headers.X_AMZ_CONTENT_SHA256);
@@ -51,7 +51,7 @@ public class SignUtil {
         String stringToSign = createStringToSign(canonicalRequest, parsedRequest);
 
         byte[] signingKey = newSingingKey(
-                secretKey,
+                parsedRequest.getS3User().getSecretKey(),
                 parsedRequest.getCredential().getValue(Credential.DATE),
                 parsedRequest.getCredential().getValue(Credential.REGION_NAME),
                 parsedRequest.getCredential().getValue(Credential.SERVICE_NAME));

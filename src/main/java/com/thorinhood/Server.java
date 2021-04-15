@@ -1,5 +1,6 @@
 package com.thorinhood;
 
+import com.thorinhood.drivers.config.ConfigDriver;
 import com.thorinhood.drivers.main.S3Driver;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -11,9 +12,9 @@ public class Server {
     private final int port;
     private final ServerInitializer serverInitializer;
 
-    public Server(int port, String basePath, S3Driver s3Driver) {
+    public Server(int port, String basePath, S3Driver s3Driver, ConfigDriver configDriver) {
         this.port = port;
-        serverInitializer = new ServerInitializer(basePath, s3Driver);
+        serverInitializer = new ServerInitializer(basePath, s3Driver, configDriver);
     }
 
     public void run() throws Exception {

@@ -29,7 +29,7 @@ public class GetObjectProcessor extends Processor {
     public void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                              Object[] arguments) throws Exception {
         if (!S3_DRIVER.checkObjectPermission(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getKey(),
-                METHOD_NAME)) {
+                METHOD_NAME, parsedRequest.getS3User())) {
             throw S3Exception.ACCESS_DENIED()
                     .setResource("1")
                     .setRequestId("1"); // TODO

@@ -1,5 +1,6 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.data.S3User;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 
@@ -18,6 +19,8 @@ public class ParsedRequest {
     private HttpHeaders headers;
     private Map<String, List<String>> queryParams;
     private HttpMethod method;
+    private Map<String, String> metadata;
+    private S3User s3User;
 
     public static Builder builder() {
         return new Builder();
@@ -78,8 +81,16 @@ public class ParsedRequest {
         return method;
     }
 
+    public Map<String, String> getMetadata() {
+        return metadata;
+    }
+
     public Map<String, List<String>> getQueryParams() {
         return queryParams;
+    }
+
+    public S3User getS3User() {
+        return s3User;
     }
 
     public static class Builder {
@@ -136,6 +147,16 @@ public class ParsedRequest {
 
         public Builder setMethod(HttpMethod method) {
             parsedRequest.method = method;
+            return this;
+        }
+
+        public Builder setMetadata(Map<String, String> metadata) {
+            parsedRequest.metadata = metadata;
+            return this;
+        }
+
+        public Builder setS3User(S3User s3User) {
+            parsedRequest.s3User = s3User;
             return this;
         }
 

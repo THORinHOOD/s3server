@@ -2,6 +2,8 @@ package com.thorinhood.utils;
 
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3ResponseErrorCodes;
+import com.thorinhood.data.S3User;
+import com.thorinhood.drivers.config.ConfigDriver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -20,17 +22,13 @@ public class RequestUtil {
 
     private static final String META_PREFIX = "x-amz-meta-";
 
-    public static Map<String, String> extractMetaData(FullHttpRequest request) {
-        return request.headers()
-                .entries()
-                .stream()
-                .filter(entry -> entry.getKey().startsWith(META_PREFIX))
-                .collect(Collectors.toMap(
-                        entry -> entry.getKey().substring(entry.getKey().indexOf(META_PREFIX) + META_PREFIX.length()),
-                        Map.Entry::getValue));
+    private final ConfigDriver configDriver;
+
+    public RequestUtil(ConfigDriver configDriver) {
+        this.configDriver = configDriver;
     }
 
-    public static ParsedRequest parseRequest(FullHttpRequest request) throws S3Exception {
+    public ParsedRequest parseRequest(FullHttpRequest request) throws Exception {
         PayloadSignType payloadSignType = getPayloadSignType(request);
         byte[] bytes = convert(request.content().asReadOnly());
         Credential credential = Credential.parse(request);
@@ -38,6 +36,13 @@ public class RequestUtil {
         String decodedContentLength = request.headers().get(S3Headers.X_AMZ_DECODED_CONTENT_LENGTH);
         String[] bucketKey = extractBucketKey(request);
         Map<String, List<String>> queryParams = parseQueryParams(request);
+        Map<String, String> metadata = extractMetaData(request);
+        Optional<S3User> s3User = configDriver.getS3User(credential.getValue(Credential.ACCESS_KEY));
+        if (s3User.isEmpty()) {
+            throw S3Exception.ACCESS_DENIED()
+                    .setResource("1")
+                    .setRequestId("1");
+        }
         return ParsedRequest.builder()
                 .setBucket(bucketKey[0])
                 .setKey(bucketKey[1])
@@ -49,10 +54,12 @@ public class RequestUtil {
                 .setSignature(requestSignature)
                 .setQueryParams(queryParams)
                 .setMethod(request.method())
+                .setMetadata(metadata)
+                .setS3User(s3User.get())
                 .build();
     }
 
-    public static void checkRequest(ParsedRequest parsedRequest, String secretKey) throws S3Exception {
+    public void checkRequest(ParsedRequest parsedRequest) throws S3Exception {
         if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK) {
             String calculatedPayloadHash = DigestUtils.sha256Hex(parsedRequest.getBytes());
             if (!calculatedPayloadHash.equals(parsedRequest.getHeader(S3Headers.X_AMZ_CONTENT_SHA256))) {
@@ -66,7 +73,7 @@ public class RequestUtil {
             }
         }
 
-        String calculatedSignature = SignUtil.calcSignature(parsedRequest, secretKey);
+        String calculatedSignature = SignUtil.calcSignature(parsedRequest);
         if (!calculatedSignature.equals(parsedRequest.getSignature())) {
             throw S3Exception.build("calculated payload hash not equals with x-amz-content-sha256")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
@@ -77,7 +84,17 @@ public class RequestUtil {
         }
     }
 
-    private static Map<String, List<String>> parseQueryParams(FullHttpRequest request) {
+    private Map<String, String> extractMetaData(FullHttpRequest request) {
+        return request.headers()
+                .entries()
+                .stream()
+                .filter(entry -> entry.getKey().startsWith(META_PREFIX))
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().substring(entry.getKey().indexOf(META_PREFIX) + META_PREFIX.length()),
+                        Map.Entry::getValue));
+    }
+
+    private Map<String, List<String>> parseQueryParams(FullHttpRequest request) {
         String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
         int indexStart = uri.indexOf("?");
         if (indexStart == -1) {
@@ -102,7 +119,7 @@ public class RequestUtil {
         return result;
     }
 
-    private static PayloadSignType getPayloadSignType(FullHttpRequest request) {
+    private PayloadSignType getPayloadSignType(FullHttpRequest request) {
         if (!request.headers().contains(S3Headers.X_AMZ_CONTENT_SHA256)) {
             throw S3Exception.build("x-amz-content-sha256 header not found")
                     .setStatus(BAD_REQUEST)
@@ -121,12 +138,12 @@ public class RequestUtil {
         }
     }
 
-    private static String extractSignature(FullHttpRequest request) {
+    private String extractSignature(FullHttpRequest request) {
         String authorization = request.headers().get("Authorization");
         return authorization.substring(authorization.indexOf("Signature=") + "Signature=".length());
     }
 
-    private static String[] extractBucketKey(FullHttpRequest request) throws S3Exception {
+    private String[] extractBucketKey(FullHttpRequest request) throws S3Exception {
         String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             throw S3Exception.build("Incorrect uri path")
@@ -147,7 +164,7 @@ public class RequestUtil {
         return new String[] { uri.substring(1), "" };
     }
 
-    private static byte[] convert(ByteBuf byteBuf) {
+    private byte[] convert(ByteBuf byteBuf) {
         byte[] bytes = new byte[byteBuf.readableBytes()];
         byteBuf.readBytes(bytes);
         return bytes;

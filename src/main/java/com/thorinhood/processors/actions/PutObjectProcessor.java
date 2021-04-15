@@ -26,7 +26,8 @@ public class PutObjectProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments) throws Exception {
-        if (!S3_DRIVER.checkBucketPermission(BASE_PATH, parsedRequest.getBucket(), METHOD_NAME)) {
+        if (!S3_DRIVER.checkBucketPermission(BASE_PATH, parsedRequest.getBucket(), METHOD_NAME,
+                parsedRequest.getS3User())) {
             throw S3Exception.ACCESS_DENIED()
                     .setResource("1")
                     .setRequestId("1");
@@ -35,7 +36,7 @@ public class PutObjectProcessor extends Processor {
             parsedRequest.getPayloadSignType() == PayloadSignType.UNSIGNED_PAYLOAD) {
             singleChunkRead(parsedRequest, request, context);
         } else {
-            multipleChunksRead(parsedRequest, request, context, (String) arguments[0]);
+            multipleChunksRead(parsedRequest, request, context);
         }
     }
 
@@ -44,9 +45,9 @@ public class PutObjectProcessor extends Processor {
         return log;
     }
 
-    private void multipleChunksRead(ParsedRequest parsedRequest, FullHttpRequest request, ChannelHandlerContext context,
-                                    String secretKey) {
-        byte[] result = ChunkReader.readChunks(request, parsedRequest, secretKey);
+    private void multipleChunksRead(ParsedRequest parsedRequest, FullHttpRequest request,
+                                    ChannelHandlerContext context) {
+        byte[] result = ChunkReader.readChunks(request, parsedRequest);
         parsedRequest.setBytes(result);
         singleChunkRead(parsedRequest, request, context);
     }
@@ -57,7 +58,9 @@ public class PutObjectProcessor extends Processor {
                     parsedRequest.getBucket(),
                     parsedRequest.getKey(),
                     BASE_PATH,
-                    parsedRequest.getBytes(), RequestUtil.extractMetaData(request));
+                    parsedRequest.getBytes(),
+                    parsedRequest.getMetadata(),
+                    parsedRequest.getS3User());
 
             if (s3Object == null) {
                 sendError(context, INTERNAL_SERVER_ERROR, request);
