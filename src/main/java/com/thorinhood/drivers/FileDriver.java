@@ -1,5 +1,6 @@
 package com.thorinhood.drivers;
 
+import com.thorinhood.exceptions.S3Exception;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -9,7 +10,7 @@ public class FileDriver {
 
     private static final Logger log = LogManager.getLogger(FileDriver.class);
 
-    protected static final String CONFIG_FOLDER_NAME = ".config";
+    protected static final String CONFIG_FOLDER_NAME = ".##config";
     protected static final String USERS_FOLDER_NAME = "users";
     protected static final String METADATA_FOLDER_PREFIX = "#";
 
@@ -28,7 +29,7 @@ public class FileDriver {
         return folder.isDirectory() && folder.exists();
     }
 
-    protected void createFolder(String path) throws Exception {
+    protected void createFolder(String path) throws S3Exception {
         File folder = new File(path);
         if (folder.exists() && !folder.isDirectory()) {
             exception(path + " is not a folder");
@@ -38,7 +39,7 @@ public class FileDriver {
         }
     }
 
-    protected void deleteFolder(String path) throws Exception {
+    protected void deleteFolder(String path) throws S3Exception {
         File folder = new File(path);
         if (folder.exists() && folder.isDirectory()) {
             if (!folder.delete()) {
@@ -47,9 +48,12 @@ public class FileDriver {
         }
     }
 
-    protected void exception(String msg) throws Exception {
+    protected void exception(String msg) throws S3Exception {
         log.error(msg);
-        throw new Exception(msg);
+        throw S3Exception.INTERNAL_ERROR(msg)
+                .setMessage(msg)
+                .setResource("1")
+                .setRequestId("1"); // TODO
     }
 
     protected String extractFileName(String key) {

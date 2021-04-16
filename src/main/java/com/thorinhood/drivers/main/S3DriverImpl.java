@@ -117,8 +117,7 @@ public class S3DriverImpl implements S3Driver {
     private boolean checkPermission(Function<Permission, Set<String>> methodsGetter, AccessControlPolicy acl,
                                     String methodName, S3User s3User) {
         return acl.getAccessControlList().stream()
-                .filter(grant -> (s3User.isRootUser() &&
-                                  grant.getGrantee().getDisplayName().equals(s3User.getAccountName()) &&
+                .filter(grant -> (grant.getGrantee().getDisplayName().equals(s3User.getAccountName()) &&
                                   grant.getGrantee().getId().equals(s3User.getCanonicalUserId())))
                 .map(Grant::getPermission)
                 .map(methodsGetter)

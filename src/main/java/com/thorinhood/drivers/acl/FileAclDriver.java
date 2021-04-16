@@ -46,12 +46,25 @@ public class FileAclDriver extends FileMetadataSubDriver implements AclDriver {
         return getAcl(pathToMetafile);
     }
 
-    private String putAcl(String pathToMetafile, AccessControlPolicy acl) {
+    private String putAcl(String pathToMetafile, AccessControlPolicy acl) throws S3Exception {
+        S3Exception s3exception = S3Exception.INTERNAL_ERROR("Can't create acl bucket file")
+                .setMessage("Can't create acl bucket file")
+                .setResource("1")
+                .setRequestId("1"); // TODO
         String xml = acl.buildXmlText();
         File metaFile = new File(pathToMetafile);
         String lastModified = null;
         if (metaFile.exists()) {
             lastModified = DateTimeUtil.parseDateTime(metaFile);
+        } else {
+
+            try {
+                if (!metaFile.createNewFile()) {
+                    throw s3exception;
+                }
+            } catch (IOException exception) {
+                throw s3exception;
+            }
         }
         try (FileOutputStream writer = new FileOutputStream(pathToMetafile)) {
             writer.write(xml.getBytes());
