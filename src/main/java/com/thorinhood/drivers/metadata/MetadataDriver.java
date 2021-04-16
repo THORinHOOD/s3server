@@ -6,8 +6,7 @@ import java.util.Map;
 
 public interface MetadataDriver {
 
-    boolean init() throws Exception;
-    void setObjectMetadata(String key, Map<String, String> metadata) throws S3Exception;
-    Map<String, String> getObjectMetadata(String key) throws S3Exception;
+    void setObjectMetadata(String bucket, String key, Map<String, String> metadata) throws S3Exception;
+    Map<String, String> getObjectMetadata(String bucket, String key) throws S3Exception;
 
 }

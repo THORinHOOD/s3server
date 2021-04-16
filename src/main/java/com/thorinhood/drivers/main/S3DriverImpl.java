@@ -53,9 +53,8 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkBucketPolicy(String basePath, String bucket, String key, String methodName, S3User s3User)
-            throws S3Exception {
-        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(basePath, bucket);
+    public boolean checkBucketPolicy(String bucket, String key, String methodName, S3User s3User) throws S3Exception {
+        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(bucket);
         if (bucketPolicy.isEmpty()) {
             return s3User.isRootUser();
         }
@@ -97,8 +96,8 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public Optional<byte[]> getBucketPolicyBytes(String basePath, String bucket) throws S3Exception {
-        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(basePath, bucket);
+    public Optional<byte[]> getBucketPolicyBytes(String bucket) throws S3Exception {
+        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(bucket);
         if (bucketPolicy.isEmpty()) {
             return Optional.empty();
         }
@@ -106,13 +105,13 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public Optional<BucketPolicy> getBucketPolicy(String basePath, String bucket) throws S3Exception {
-        return policyDriver.getBucketPolicy(basePath, bucket);
+    public Optional<BucketPolicy> getBucketPolicy(String bucket) throws S3Exception {
+        return policyDriver.getBucketPolicy(bucket);
     }
 
     @Override
-    public void putBucketPolicy(String basePath, String bucket, byte[] bytes) throws S3Exception {
-        policyDriver.putBucketPolicy(basePath, bucket, bytes);
+    public void putBucketPolicy(String bucket, byte[] bytes) throws S3Exception {
+        policyDriver.putBucketPolicy(bucket, bytes);
     }
 
     private boolean checkPermission(Function<Permission, Set<String>> methodsGetter, AccessControlPolicy acl,
@@ -129,67 +128,51 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkAclPermission(boolean isBucketAcl, String basePath, String bucket, String key,
-                                      String methodName, S3User s3User) throws S3Exception {
+    public boolean checkAclPermission(boolean isBucketAcl, String bucket, String key, String methodName,
+                                      S3User s3User) throws S3Exception {
         return (isBucketAcl ?
-                checkBucketAclPermission(basePath, bucket, methodName, s3User) :
-                checkObjectAclPermission(basePath, bucket, key, methodName, s3User));
+                checkBucketAclPermission(bucket, methodName, s3User) :
+                checkObjectAclPermission(bucket, key, methodName, s3User));
     }
 
-    private boolean checkBucketAclPermission(String basePath, String bucket, String methodName, S3User s3User)
+    private boolean checkBucketAclPermission(String bucket, String methodName, S3User s3User)
             throws S3Exception {
-        AccessControlPolicy acl = getBucketAcl(basePath, bucket);
+        AccessControlPolicy acl = getBucketAcl(bucket);
         return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
     }
 
-    private boolean checkObjectAclPermission(String basePath, String bucket, String key, String methodName,
-                                             S3User s3User) throws S3Exception {
-        AccessControlPolicy acl = getObjectAcl(basePath, bucket, key);
+    private boolean checkObjectAclPermission(String bucket, String key, String methodName, S3User s3User)
+            throws S3Exception {
+        AccessControlPolicy acl = getObjectAcl(bucket, key);
         return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
     }
 
     @Override
-    public AccessControlPolicy getBucketAcl(String basePath, String bucket) throws S3Exception {
-        return aclDriver.getBucketAcl(basePath, bucket);
+    public AccessControlPolicy getBucketAcl(String bucket) throws S3Exception {
+        return aclDriver.getBucketAcl(bucket);
     }
 
     @Override
-    public AccessControlPolicy getObjectAcl(String basePath, String bucket, String key) throws S3Exception {
-        Optional<String> path = buildPath(basePath, bucket, key);
-        if (path.isEmpty()) {
-            //TODO
-            throw S3Exception.INTERNAL_ERROR("Can't build path to object")
-                    .setMessage("Can't build path to object")
-                    .setResource("1")
-                    .setRequestId("1");
-        }
-        return aclDriver.getObjectAcl(path.get());
+    public AccessControlPolicy getObjectAcl(String bucket, String key) throws S3Exception {
+        return aclDriver.getObjectAcl(bucket, key);
     }
 
     @Override
-    public void putBucketAcl(String basePath, String bucket, byte[] bytes) throws S3Exception {
-        putBucketAcl(basePath, bucket, aclDriver.parseFromBytes(bytes));
+    public void putBucketAcl(String bucket, byte[] bytes) throws S3Exception {
+        putBucketAcl(bucket, aclDriver.parseFromBytes(bytes));
     }
 
-    private void putBucketAcl(String basePath, String bucket, AccessControlPolicy acl) throws S3Exception {
-        aclDriver.putBucketAcl(basePath, bucket, acl);
+    private void putBucketAcl(String bucket, AccessControlPolicy acl) throws S3Exception {
+        aclDriver.putBucketAcl(bucket, acl);
     }
 
     @Override
-    public String putObjectAcl(String basePath, String bucket, String key, byte[] bytes) throws S3Exception {
-        return putObjectAcl(basePath, bucket, key, aclDriver.parseFromBytes(bytes));
+    public String putObjectAcl(String bucket, String key, byte[] bytes) throws S3Exception {
+        return putObjectAcl(bucket, key, aclDriver.parseFromBytes(bytes));
     }
 
-    private String putObjectAcl(String basePath, String bucket, String key, AccessControlPolicy acl) throws S3Exception {
-        Optional<String> path = buildPath(basePath, bucket, key);
-        if (path.isEmpty()) {
-            //TODO
-            throw S3Exception.INTERNAL_ERROR("Can't build path to object")
-                    .setMessage("Can't build path to object")
-                    .setResource("1")
-                    .setRequestId("1");
-        }
-        return aclDriver.putObjectAcl(path.get(), acl);
+    private String putObjectAcl(String bucket, String key, AccessControlPolicy acl) throws S3Exception {
+        return aclDriver.putObjectAcl(bucket, key, acl);
     }
 
     @Override
@@ -210,7 +193,7 @@ public class S3DriverImpl implements S3Driver {
                     .setResource(File.separatorChar + bucket)
                     .setRequestId("1");
         }
-        putBucketAcl(basePath, bucket, createDefaultAccessControlPolicy(s3User));
+        putBucketAcl(bucket, createDefaultAccessControlPolicy(s3User));
     }
 
     @Override
@@ -247,7 +230,7 @@ public class S3DriverImpl implements S3Driver {
                     .setFile(file)
                     .setRawBytes(bytes)
                     .setLastModified(DateTimeUtil.parseDateTime(file))
-                    .setMetaData(metadataDriver.getObjectMetadata(absolutePath.get()));
+                    .setMetaData(metadataDriver.getObjectMetadata(request.getBucket(), request.getKey()));
         } catch (IOException | ParseException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
@@ -295,8 +278,8 @@ public class S3DriverImpl implements S3Driver {
                 FileOutputStream outputStream = new FileOutputStream(file);
                 outputStream.write(bytes);
                 outputStream.close();
-                metadataDriver.setObjectMetadata(absolutePath.get(), metadata);
-                putObjectAcl(basePath, bucket, key, createDefaultAccessControlPolicy(s3User));
+                metadataDriver.setObjectMetadata(bucket, key, metadata);
+                putObjectAcl(bucket, key, createDefaultAccessControlPolicy(s3User));
                 return S3Object.build()
                         .setAbsolutePath(absolutePath.get())
                         .setKey(key)

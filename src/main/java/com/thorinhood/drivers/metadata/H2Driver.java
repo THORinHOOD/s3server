@@ -82,4 +82,13 @@ public class H2Driver implements MetadataDriver {
         }
     }
 
+    @Override
+    public void setObjectMetadata(String bucket, String key, Map<String, String> metadata) throws S3Exception {
+
+    }
+
+    @Override
+    public Map<String, String> getObjectMetadata(String bucket, String key) throws S3Exception {
+        return null;
+    }
 }

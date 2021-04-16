@@ -3,14 +3,13 @@ package com.thorinhood.utils;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
-import com.thorinhood.drivers.config.ConfigDriver;
+import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
 
-import java.io.File;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -22,10 +21,10 @@ public class RequestUtil {
 
     private static final String META_PREFIX = "x-amz-meta-";
 
-    private final ConfigDriver configDriver;
+    private final UserDriver userDriver;
 
-    public RequestUtil(ConfigDriver configDriver) {
-        this.configDriver = configDriver;
+    public RequestUtil(UserDriver userDriver) {
+        this.userDriver = userDriver;
     }
 
     public ParsedRequest parseRequest(FullHttpRequest request) throws Exception {
@@ -37,7 +36,7 @@ public class RequestUtil {
         String[] bucketKey = extractBucketKey(request);
         Map<String, List<String>> queryParams = parseQueryParams(request);
         Map<String, String> metadata = extractMetaData(request);
-        Optional<S3User> s3User = configDriver.getS3User(credential.getValue(Credential.ACCESS_KEY));
+        Optional<S3User> s3User = userDriver.getS3User(credential.getValue(Credential.ACCESS_KEY));
         if (s3User.isEmpty()) {
             throw S3Exception.ACCESS_DENIED()
                     .setResource("1")

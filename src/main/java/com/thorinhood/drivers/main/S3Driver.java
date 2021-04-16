@@ -13,17 +13,15 @@ import java.util.Optional;
 public interface S3Driver extends AclPermissionChecker {
 
     // Permissions
-    AccessControlPolicy getBucketAcl(String basePath, String bucket) throws S3Exception;
-    AccessControlPolicy getObjectAcl(String basePath, String bucket, String key) throws S3Exception;
-    void putBucketAcl(String basePath, String bucket, byte[] bytes) throws S3Exception;
-    String putObjectAcl(String basePath, String bucket, String key, byte[] bytes) throws S3Exception;
+    AccessControlPolicy getBucketAcl(String bucket) throws S3Exception;
+    AccessControlPolicy getObjectAcl(String bucket, String key) throws S3Exception;
+    void putBucketAcl(String bucket, byte[] bytes) throws S3Exception;
+    String putObjectAcl(String bucket, String key, byte[] bytes) throws S3Exception;
 
-    boolean checkBucketPolicy(String basePath, String bucket, String key, String methodName, S3User s3User)
-            throws S3Exception;
-    Optional<BucketPolicy> getBucketPolicy(String basePath, String bucket) throws S3Exception;
-    Optional<byte[]> getBucketPolicyBytes(String basePath, String bucket) throws S3Exception;
-    void putBucketPolicy(String basePath, String bucket, byte[] bytes) throws S3Exception;
-
+    boolean checkBucketPolicy(String bucket, String key, String methodName, S3User s3User) throws S3Exception;
+    Optional<BucketPolicy> getBucketPolicy(String bucket) throws S3Exception;
+    Optional<byte[]> getBucketPolicyBytes(String bucket) throws S3Exception;
+    void putBucketPolicy( String bucket, byte[] bytes) throws S3Exception;
 
     // Actions
     void createBucket(String bucket, String basePath, S3User s3User) throws S3Exception;

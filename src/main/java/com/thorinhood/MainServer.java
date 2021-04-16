@@ -1,15 +1,11 @@
 package com.thorinhood;
 
+import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
-import com.thorinhood.drivers.acl.FileAclDriver;
-import com.thorinhood.drivers.config.ConfigDriver;
-import com.thorinhood.drivers.config.FileConfigDriver;
+import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.main.S3Driver;
-import com.thorinhood.drivers.metadata.FileMetadataDriver;
-import com.thorinhood.drivers.metadata.H2Driver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.main.S3DriverImpl;
-import com.thorinhood.drivers.principal.FilePolicyDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.utils.ArgumentParser;
 import org.apache.logging.log4j.LogManager;
@@ -45,62 +41,38 @@ public class MainServer {
             return;
         }
 
-        ConfigDriver configDriver = null;
+        FileDriversFactory fileFactory = new FileDriversFactory(parsedArgs.get(BASE_PATH));
         try {
-            configDriver = configDriverInit(parsedArgs.get(BASE_PATH));
+            fileFactory.init();
         } catch (Exception exception) {
             log.error(exception.getMessage());
             return;
         }
-        S3Driver s3Driver = null;
-        try {
-            s3Driver = s3DriverInit(parsedArgs);
-        } catch (Exception exception) {
-            log.error(exception.getMessage());
-            return;
-        }
-        Server server = new Server(port, parsedArgs.get(BASE_PATH), s3Driver, configDriver);
+        UserDriver userDriver = fileFactory.createUserDriver();
+        AclDriver aclDriver = fileFactory.createAclDriver();
+        MetadataDriver metadataDriver = fileFactory.createMetadataDriver();
+        PolicyDriver policyDriver = fileFactory.createPolicyDriver();
+        S3Driver s3Driver = new S3DriverImpl(metadataDriver, aclDriver, policyDriver);
+        Server server = new Server(port, parsedArgs.get(BASE_PATH), s3Driver, userDriver);
         log.info("port : {}", port);
         log.info("base path : {}", parsedArgs.get(BASE_PATH));
         server.run();
     }
 
-    private static S3Driver s3DriverInit(Map<String, String> parsedArgs) throws Exception {
-        MetadataDriver metadataDriver = metadataDriverInit(parsedArgs);
-        AclDriver aclDriver = aclDriverInit();
-        PolicyDriver policyDriver = policyDriverInit();
-        return new S3DriverImpl(metadataDriver, aclDriver, policyDriver);
-    }
-
-    private static PolicyDriver policyDriverInit() {
-        return new FilePolicyDriver();
-    }
-
-    private static MetadataDriver metadataDriverInit(Map<String, String> parsedArgs) throws Exception {
-        if (parsedArgs.get(DB_TYPE).equals("h2")) {
-            H2Driver h2Driver = H2Driver.getInstance(parsedArgs.get(DB_PATH), parsedArgs.get(DB_USER), parsedArgs.get(DB_PASSWORD));
-            h2Driver.init();
-            log.info("database type : h2");
-            log.info("database path : {}", parsedArgs.get(DB_PATH));
-            return h2Driver;
-        } else if (parsedArgs.get(DB_TYPE).equals("files")) {
-            FileMetadataDriver fileMetadataDriver = new FileMetadataDriver();
-            fileMetadataDriver.init();
-            log.info("database type : files");
-            return fileMetadataDriver;
-        } else {
-            throw new Exception("Wrong value dbType flag");
-        }
-    }
-
-    private static ConfigDriver configDriverInit(String baseFolderPath) throws Exception {
-        ConfigDriver configDriver = new FileConfigDriver(baseFolderPath);
-        configDriver.init();
-        return configDriver;
-    }
-
-    private static AclDriver aclDriverInit() {
-        return new FileAclDriver();
-    }
-
+//    private static MetadataDriver metadataDriverInit(Map<String, String> parsedArgs) throws Exception {
+//        if (parsedArgs.get(DB_TYPE).equals("h2")) {
+//            H2Driver h2Driver = H2Driver.getInstance(parsedArgs.get(DB_PATH), parsedArgs.get(DB_USER), parsedArgs.get(DB_PASSWORD));
+//            h2Driver.init();
+//            log.info("database type : h2");
+//            log.info("database path : {}", parsedArgs.get(DB_PATH));
+//            return h2Driver;
+//        } else if (parsedArgs.get(DB_TYPE).equals("files")) {
+//            FileMetadataDriver fileMetadataDriver = new FileMetadataDriver();
+//            fileMetadataDriver.init();
+//            log.info("database type : files");
+//            return fileMetadataDriver;
+//        } else {
+//            throw new Exception("Wrong value dbType flag");
+//        }
+//    }
 }

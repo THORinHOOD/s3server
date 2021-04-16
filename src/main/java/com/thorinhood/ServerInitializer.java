@@ -1,6 +1,6 @@
 package com.thorinhood;
 
-import com.thorinhood.drivers.config.ConfigDriver;
+import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.handlers.ServerHandler;
 import io.netty.channel.ChannelInitializer;
@@ -14,8 +14,8 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final ServerHandler serverHandler;
 
-    public ServerInitializer(String basePath, S3Driver s3Driver, ConfigDriver configDriver) {
-        serverHandler = new ServerHandler(basePath, s3Driver, configDriver);
+    public ServerInitializer(String basePath, S3Driver s3Driver, UserDriver userDriver) {
+        serverHandler = new ServerHandler(basePath, s3Driver, userDriver);
     }
 
     @Override

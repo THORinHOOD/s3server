@@ -1,7 +1,6 @@
 package com.thorinhood.handlers;
 
-import com.thorinhood.data.S3User;
-import com.thorinhood.drivers.config.ConfigDriver;
+import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.*;
@@ -14,7 +13,6 @@ import com.thorinhood.processors.actions.GetObjectProcessor;
 import com.thorinhood.processors.actions.PutObjectProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
-import com.thorinhood.utils.Credential;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
 import com.thorinhood.utils.XmlUtil;
@@ -49,8 +47,8 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final PutBucketPolicyProcessor putBucketPolicyProcessor;
     private final GetBucketPolicyProcessor getBucketPolicyProcessor;
 
-    public ServerHandler(String basePath, S3Driver s3Driver, ConfigDriver configDriver) {
-        requestUtil = new RequestUtil(configDriver);
+    public ServerHandler(String basePath, S3Driver s3Driver, UserDriver userDriver) {
+        requestUtil = new RequestUtil(userDriver);
         getObjectProcessor = new GetObjectProcessor(basePath, s3Driver);
         createBucketProcessor = new CreateBucketProcessor(basePath, s3Driver);
         putObjectProcessor = new PutObjectProcessor(basePath, s3Driver);

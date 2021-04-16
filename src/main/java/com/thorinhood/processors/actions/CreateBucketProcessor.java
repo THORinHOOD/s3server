@@ -1,6 +1,8 @@
 package com.thorinhood.processors.actions;
 
+import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.drivers.main.S3Driver;
+import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.ParsedRequest;
 import io.netty.channel.ChannelHandlerContext;
@@ -25,11 +27,35 @@ public class CreateBucketProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments) throws Exception {
         // TODO CHECK
+        if (!isBucketNameCorrect(parsedRequest.getBucket())) {
+            throw S3Exception.build("Illegal bucket name : " + parsedRequest.getBucket())
+                    .setStatus(HttpResponseStatus.BAD_REQUEST)
+                    .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
+                    .setMessage("Illegal bucket name : " + parsedRequest.getBucket())
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
         S3_DRIVER.createBucket(parsedRequest.getBucket(), BASE_PATH, parsedRequest.getS3User());
         sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime(),
                 "Location", File.separatorChar + parsedRequest.getBucket()
         ));
+    }
+
+    private boolean isBucketNameCorrect(String bucket) {
+        if (bucket == null) {
+            return false;
+        }
+        if (bucket.length() < 3 || bucket.length() > 63) {
+            return false;
+        }
+        for (int i = 0; i < bucket.length(); i++) {
+            char c = bucket.charAt(i);
+            if (!((Character.isLetter(c) && Character.isLowerCase(c)) || Character.isDigit(c) || c == '.' || c == '-')) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
