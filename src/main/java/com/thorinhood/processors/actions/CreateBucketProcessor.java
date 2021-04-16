@@ -24,6 +24,7 @@ public class CreateBucketProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments) throws Exception {
+        // TODO CHECK
         S3_DRIVER.createBucket(parsedRequest.getBucket(), BASE_PATH, parsedRequest.getS3User());
         sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime(),

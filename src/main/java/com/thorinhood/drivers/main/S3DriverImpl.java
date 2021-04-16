@@ -3,10 +3,13 @@ package com.thorinhood.drivers.main;
 import com.thorinhood.data.S3User;
 import com.thorinhood.data.acl.*;
 import com.thorinhood.data.S3Headers;
+import com.thorinhood.data.policy.BucketPolicy;
+import com.thorinhood.data.policy.Statement;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
+import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import com.thorinhood.utils.DateTimeUtil;
@@ -28,30 +31,17 @@ public class S3DriverImpl implements S3Driver {
 
     private final MetadataDriver metadataDriver;
     private final AclDriver aclDriver;
+    private final PolicyDriver policyDriver;
     private final Map<String, Selector<String>> strSelectors;
     private final Map<String, Selector<Date>> dateSelectors;
-//    private final AccessControlPolicy defaultOwnerAcl = AccessControlPolicy.builder()    // TODO
-//            .setOwner(Owner.builder()
-//                    .setId("1")
-//                    .setDisplayName("asgar")
-//                    .build())
-//            .setAccessControlList(Collections.singletonList(
-//                    Grant.builder()
-//                            .setGrantee(Grantee.builder()
-//                                    .setDisplayName("asgar")
-//                                    .setId("1")
-//                                    .setType("Canonical User")
-//                                    .build())
-//                            .setPermission(Permission.FULL_CONTROL)
-//                            .build()
-//            ))
-//            .build();
+
 
     private static final Logger log = LogManager.getLogger(S3DriverImpl.class);
 
-    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver) {
+    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, PolicyDriver policyDriver) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
+        this.policyDriver = policyDriver;
         strSelectors = Map.of(
                 S3Headers.IF_MATCH, new IfMatch(),
                 S3Headers.IF_NONE_MATCH, new IfNoneMatch()
@@ -63,29 +53,99 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkBucketPermission(String basePath, String bucket, String methodName, S3User s3User)
+    public boolean checkBucketPolicy(String basePath, String bucket, String key, String methodName, S3User s3User)
             throws S3Exception {
-        AccessControlPolicy acl = getBucketAcl(basePath, bucket);
-        return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
+        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(basePath, bucket);
+        if (bucketPolicy.isEmpty()) {
+            return s3User.isRootUser();
+        }
+        boolean result = false;
+        for (Statement statement : bucketPolicy.get().getStatements()) {
+            if (checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn())) {
+                if (checkStatement(statement, bucket, key, methodName, s3User)) {
+                    result = true;
+                }
+            }
+        }
+        return result;
+    }
+
+    private boolean checkStatement(Statement statement, String bucket, String key, String methodName, S3User s3User) {
+        boolean hasAction = statement.getAction().stream().anyMatch(action -> checkAction(action, methodName));
+        boolean isThisResource = statement.getResource().stream().anyMatch(resource ->
+                checkResource(resource, bucket, key));
+        boolean isThisPrincipal = checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn());
+        boolean isEffectAllow = checkEffect(statement.getEffect());
+        return hasAction && isThisResource && isThisPrincipal && isEffectAllow;
+    }
+
+    private boolean checkEffect(Statement.EffectType effect) {
+        return Statement.EffectType.Allow.equals(effect);
+    }
+
+    private boolean checkPrincipal(List<String> patterns, String arn) {
+        return patterns.stream().anyMatch(pattern -> match(pattern, arn));
+    }
+
+    private boolean checkResource(String pattern, String bucket, String key) {
+        String resource = "arn:aws:s3::" + bucket + (key != null && !key.isEmpty() ? "/" + key : "");
+        return match(pattern, resource);
+    }
+
+    private boolean checkAction(String pattern, String toCheck) {
+        return match(pattern, toCheck);
     }
 
     @Override
-    public boolean checkObjectPermission(String basePath, String bucket, String key, String methodName, S3User s3User)
-            throws S3Exception {
-        AccessControlPolicy acl = getObjectAcl(basePath, bucket, key);
-        return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
+    public Optional<byte[]> getBucketPolicyBytes(String basePath, String bucket) throws S3Exception {
+        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(basePath, bucket);
+        if (bucketPolicy.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(policyDriver.convertBucketPolicy(bucketPolicy.get()));
+    }
+
+    @Override
+    public Optional<BucketPolicy> getBucketPolicy(String basePath, String bucket) throws S3Exception {
+        return policyDriver.getBucketPolicy(basePath, bucket);
+    }
+
+    @Override
+    public void putBucketPolicy(String basePath, String bucket, byte[] bytes) throws S3Exception {
+        policyDriver.putBucketPolicy(basePath, bucket, bytes);
     }
 
     private boolean checkPermission(Function<Permission, Set<String>> methodsGetter, AccessControlPolicy acl,
                                     String methodName, S3User s3User) {
         return acl.getAccessControlList().stream()
-                .filter(grant -> grant.getGrantee().getDisplayName().equals(s3User.getAccountName()) &&
-                                 grant.getGrantee().getId().equals(s3User.getCanonicalUserId()))
+                .filter(grant -> (s3User.isRootUser() &&
+                                  grant.getGrantee().getDisplayName().equals(s3User.getAccountName()) &&
+                                  grant.getGrantee().getId().equals(s3User.getCanonicalUserId())))
                 .map(Grant::getPermission)
                 .map(methodsGetter)
                 .flatMap(Collection::stream)
                 .distinct()
                 .anyMatch(name -> name.equals(methodName));
+    }
+
+    @Override
+    public boolean checkAclPermission(boolean isBucketAcl, String basePath, String bucket, String key,
+                                      String methodName, S3User s3User) throws S3Exception {
+        return (isBucketAcl ?
+                checkBucketAclPermission(basePath, bucket, methodName, s3User) :
+                checkObjectAclPermission(basePath, bucket, key, methodName, s3User));
+    }
+
+    private boolean checkBucketAclPermission(String basePath, String bucket, String methodName, S3User s3User)
+            throws S3Exception {
+        AccessControlPolicy acl = getBucketAcl(basePath, bucket);
+        return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
+    }
+
+    private boolean checkObjectAclPermission(String basePath, String bucket, String key, String methodName,
+                                             S3User s3User) throws S3Exception {
+        AccessControlPolicy acl = getObjectAcl(basePath, bucket, key);
+        return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
     }
 
     @Override
@@ -302,4 +362,22 @@ public class S3DriverImpl implements S3Driver {
         return DigestUtils.md5Hex(bytes);
     }
 
+    private boolean match(String first, String second)
+    {
+        if (first.length() == 0 && second.length() == 0)
+            return true;
+
+        if (first.length() > 1 && first.charAt(0) == '*' &&
+                second.length() == 0)
+            return false;
+
+        if ((first.length() != 0 && second.length() != 0 &&
+                        first.charAt(0) == second.charAt(0)))
+            return match(first.substring(1), second.substring(1));
+
+        if (first.length() > 0 && first.charAt(0) == '*')
+            return match(first.substring(1), second) ||
+                   match(first, second.substring(1));
+        return false;
+    }
 }

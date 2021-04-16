@@ -1,7 +1,6 @@
-package com.thorinhood.processors.acl;
+package com.thorinhood.processors.policies;
 
 import com.thorinhood.drivers.main.S3Driver;
-import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.ParsedRequest;
@@ -14,11 +13,11 @@ import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
-public class PutBucketAclProcessor extends Processor {
+public class PutBucketPolicyProcessor extends Processor {
 
-    private static final Logger log = LogManager.getLogger(PutBucketAclProcessor.class);
+    private static final Logger log = LogManager.getLogger(PutBucketPolicyProcessor.class);
 
-    public PutBucketAclProcessor(String basePath, S3Driver s3Driver) {
+    public PutBucketPolicyProcessor(String basePath, S3Driver s3Driver) {
         super(basePath, s3Driver);
     }
 
@@ -26,10 +25,9 @@ public class PutBucketAclProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         checkRequestPermission(parsedRequest, true);
-        S3_DRIVER.putBucketAcl(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getBytes());
+        S3_DRIVER.putBucketPolicy(BASE_PATH, parsedRequest.getBucket(), parsedRequest.getBytes());
         sendResponseWithoutContent(context, OK, request, Map.of(
-                "Date", DateTimeUtil.currentDateTime(),
-                "Content-Length", 0
+                "Date", DateTimeUtil.currentDateTime()
         ));
     }
 
@@ -37,4 +35,5 @@ public class PutBucketAclProcessor extends Processor {
     protected Logger getLogger() {
         return log;
     }
+
 }

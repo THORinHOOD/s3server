@@ -1,5 +1,8 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.data.S3User;
+import com.thorinhood.data.acl.AccessControlPolicy;
+import com.thorinhood.drivers.main.AclPermissionChecker;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.exceptions.S3Exception;
@@ -19,6 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
@@ -35,6 +40,18 @@ public abstract class Processor {
         this.S3_DRIVER = s3Driver;
         METHOD_NAME = "s3:" + this.getClass().getSimpleName().substring(0,
                 this.getClass().getSimpleName().indexOf("Processor"));
+    }
+
+    protected void checkRequestPermission(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
+        boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, BASE_PATH, request.getBucket(),
+                request.getKey(), METHOD_NAME, request.getS3User());
+        boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(BASE_PATH, request.getBucket(), request.getKey(),
+                METHOD_NAME, request.getS3User());
+        if (!(aclCheckResult && policyCheckResult)) {
+            throw S3Exception.ACCESS_DENIED()
+                    .setResource("1")
+                    .setRequestId("1");
+        }
     }
 
     private void wrapProcess(Logger log, ChannelHandlerContext ctx, FullHttpRequest request, Process process) {
@@ -57,6 +74,14 @@ public abstract class Processor {
                              Consumer<FullHttpResponse> headersSetter, String content) {
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, httpResponseStatus, Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
+        headersSetter.accept(response);
+        sendAndCleanupConnection(ctx, response, request);
+    }
+
+    public void sendResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus httpResponseStatus,
+                             Consumer<FullHttpResponse> headersSetter, byte[] content) {
+        FullHttpResponse response = new DefaultFullHttpResponse(
+                HTTP_1_1, httpResponseStatus, Unpooled.copiedBuffer(content));
         headersSetter.accept(response);
         sendAndCleanupConnection(ctx, response, request);
     }
@@ -102,28 +127,6 @@ public abstract class Processor {
         Path path = file.toPath();
         String mimeType = Files.probeContentType(path);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, mimeType);
-    }
-
-    protected String extractBucket(FullHttpRequest request) {
-        String host = request.headers().get(HttpHeaderNames.HOST);
-        return host.substring(0, host.indexOf("."));
-    }
-
-    protected String extractBucketPath(FullHttpRequest request) {
-        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
-        if (uri.isEmpty() || uri.charAt(0) != '/') {
-            return null;
-        }
-        uri += "/";
-        return uri.substring(1, uri.indexOf("/", 1));
-    }
-
-    protected String extractKeyPath(FullHttpRequest request) {
-        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
-        if (uri.isEmpty() || uri.charAt(0) != '/') {
-            return null;
-        }
-        return uri.replace('/', File.separatorChar).substring(uri.indexOf("/", 1));
     }
 
     public void process(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,

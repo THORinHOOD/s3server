@@ -28,12 +28,7 @@ public class GetBucketAclProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        if (!S3_DRIVER.checkBucketPermission(BASE_PATH, parsedRequest.getBucket(), METHOD_NAME,
-                parsedRequest.getS3User())) {
-            throw S3Exception.ACCESS_DENIED()
-                    .setResource("1")
-                    .setRequestId("1");
-        }
+        checkRequestPermission(parsedRequest, true);
         AccessControlPolicy accessControlPolicy = S3_DRIVER.getBucketAcl(BASE_PATH, parsedRequest.getBucket());
         String xml = accessControlPolicy.buildXmlText();
         sendResponse(context, request, OK, response -> {

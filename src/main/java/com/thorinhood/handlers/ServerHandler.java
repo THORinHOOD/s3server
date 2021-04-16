@@ -12,6 +12,8 @@ import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.processors.actions.CreateBucketProcessor;
 import com.thorinhood.processors.actions.GetObjectProcessor;
 import com.thorinhood.processors.actions.PutObjectProcessor;
+import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
+import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
 import com.thorinhood.utils.Credential;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
@@ -44,6 +46,8 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final PutBucketAclProcessor putBucketAclProcessor;
     private final GetObjectAclProcessor getObjectAclProcessor;
     private final GetBucketAclProcessor getBucketAclProcessor;
+    private final PutBucketPolicyProcessor putBucketPolicyProcessor;
+    private final GetBucketPolicyProcessor getBucketPolicyProcessor;
 
     public ServerHandler(String basePath, S3Driver s3Driver, ConfigDriver configDriver) {
         requestUtil = new RequestUtil(configDriver);
@@ -54,6 +58,8 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         putBucketAclProcessor = new PutBucketAclProcessor(basePath, s3Driver);
         getObjectAclProcessor = new GetObjectAclProcessor(basePath, s3Driver);
         getBucketAclProcessor = new GetBucketAclProcessor(basePath, s3Driver);
+        putBucketPolicyProcessor = new PutBucketPolicyProcessor(basePath, s3Driver);
+        getBucketPolicyProcessor = new GetBucketPolicyProcessor(basePath, s3Driver);
     }
 
     @Override
@@ -91,12 +97,11 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 } else {
                     getBucketAclProcessor.process(context, request, parsedRequest);
                 }
-                return true;
+            } else if (isPolicyRequest(request)) {
+                getBucketPolicyProcessor.process(context, request, parsedRequest);
+            } else {
+                getObjectProcessor.process(context, request, parsedRequest);
             }
-        }
-
-        if (request.method().equals(HttpMethod.GET)) {
-            getObjectProcessor.process(context, request, parsedRequest);
             return true;
         }
 
@@ -107,6 +112,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 } else {
                     putBucketAclProcessor.process(context, request, parsedRequest);
                 }
+                return true;
+            } else if (isPolicyRequest(request)) {
+                putBucketPolicyProcessor.process(context, request, parsedRequest);
                 return true;
             }
         }
@@ -131,10 +139,17 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         return false;
     }
 
-    private boolean isAclRequest(FullHttpRequest request) {
-        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
-        Map<String, List<String>> params = queryStringDecoder.parameters();
-        return params.containsKey("acl");
+    private boolean isPolicyRequest(FullHttpRequest request) {
+        return checkRequestS3Type(request, "policy");
     }
 
+    private boolean isAclRequest(FullHttpRequest request) {
+        return checkRequestS3Type(request, "acl");
+    }
+
+    private boolean checkRequestS3Type(FullHttpRequest request, String type) {
+        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+        Map<String, List<String>> params = queryStringDecoder.parameters();
+        return params.containsKey(type);
+    }
 }

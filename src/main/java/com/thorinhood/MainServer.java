@@ -9,6 +9,8 @@ import com.thorinhood.drivers.metadata.FileMetadataDriver;
 import com.thorinhood.drivers.metadata.H2Driver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.main.S3DriverImpl;
+import com.thorinhood.drivers.principal.FilePolicyDriver;
+import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.utils.ArgumentParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -66,7 +68,12 @@ public class MainServer {
     private static S3Driver s3DriverInit(Map<String, String> parsedArgs) throws Exception {
         MetadataDriver metadataDriver = metadataDriverInit(parsedArgs);
         AclDriver aclDriver = aclDriverInit();
-        return new S3DriverImpl(metadataDriver, aclDriver);
+        PolicyDriver policyDriver = policyDriverInit();
+        return new S3DriverImpl(metadataDriver, aclDriver, policyDriver);
+    }
+
+    private static PolicyDriver policyDriverInit() {
+        return new FilePolicyDriver();
     }
 
     private static MetadataDriver metadataDriverInit(Map<String, String> parsedArgs) throws Exception {

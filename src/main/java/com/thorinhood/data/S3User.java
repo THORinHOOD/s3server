@@ -58,4 +58,8 @@ public class S3User {
     public String getAccountName() {
         return accountName;
     }
+
+    public boolean isRootUser() {
+        return path == null && userName == null;
+    }
 }
