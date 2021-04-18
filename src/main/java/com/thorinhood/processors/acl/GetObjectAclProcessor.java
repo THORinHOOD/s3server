@@ -19,8 +19,8 @@ public class GetObjectAclProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(GetObjectAclProcessor.class);
 
-    public GetObjectAclProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public GetObjectAclProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override

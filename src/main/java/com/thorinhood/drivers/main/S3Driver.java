@@ -6,6 +6,7 @@ import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.ParsedRequest;
+import io.netty.handler.codec.http.HttpHeaders;
 
 import java.util.Map;
 import java.util.Optional;
@@ -21,12 +22,13 @@ public interface S3Driver extends AclPermissionChecker {
     boolean checkBucketPolicy(String bucket, String key, String methodName, S3User s3User) throws S3Exception;
     Optional<BucketPolicy> getBucketPolicy(String bucket) throws S3Exception;
     Optional<byte[]> getBucketPolicyBytes(String bucket) throws S3Exception;
-    void putBucketPolicy( String bucket, byte[] bytes) throws S3Exception;
+    void putBucketPolicy(String bucket, byte[] bytes) throws S3Exception;
 
     // Actions
-    void createBucket(String bucket, String basePath, S3User s3User) throws S3Exception;
-    S3Object getObject(ParsedRequest request, String basePath) throws S3Exception;
-    S3Object putObject(String bucket, String key, String basePath, byte[] bytes, Map<String, String> metadata,
-                       S3User s3User) throws S3Exception;
+    void createBucket(String bucket, S3User s3User) throws S3Exception;
+    S3Object getObject(String bucket, String key, HttpHeaders httpHeaders) throws S3Exception;
+    S3Object putObject(String bucket, String key, byte[] bytes, Map<String, String> metadata, S3User s3User)
+            throws S3Exception;
+    void deleteObject(String bucket, String key) throws S3Exception;
 
 }

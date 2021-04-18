@@ -1,8 +1,8 @@
 package com.thorinhood.utils.utils;
 
-import com.thorinhood.Server;
 import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
+import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.main.S3DriverImpl;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -18,8 +18,9 @@ public class TestServer {
         AclDriver aclDriver = fileFactory.createAclDriver();
         MetadataDriver metadataDriver = fileFactory.createMetadataDriver();
         PolicyDriver policyDriver = fileFactory.createPolicyDriver();
-        S3Driver s3Driver = new S3DriverImpl(metadataDriver, aclDriver, policyDriver);
-        com.thorinhood.Server server = new com.thorinhood.Server(port, basePath, s3Driver, userDriver);
+        EntityDriver entityDriver = fileFactory.createEntityDriver();
+        S3Driver s3Driver = new S3DriverImpl(metadataDriver, aclDriver, policyDriver, entityDriver);
+        com.thorinhood.Server server = new com.thorinhood.Server(port, s3Driver, userDriver);
         server.run();
     }
 

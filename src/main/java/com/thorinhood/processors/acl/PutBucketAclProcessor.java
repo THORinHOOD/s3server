@@ -18,8 +18,8 @@ public class PutBucketAclProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(PutBucketAclProcessor.class);
 
-    public PutBucketAclProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public PutBucketAclProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override

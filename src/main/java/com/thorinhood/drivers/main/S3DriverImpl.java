@@ -2,28 +2,19 @@ package com.thorinhood.drivers.main;
 
 import com.thorinhood.data.S3User;
 import com.thorinhood.data.acl.*;
-import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.policy.Statement;
+import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
-import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.drivers.acl.AclDriver;
+import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.exceptions.S3Exception;
-import com.thorinhood.processors.selectors.*;
-import com.thorinhood.utils.DateTimeUtil;
-import com.thorinhood.utils.ParsedRequest;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import org.apache.commons.codec.digest.DigestUtils;
+import io.netty.handler.codec.http.HttpHeaders;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.text.ParseException;
 import java.util.*;
 import java.util.function.Function;
 
@@ -32,24 +23,16 @@ public class S3DriverImpl implements S3Driver {
     private final MetadataDriver metadataDriver;
     private final AclDriver aclDriver;
     private final PolicyDriver policyDriver;
-    private final Map<String, Selector<String>> strSelectors;
-    private final Map<String, Selector<Date>> dateSelectors;
-
+    private final EntityDriver entityDriver;
 
     private static final Logger log = LogManager.getLogger(S3DriverImpl.class);
 
-    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, PolicyDriver policyDriver) {
+    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, PolicyDriver policyDriver,
+                        EntityDriver entityDriver) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
         this.policyDriver = policyDriver;
-        strSelectors = Map.of(
-                S3Headers.IF_MATCH, new IfMatch(),
-                S3Headers.IF_NONE_MATCH, new IfNoneMatch()
-        );
-        dateSelectors = Map.of(
-                S3Headers.IF_MODIFIED_SINCE, new IfModifiedSince(),
-                S3Headers.IF_UNMODIFIED_SINCE, new IfUnmodifiedSince()
-        );
+        this.entityDriver = entityDriver;
     }
 
     @Override
@@ -187,130 +170,30 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public void createBucket(String bucket, String basePath, S3User s3User) throws S3Exception {
-        String absolutePath = basePath + File.separatorChar + bucket;
-        File bucketFile = new File(absolutePath);
-        if (bucketFile.exists()) {
-            throw S3Exception.build("Bucket already exists : " + absolutePath)
-                    .setStatus(HttpResponseStatus.CONFLICT)
-                    .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
-                    .setMessage("Your previous request to create the named bucket succeeded and you already own it.")
-                    .setResource(File.separatorChar + bucket)
-                    .setRequestId("1");
-        }
-        if (!bucketFile.mkdir()) {
-            throw S3Exception.INTERNAL_ERROR("Can't create bucket: " + absolutePath)
-                    .setMessage("Can't create bucket")
-                    .setResource(File.separatorChar + bucket)
-                    .setRequestId("1");
-        }
+    public void createBucket(String bucket, S3User s3User) throws S3Exception {
+        entityDriver.createBucket(bucket, s3User);
         putBucketAcl(bucket, createDefaultAccessControlPolicy(s3User));
     }
 
     @Override
-    public S3Object getObject(ParsedRequest request, String basePath) throws S3Exception {
-        Optional<String> absolutePath = buildPath(basePath, request.getBucket(), request.getKey());
-        if (absolutePath.isEmpty()) {
-            //TODO
-            return null;
-        }
-        File file = new File(absolutePath.get());
-        if (file.isHidden() || !file.exists()) {
-            throw S3Exception.build("File not found: " + absolutePath)
-                    .setStatus(HttpResponseStatus.NOT_FOUND)
-                    .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
-                    .setMessage("The resource you requested does not exist")
-                    .setResource(File.separatorChar + request.getBucket() + request.getKey())
-                    .setRequestId("1");
-        }
-        if (!file.isFile()) {
-            //TODO
-            return null;
-        }
-
-        byte[] bytes;
-
-        try {
-            bytes = Files.readAllBytes(file.toPath());
-            String eTag = calculateETag(bytes);
-            checkSelectors(request, eTag, file);
-            return S3Object.build()
-                    .setAbsolutePath(absolutePath.get())
-                    .setKey(request.getKey())
-                    .setETag(eTag)
-                    .setFile(file)
-                    .setRawBytes(bytes)
-                    .setLastModified(DateTimeUtil.parseDateTime(file))
-                    .setMetaData(metadataDriver.getObjectMetadata(request.getBucket(), request.getKey()));
-        } catch (IOException | ParseException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                    .setMessage("Internal error : can't create object")
-                    .setResource(File.separatorChar + request.getBucket() + request.getKey())
-                    .setRequestId("1");
-        }
-    }
-
-    private void checkSelectors(ParsedRequest request, String eTag, File file) throws ParseException {
-        //TODO
-        if (request.containsHeader(S3Headers.IF_MATCH)) {
-            strSelectors.get(S3Headers.IF_MATCH).check(eTag, request.getHeader(S3Headers.IF_MATCH));
-        }
-        if (request.containsHeader(S3Headers.IF_MODIFIED_SINCE)) {
-            dateSelectors.get(S3Headers.IF_MODIFIED_SINCE).check(new Date(file.lastModified()),
-                    DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_MODIFIED_SINCE))); //TODO
-        }
-        if (request.containsHeader(S3Headers.IF_NONE_MATCH)) {
-            strSelectors.get(S3Headers.IF_NONE_MATCH).check(eTag, request.getHeader(S3Headers.IF_NONE_MATCH));
-        }
-        if (request.containsHeader(S3Headers.IF_UNMODIFIED_SINCE)) {
-            dateSelectors.get(S3Headers.IF_UNMODIFIED_SINCE).check(new Date(file.lastModified()),
-                    DateTimeUtil.parseStrTime(request.getHeader(S3Headers.IF_UNMODIFIED_SINCE))); // TODO
-        }
+    public S3Object getObject(String bucket, String key, HttpHeaders httpHeaders) throws S3Exception {
+        HasMetaData rawS3Object = entityDriver.getObject(bucket, key, httpHeaders);
+        Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(bucket, key);
+        return rawS3Object.setMetaData(objectMetadata);
     }
 
     @Override
-    public S3Object putObject(String bucket, String key, String basePath, byte[] bytes, Map<String, String> metadata,
-                              S3User s3User) throws S3Exception {
-        Optional<String> absolutePath = buildPath(basePath, bucket, key);
-        if (absolutePath.isEmpty()) {
-            //TODO
-            return null;
-        }
-        File file = new File(absolutePath.get());
-        if (!processFolders(file, bucket)) {
-            throw S3Exception.INTERNAL_ERROR("Can't create folders: " + absolutePath)
-                    .setMessage("Internal error : can't create folder")
-                    .setResource(File.separatorChar + bucket + key)
-                    .setRequestId("1");
-        }
-        try {
-            log.info("Starting creating file : " + file.getAbsolutePath() + " # " + file.getPath());
-            if (file.createNewFile() || file.exists()) {
-                FileOutputStream outputStream = new FileOutputStream(file);
-                outputStream.write(bytes);
-                outputStream.close();
-                metadataDriver.setObjectMetadata(bucket, key, metadata);
-                putObjectAcl(bucket, key, createDefaultAccessControlPolicy(s3User));
-                return S3Object.build()
-                        .setAbsolutePath(absolutePath.get())
-                        .setKey(key)
-                        .setETag(calculateETag(bytes))
-                        .setFile(file)
-                        .setRawBytes(bytes)
-                        .setLastModified(DateTimeUtil.parseDateTime(file))
-                        .setMetaData(metadata);
-            } else {
-                throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                        .setMessage("Internal error : can't create object")
-                        .setResource(File.separatorChar + bucket + key)
-                        .setRequestId("1");
-            }
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                    .setMessage(exception.getMessage())
-                    .setResource(File.separatorChar + bucket + key)
-                    .setRequestId("1");
-        }
+    public S3Object putObject(String bucket, String key, byte[] bytes, Map<String, String> metadata, S3User s3User)
+            throws S3Exception {
+        S3Object s3Object = entityDriver.putObject(bucket, key, bytes, metadata);
+        metadataDriver.putObjectMetadata(bucket, key, metadata);
+        aclDriver.putObjectAcl(bucket, key, createDefaultAccessControlPolicy(s3User));
+        return s3Object;
+    }
+
+    @Override
+    public void deleteObject(String bucket, String key) throws S3Exception {
+        entityDriver.deleteObject(bucket, key);
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {
@@ -330,30 +213,6 @@ public class S3DriverImpl implements S3Driver {
                                 .build()
                 ))
                 .build();
-    }
-
-    //TODO
-    private Optional<String> buildPath(String basePath, String bucket, String key) {
-        if (key == null || bucket == null) {
-            return Optional.empty();
-        }
-        return Optional.of(basePath + File.separatorChar + bucket + key);
-    }
-
-    private boolean processFolders(File file, String bucket) {
-        File folder = file.getParentFile();
-        if (folder.exists() && folder.isDirectory()) {
-            return true;
-        } else if (folder.exists() && !folder.isDirectory()) {
-            return false;
-        } else if (!folder.getName().equals(bucket)) {
-            return processFolders(folder, bucket) && folder.mkdir();
-        }
-        return true;
-    }
-
-    private String calculateETag(byte[] bytes) {
-        return DigestUtils.md5Hex(bytes);
     }
 
     private boolean match(String first, String second)

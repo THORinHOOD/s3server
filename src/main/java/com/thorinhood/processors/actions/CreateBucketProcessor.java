@@ -19,8 +19,8 @@ public class CreateBucketProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(CreateBucketProcessor.class);
 
-    public CreateBucketProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public CreateBucketProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override
@@ -35,7 +35,7 @@ public class CreateBucketProcessor extends Processor {
                     .setResource("1")
                     .setRequestId("1"); // TODO
         }
-        S3_DRIVER.createBucket(parsedRequest.getBucket(), BASE_PATH, parsedRequest.getS3User());
+        S3_DRIVER.createBucket(parsedRequest.getBucket(), parsedRequest.getS3User());
         sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime(),
                 "Location", File.separatorChar + parsedRequest.getBucket()

@@ -1,8 +1,5 @@
 package com.thorinhood.processors;
 
-import com.thorinhood.data.S3User;
-import com.thorinhood.data.acl.AccessControlPolicy;
-import com.thorinhood.drivers.main.AclPermissionChecker;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.exceptions.S3Exception;
@@ -16,14 +13,10 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
@@ -31,12 +24,10 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public abstract class Processor {
 
-    protected final String BASE_PATH;
     protected final S3Driver S3_DRIVER;
     protected final String METHOD_NAME;
 
-    public Processor(String basePath, S3Driver s3Driver) {
-        this.BASE_PATH = basePath;
+    public Processor(S3Driver s3Driver) {
         this.S3_DRIVER = s3Driver;
         METHOD_NAME = "s3:" + this.getClass().getSimpleName().substring(0,
                 this.getClass().getSimpleName().indexOf("Processor"));

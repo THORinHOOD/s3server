@@ -19,8 +19,8 @@ public class PutObjectProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(PutObjectProcessor.class);
 
-    public PutObjectProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public PutObjectProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override
@@ -52,7 +52,6 @@ public class PutObjectProcessor extends Processor {
             S3Object s3Object = S3_DRIVER.putObject(
                     parsedRequest.getBucket(),
                     parsedRequest.getKey(),
-                    BASE_PATH,
                     parsedRequest.getBytes(),
                     parsedRequest.getMetadata(),
                     parsedRequest.getS3User());

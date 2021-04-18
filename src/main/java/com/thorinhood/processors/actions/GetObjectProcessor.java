@@ -21,8 +21,8 @@ public class GetObjectProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(GetObjectProcessor.class);
 
-    public GetObjectProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public GetObjectProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override
@@ -32,7 +32,8 @@ public class GetObjectProcessor extends Processor {
 
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
 
-        S3Object s3Object = S3_DRIVER.getObject(parsedRequest, BASE_PATH);
+        S3Object s3Object = S3_DRIVER.getObject(parsedRequest.getBucket(), parsedRequest.getKey(),
+                parsedRequest.getHeaders());
 
         RandomAccessFile raf;
         try {

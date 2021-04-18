@@ -4,7 +4,6 @@ import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.acl.Grant;
 import com.thorinhood.data.acl.Owner;
 import com.thorinhood.drivers.FileDriver;
-import com.thorinhood.drivers.FileMetadataSubDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
@@ -16,7 +15,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FileAclDriver extends FileMetadataSubDriver implements AclDriver {
+public class FileAclDriver extends FileDriver implements AclDriver {
 
     public FileAclDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
         super(baseFolderPath, configFolderPath, usersFolderPath);
@@ -24,25 +23,25 @@ public class FileAclDriver extends FileMetadataSubDriver implements AclDriver {
 
     @Override
     public String putObjectAcl(String bucket, String key, AccessControlPolicy acl) throws S3Exception {
-        String pathToMetafile = getPathToObjectAclFile(bucket, key);
+        String pathToMetafile = getPathToObjectAclFile(bucket, key, true);
         return putAcl(pathToMetafile, acl);
     }
 
     @Override
     public AccessControlPolicy getObjectAcl(String bucket, String key) throws S3Exception {
-        String pathToMetafile = getPathToObjectAclFile(bucket, key);
+        String pathToMetafile = getPathToObjectAclFile(bucket, key, true);
         return getAcl(pathToMetafile);
     }
 
     @Override
     public void putBucketAcl(String bucket, AccessControlPolicy acl) throws S3Exception {
-        String pathToMetafile = getPathToBucketAclFile(bucket);
+        String pathToMetafile = getPathToBucketAclFile(bucket, true);
         putAcl(pathToMetafile, acl);
     }
 
     @Override
     public AccessControlPolicy getBucketAcl(String bucket) throws S3Exception {
-        String pathToMetafile = getPathToBucketAclFile(bucket);
+        String pathToMetafile = getPathToBucketAclFile(bucket, true);
         return getAcl(pathToMetafile);
     }
 
@@ -95,13 +94,13 @@ public class FileAclDriver extends FileMetadataSubDriver implements AclDriver {
         }
     }
 
-    private String getPathToBucketAclFile(String bucket) {
-        return getPathToBucketMetadataFolder(bucket) + File.separatorChar + bucket + ".acl";
+    private String getPathToBucketAclFile(String bucket, boolean safely) {
+        return getPathToBucketMetadataFolder(bucket, safely) + File.separatorChar + bucket + ".acl";
     }
 
-    private String getPathToObjectAclFile(String bucket, String key) {
+    private String getPathToObjectAclFile(String bucket, String key, boolean safely) {
         String fileName = extractFileName(key);
-        return getPathToObjectMetadataFolder(bucket, key) + File.separatorChar + fileName + ".acl";
+        return getPathToObjectMetadataFolder(bucket, key, safely) + File.separatorChar + fileName + ".acl";
     }
 
     public AccessControlPolicy parseFromBytes(byte[] bytes) throws S3Exception {

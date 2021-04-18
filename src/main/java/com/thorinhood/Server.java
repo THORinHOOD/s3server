@@ -12,9 +12,9 @@ public class Server {
     private final int port;
     private final ServerInitializer serverInitializer;
 
-    public Server(int port, String basePath, S3Driver s3Driver, UserDriver userDriver) {
+    public Server(int port, S3Driver s3Driver, UserDriver userDriver) {
         this.port = port;
-        serverInitializer = new ServerInitializer(basePath, s3Driver, userDriver);
+        serverInitializer = new ServerInitializer(s3Driver, userDriver);
     }
 
     public void run() throws Exception {

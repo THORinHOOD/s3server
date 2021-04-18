@@ -2,6 +2,7 @@ package com.thorinhood;
 
 import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
+import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -20,7 +21,6 @@ public class MainServer {
 
     public static final String BASE_PATH = "basePath";
     public static final String PORT = "port";
-
 
     public static void main(String[] args) throws Exception {
         Map<String, String> parsedArgs = ArgumentParser.parseArguments(args);
@@ -48,8 +48,9 @@ public class MainServer {
         AclDriver aclDriver = fileFactory.createAclDriver();
         MetadataDriver metadataDriver = fileFactory.createMetadataDriver();
         PolicyDriver policyDriver = fileFactory.createPolicyDriver();
-        S3Driver s3Driver = new S3DriverImpl(metadataDriver, aclDriver, policyDriver);
-        Server server = new Server(port, parsedArgs.get(BASE_PATH), s3Driver, userDriver);
+        EntityDriver entityDriver = fileFactory.createEntityDriver();
+        S3Driver s3Driver = new S3DriverImpl(metadataDriver, aclDriver, policyDriver, entityDriver);
+        Server server = new Server(port, s3Driver, userDriver);
         log.info("port : {}", port);
         log.info("base path : {}", parsedArgs.get(BASE_PATH));
         server.run();

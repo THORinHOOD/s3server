@@ -14,8 +14,8 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final ServerHandler serverHandler;
 
-    public ServerInitializer(String basePath, S3Driver s3Driver, UserDriver userDriver) {
-        serverHandler = new ServerHandler(basePath, s3Driver, userDriver);
+    public ServerInitializer(S3Driver s3Driver, UserDriver userDriver) {
+        serverHandler = new ServerHandler(s3Driver, userDriver);
     }
 
     @Override

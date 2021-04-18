@@ -9,6 +9,7 @@ import com.thorinhood.processors.acl.GetObjectAclProcessor;
 import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.processors.actions.CreateBucketProcessor;
+import com.thorinhood.processors.actions.DeleteObjectProcessor;
 import com.thorinhood.processors.actions.GetObjectProcessor;
 import com.thorinhood.processors.actions.PutObjectProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
@@ -46,18 +47,20 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final GetBucketAclProcessor getBucketAclProcessor;
     private final PutBucketPolicyProcessor putBucketPolicyProcessor;
     private final GetBucketPolicyProcessor getBucketPolicyProcessor;
+    private final DeleteObjectProcessor deleteObjectProcessor;
 
-    public ServerHandler(String basePath, S3Driver s3Driver, UserDriver userDriver) {
+    public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
-        getObjectProcessor = new GetObjectProcessor(basePath, s3Driver);
-        createBucketProcessor = new CreateBucketProcessor(basePath, s3Driver);
-        putObjectProcessor = new PutObjectProcessor(basePath, s3Driver);
-        putObjectAclProcessor = new PutObjectAclProcessor(basePath, s3Driver);
-        putBucketAclProcessor = new PutBucketAclProcessor(basePath, s3Driver);
-        getObjectAclProcessor = new GetObjectAclProcessor(basePath, s3Driver);
-        getBucketAclProcessor = new GetBucketAclProcessor(basePath, s3Driver);
-        putBucketPolicyProcessor = new PutBucketPolicyProcessor(basePath, s3Driver);
-        getBucketPolicyProcessor = new GetBucketPolicyProcessor(basePath, s3Driver);
+        getObjectProcessor = new GetObjectProcessor(s3Driver);
+        createBucketProcessor = new CreateBucketProcessor(s3Driver);
+        putObjectProcessor = new PutObjectProcessor(s3Driver);
+        putObjectAclProcessor = new PutObjectAclProcessor(s3Driver);
+        putBucketAclProcessor = new PutBucketAclProcessor(s3Driver);
+        getObjectAclProcessor = new GetObjectAclProcessor(s3Driver);
+        getBucketAclProcessor = new GetBucketAclProcessor(s3Driver);
+        putBucketPolicyProcessor = new PutBucketPolicyProcessor(s3Driver);
+        getBucketPolicyProcessor = new GetBucketPolicyProcessor(s3Driver);
+        deleteObjectProcessor = new DeleteObjectProcessor(s3Driver);
     }
 
     @Override
@@ -131,6 +134,11 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         if (request.method().equals(HttpMethod.PUT)) {
             putObjectProcessor.process(context, request, parsedRequest);
+            return true;
+        }
+
+        if (request.method().equals(HttpMethod.DELETE)) {
+            deleteObjectProcessor.process(context, request, parsedRequest);
             return true;
         }
 

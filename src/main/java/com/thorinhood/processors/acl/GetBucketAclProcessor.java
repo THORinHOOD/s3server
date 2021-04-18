@@ -2,7 +2,6 @@ package com.thorinhood.processors.acl;
 
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.drivers.main.S3Driver;
-import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.ParsedRequest;
@@ -21,8 +20,8 @@ public class GetBucketAclProcessor extends Processor {
 
     private static final Logger log = LogManager.getLogger(GetObjectAclProcessor.class);
 
-    public GetBucketAclProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public GetBucketAclProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override

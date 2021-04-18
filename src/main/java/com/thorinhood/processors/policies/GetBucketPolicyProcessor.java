@@ -24,8 +24,8 @@ public class GetBucketPolicyProcessor extends BucketPolicyProcessor {
 
     private static final Logger log = LogManager.getLogger(PutBucketPolicyProcessor.class);
 
-    public GetBucketPolicyProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public GetBucketPolicyProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override

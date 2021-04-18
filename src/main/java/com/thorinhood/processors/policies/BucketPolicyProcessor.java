@@ -7,8 +7,8 @@ import com.thorinhood.utils.ParsedRequest;
 
 public abstract class BucketPolicyProcessor extends Processor {
 
-    public BucketPolicyProcessor(String basePath, S3Driver s3Driver) {
-        super(basePath, s3Driver);
+    public BucketPolicyProcessor(S3Driver s3Driver) {
+        super(s3Driver);
     }
 
     @Override

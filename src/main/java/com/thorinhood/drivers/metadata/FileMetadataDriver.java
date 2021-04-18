@@ -1,21 +1,21 @@
 package com.thorinhood.drivers.metadata;
 
-import com.thorinhood.drivers.FileMetadataSubDriver;
+import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class FileMetadataDriver extends FileMetadataSubDriver implements MetadataDriver {
+public class FileMetadataDriver extends FileDriver implements MetadataDriver {
 
     public FileMetadataDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
         super(baseFolderPath, configFolderPath, usersFolderPath);
     }
 
     @Override
-    public void setObjectMetadata(String bucket, String key, Map<String, String> metadata) throws S3Exception {
-        File file = new File(getObjectMetaFile(bucket, key));
+    public void putObjectMetadata(String bucket, String key, Map<String, String> metadata) throws S3Exception {
+        File file = new File(getObjectMetaFile(bucket, key, true));
         try {
             if (!file.exists() && !file.createNewFile()) {
                 throw S3Exception.INTERNAL_ERROR("Can't create meta file")
@@ -39,7 +39,7 @@ public class FileMetadataDriver extends FileMetadataSubDriver implements Metadat
 
     @Override
     public Map<String, String> getObjectMetadata(String bucket, String key) throws S3Exception {
-        File file = new File(getObjectMetaFile(bucket, key));
+        File file = new File(getObjectMetaFile(bucket, key, false));
         try {
             if (!file.exists()) {
                 return Map.of();
@@ -71,13 +71,13 @@ public class FileMetadataDriver extends FileMetadataSubDriver implements Metadat
         }
     }
 
-    private String getBucketMetaFile(String bucket) {
-        String pathToMetaFolder = getPathToBucketMetadataFolder(bucket);
+    private String getBucketMetaFile(String bucket, boolean safely) {
+        String pathToMetaFolder = getPathToBucketMetadataFolder(bucket, safely);
         return pathToMetaFolder + File.separatorChar + bucket + ".meta";
     }
 
-    private String getObjectMetaFile(String bucket, String key) {
-        String pathToMetaFolder = getPathToObjectMetadataFolder(bucket, key);
+    private String getObjectMetaFile(String bucket, String key, boolean safely) {
+        String pathToMetaFolder = getPathToObjectMetadataFolder(bucket, key, safely);
         return pathToMetaFolder + File.separatorChar + key + ".meta";
     }
 
