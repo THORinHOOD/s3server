@@ -1,12 +1,16 @@
 package com.thorinhood.drivers;
 
-import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.exceptions.S3Exception;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 
 public class FileDriver {
 
@@ -62,7 +66,24 @@ public class FileDriver {
     protected void deleteFolder(String path) throws S3Exception {
         File folder = new File(path);
         if (folder.exists() && folder.isDirectory()) {
-            if (!folder.delete()) {
+            try {
+                Files.walkFileTree(folder.toPath(), new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        Files.delete(file);
+                        return FileVisitResult.CONTINUE;
+                    }
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                        if (exc == null) {
+                            Files.delete(dir);
+                            return FileVisitResult.CONTINUE;
+                        } else {
+                            throw exc;
+                        }
+                    }
+                });
+            } catch (IOException exception) {
                 exception("Can't delete folder " + path);
             }
         }

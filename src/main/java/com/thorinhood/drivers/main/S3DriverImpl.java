@@ -41,24 +41,25 @@ public class S3DriverImpl implements S3Driver {
         if (bucketPolicy.isEmpty()) {
             return s3User.isRootUser();
         }
-        boolean result = false;
+        boolean result = s3User.isRootUser();
         for (Statement statement : bucketPolicy.get().getStatements()) {
             if (checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn())) {
-                if (checkStatement(statement, bucket, key, methodName, s3User)) {
-                    result = true;
+                if (checkStatement(statement, bucket, key, methodName, s3User, !s3User.isRootUser())) {
+                    result = !s3User.isRootUser();
                 }
             }
         }
         return result;
     }
 
-    private boolean checkStatement(Statement statement, String bucket, String key, String methodName, S3User s3User) {
+    private boolean checkStatement(Statement statement, String bucket, String key, String methodName, S3User s3User,
+                                   boolean isAllow) {
         boolean hasAction = statement.getAction().stream().anyMatch(action -> checkAction(action, methodName));
         boolean isThisResource = statement.getResource().stream().anyMatch(resource ->
                 checkResource(resource, bucket, key));
         boolean isThisPrincipal = checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn());
         boolean isEffectAllow = checkEffect(statement.getEffect());
-        return hasAction && isThisResource && isThisPrincipal && isEffectAllow;
+        return hasAction && isThisResource && isThisPrincipal && (isEffectAllow == isAllow);
     }
 
     private boolean checkEffect(Statement.EffectType effect) {
