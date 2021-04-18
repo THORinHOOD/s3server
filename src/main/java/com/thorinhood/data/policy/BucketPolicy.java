@@ -6,13 +6,17 @@ import java.util.List;
 
 public class BucketPolicy {
 
+    @JsonProperty(value = "Version")
     private String version;
+    @JsonProperty(value = "Id")
     private String id;
+    @JsonProperty(value = "Statement", required = true)
     private List<Statement> statements;
 
-    public BucketPolicy(@JsonProperty(value = "Version") String version,
-                        @JsonProperty(value = "Id") String id,
-                        @JsonProperty(value = "Statement", required = true) List<Statement> statements) {
+    public BucketPolicy() {
+    }
+
+    public BucketPolicy(String version, String id, List<Statement> statements) {
         this.version = version;
         this.id = id;
         this.statements = statements;

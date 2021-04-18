@@ -1,5 +1,6 @@
 package com.thorinhood.drivers.principal;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thorinhood.data.S3ResponseErrorCodes;
@@ -23,6 +24,7 @@ public class FilePolicyDriver extends FileMetadataSubDriver implements PolicyDri
     public FilePolicyDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
         super(baseFolderPath, configFolderPath, usersFolderPath);
         this.objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.thorinhood.processors.policies;
 
 import com.thorinhood.drivers.main.S3Driver;
-import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.ParsedRequest;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,7 +12,7 @@ import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
-public class PutBucketPolicyProcessor extends Processor {
+public class PutBucketPolicyProcessor extends BucketPolicyProcessor {
 
     private static final Logger log = LogManager.getLogger(PutBucketPolicyProcessor.class);
 

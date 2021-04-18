@@ -20,7 +20,7 @@ import java.util.Optional;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
-public class GetBucketPolicyProcessor extends Processor {
+public class GetBucketPolicyProcessor extends BucketPolicyProcessor {
 
     private static final Logger log = LogManager.getLogger(PutBucketPolicyProcessor.class);
 

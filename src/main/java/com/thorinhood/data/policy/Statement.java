@@ -1,5 +1,6 @@
 package com.thorinhood.data.policy;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
@@ -10,17 +11,25 @@ public class Statement {
         Allow, Deny;
     }
 
+    @JsonProperty(value = "Sid")
     private String sid;
+    @JsonProperty(value = "Effect", required = true)
     private EffectType effect;
+    @JsonProperty(value = "Principal", required = true)
     private AWSPrincipal principle;
+    @JsonProperty(value = "Action", required = true)
+    @JsonFormat(with = { JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
+                         JsonFormat.Feature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED })
     private List<String> action;
+    @JsonProperty(value = "Resource", required = true)
+    @JsonFormat(with = { JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
+                         JsonFormat.Feature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED })
     private List<String> resource;
 
-    public Statement(@JsonProperty(value = "Sid") String sid,
-                     @JsonProperty(value = "Effect", required = true) EffectType effect,
-                     @JsonProperty(value = "Principal", required = true) AWSPrincipal principle,
-                     @JsonProperty(value = "Action", required = true) List<String> action,
-                     @JsonProperty(value = "Resource", required = true) List<String> resource) {
+    public Statement() {
+    }
+
+    public Statement(String sid, EffectType effect, AWSPrincipal principle, List<String> action, List<String> resource) {
         this.sid = sid;
         this.effect = effect;
         this.principle = principle;

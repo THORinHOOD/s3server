@@ -87,7 +87,7 @@ public class S3DriverImpl implements S3Driver {
     }
 
     private boolean checkResource(String pattern, String bucket, String key) {
-        String resource = "arn:aws:s3::" + bucket + (key != null && !key.isEmpty() ? "/" + key : "");
+        String resource = "arn:aws:s3:::" + bucket + (key != null && !key.isEmpty() ? "/" + key : "");
         return match(pattern, resource);
     }
 
@@ -132,6 +132,18 @@ public class S3DriverImpl implements S3Driver {
         return (isBucketAcl ?
                 checkBucketAclPermission(bucket, methodName, s3User) :
                 checkObjectAclPermission(bucket, key, methodName, s3User));
+    }
+
+    @Override
+    public boolean isOwner(boolean isBucket, String bucket, String key, S3User s3User) throws S3Exception {
+        return (isBucket ?
+                isOwner(getBucketAcl(bucket), s3User) :
+                isOwner(getObjectAcl(bucket, key), s3User));
+    }
+
+    private boolean isOwner(AccessControlPolicy acl, S3User s3User) throws S3Exception {
+        return acl.getOwner().getDisplayName().equals(s3User.getAccountName()) &&
+               acl.getOwner().getId().equals(s3User.getCanonicalUserId());
     }
 
     private boolean checkBucketAclPermission(String bucket, String methodName, S3User s3User)
