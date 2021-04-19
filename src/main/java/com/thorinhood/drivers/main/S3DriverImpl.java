@@ -1,5 +1,6 @@
 package com.thorinhood.drivers.main;
 
+import com.thorinhood.data.S3Content;
 import com.thorinhood.data.S3User;
 import com.thorinhood.data.acl.*;
 import com.thorinhood.data.policy.BucketPolicy;
@@ -17,6 +18,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class S3DriverImpl implements S3Driver {
 
@@ -195,6 +197,25 @@ public class S3DriverImpl implements S3Driver {
     @Override
     public void deleteObject(String bucket, String key) throws S3Exception {
         entityDriver.deleteObject(bucket, key);
+    }
+
+    @Override
+    public List<S3Content> getBucketObjects(String bucket) throws S3Exception {
+        List<HasMetaData> hasMetaDataObjects = entityDriver.getBucketObjects(bucket);
+        return hasMetaDataObjects.stream()
+                .map(hasMetaDataObject -> {
+                    Map<String, String> metaData = metadataDriver.getObjectMetadata(bucket, hasMetaDataObject.getKey());
+                    return hasMetaDataObject.setMetaData(metaData);
+                })
+                .map(s3Object -> S3Content.builder()
+                        .setETag(s3Object.getETag())
+                        .setKey(s3Object.getKey().substring(1))
+//                        .setLastModified(s3Object.getLastModified()) // TODO
+                        .setOwner(aclDriver.getObjectAcl(bucket, s3Object.getKey()).getOwner())
+                        .setSize(s3Object.getRawBytes().length)
+                        .setStorageClass("none") // TODO
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

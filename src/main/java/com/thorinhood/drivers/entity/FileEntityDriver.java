@@ -18,9 +18,12 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 public class FileEntityDriver extends FileDriver implements EntityDriver {
@@ -79,7 +82,9 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         try {
             bytes = Files.readAllBytes(file.toPath());
             String eTag = calculateETag(bytes);
-            checkSelectors(httpHeaders, eTag, file);
+            if (httpHeaders != null) {
+                checkSelectors(httpHeaders, eTag, file);
+            }
             return S3Object.build()
                     .setAbsolutePath(absolutePath)
                     .setKey(key)
@@ -139,6 +144,36 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         String pathToObjectMetadataFolder = getPathToObjectMetadataFolder(bucket, key, false);
         deleteFolder(pathToObjectMetadataFolder);
         deleteFile(pathToObject);
+    }
+
+    @Override
+    public List<HasMetaData> getBucketObjects(String bucket) throws S3Exception {
+        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + bucket);
+        List<HasMetaData> objects = new ArrayList<>();
+        try {
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                    if (dir.getFileName().toString().startsWith(".#")) {
+                        return FileVisitResult.SKIP_SUBTREE;
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    String path = file.toString();
+                    String key = path.substring(path.indexOf(bucket) + bucket.length());
+                    objects.add(getObject(bucket, key, null));
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR("Can't list bucket objects")
+                    .setMessage("Can't list bucket objects")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+        return objects;
     }
 
     private boolean processFolders(File file, String bucket) {

@@ -28,6 +28,13 @@ public interface XmlObject {
         }
     }
 
+    default Element createTextElement(Document doc, String key, String value) {
+        if (value == null) {
+            return null;
+        }
+        return createElement(doc, key, doc.createTextNode(value));
+    }
+
     default Element createElement(Document doc, String key, Node... values) {
         Element element = doc.createElement(key);
         for (Node child : values) {

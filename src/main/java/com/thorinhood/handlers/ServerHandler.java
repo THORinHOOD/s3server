@@ -12,6 +12,7 @@ import com.thorinhood.processors.actions.CreateBucketProcessor;
 import com.thorinhood.processors.actions.DeleteObjectProcessor;
 import com.thorinhood.processors.actions.GetObjectProcessor;
 import com.thorinhood.processors.actions.PutObjectProcessor;
+import com.thorinhood.processors.lists.ListObjectsProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
 import com.thorinhood.utils.ParsedRequest;
@@ -48,6 +49,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final PutBucketPolicyProcessor putBucketPolicyProcessor;
     private final GetBucketPolicyProcessor getBucketPolicyProcessor;
     private final DeleteObjectProcessor deleteObjectProcessor;
+    private final ListObjectsProcessor listObjectsProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
@@ -61,6 +63,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         putBucketPolicyProcessor = new PutBucketPolicyProcessor(s3Driver);
         getBucketPolicyProcessor = new GetBucketPolicyProcessor(s3Driver);
         deleteObjectProcessor = new DeleteObjectProcessor(s3Driver);
+        listObjectsProcessor = new ListObjectsProcessor(s3Driver);
     }
 
     @Override
@@ -100,6 +103,8 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 }
             } else if (isPolicyRequest(request)) {
                 getBucketPolicyProcessor.process(context, request, parsedRequest);
+            } else if (!parsedRequest.isPathToObject()) {
+                listObjectsProcessor.process(context, request, parsedRequest);
             } else {
                 getObjectProcessor.process(context, request, parsedRequest);
             }

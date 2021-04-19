@@ -1,13 +1,14 @@
 package com.thorinhood.drivers.main;
 
+import com.thorinhood.data.S3Content;
 import com.thorinhood.data.S3User;
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.exceptions.S3Exception;
-import com.thorinhood.utils.ParsedRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,4 +32,6 @@ public interface S3Driver extends AclPermissionChecker {
             throws S3Exception;
     void deleteObject(String bucket, String key) throws S3Exception;
 
+    // Lists
+    List<S3Content> getBucketObjects(String bucket) throws S3Exception;
 }
