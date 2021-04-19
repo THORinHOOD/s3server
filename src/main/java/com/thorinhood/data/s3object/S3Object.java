@@ -1,6 +1,6 @@
 package com.thorinhood.data.s3object;
 
-import java.io.*;
+import java.io.File;
 import java.util.Map;
 
 public class S3Object implements HasAbsolutePath, HasKey, HasETag, HasFile, HasRawBytes, HasLastModified, HasMetaData {

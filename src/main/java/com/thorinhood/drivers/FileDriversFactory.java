@@ -4,12 +4,12 @@ import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.acl.FileAclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.entity.FileEntityDriver;
-import com.thorinhood.drivers.user.FileUserDriver;
-import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.metadata.FileMetadataDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.FilePolicyDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
+import com.thorinhood.drivers.user.FileUserDriver;
+import com.thorinhood.drivers.user.UserDriver;
 
 import java.io.File;
 

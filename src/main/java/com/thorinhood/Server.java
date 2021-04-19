@@ -1,9 +1,10 @@
 package com.thorinhood;
 
-import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.main.S3Driver;
+import com.thorinhood.drivers.user.UserDriver;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 

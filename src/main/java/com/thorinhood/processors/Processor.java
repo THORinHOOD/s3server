@@ -1,8 +1,8 @@
 package com.thorinhood.processors;
 
 import com.thorinhood.drivers.main.S3Driver;
-import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.utils.ParsedRequest;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

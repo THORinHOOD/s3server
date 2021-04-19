@@ -5,15 +5,18 @@ import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.Processor;
-import com.thorinhood.utils.*;
+import com.thorinhood.utils.DateTimeUtil;
+import com.thorinhood.utils.ParsedRequest;
+import com.thorinhood.utils.PayloadSignType;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.FullHttpRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.Map;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
 public class PutObjectProcessor extends Processor {
 

@@ -3,7 +3,10 @@ package com.thorinhood.drivers.metadata;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 

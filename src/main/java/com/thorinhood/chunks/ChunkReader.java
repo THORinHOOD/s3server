@@ -1,9 +1,9 @@
 package com.thorinhood.chunks;
 
-import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.Credential;
+import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.SignUtil;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;

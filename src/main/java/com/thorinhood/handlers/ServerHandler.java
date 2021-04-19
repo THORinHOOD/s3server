@@ -1,9 +1,9 @@
 package com.thorinhood.handlers;
 
-import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.main.S3Driver;
+import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.exceptions.S3Exception;
-import com.thorinhood.processors.*;
+import com.thorinhood.processors.Processor;
 import com.thorinhood.processors.acl.GetBucketAclProcessor;
 import com.thorinhood.processors.acl.GetObjectAclProcessor;
 import com.thorinhood.processors.acl.PutBucketAclProcessor;

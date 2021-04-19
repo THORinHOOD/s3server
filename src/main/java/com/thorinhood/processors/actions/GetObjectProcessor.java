@@ -3,18 +3,18 @@ package com.thorinhood.processors.actions;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.processors.Processor;
+import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.ParsedRequest;
-import com.thorinhood.exceptions.S3Exception;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.*;
-import com.thorinhood.utils.DateTimeUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class GetObjectProcessor extends Processor {

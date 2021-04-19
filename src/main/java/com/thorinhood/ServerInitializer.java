@@ -1,7 +1,7 @@
 package com.thorinhood;
 
-import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.drivers.main.S3Driver;
+import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.handlers.ServerHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
