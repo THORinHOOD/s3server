@@ -43,9 +43,13 @@ public class SignUtil {
             contentSha256 = PayloadSignType.UNSIGNED_PAYLOAD.getValue();
         }
 
+        int indexOfStartParams = parsedRequest.getRawUri().indexOf("?");
+        String relativePath = parsedRequest.getRawUri().substring(0, indexOfStartParams != -1 ? indexOfStartParams :
+                parsedRequest.getRawUri().length());
+
         String canonicalRequest = createCanonicalRequest(
                 parsedRequest,
-                parsedRequest.getRawUri(),
+                relativePath,
                 contentSha256
         );
         String stringToSign = createStringToSign(canonicalRequest, parsedRequest);

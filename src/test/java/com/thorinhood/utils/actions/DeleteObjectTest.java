@@ -121,6 +121,8 @@ public class DeleteObjectTest extends BaseTest {
         }
     }
 
+    // TODO check empty folders is deleted
+
     private void deleteObject(S3Client s3, String bucket, String key) {
         DeleteObjectRequest request = DeleteObjectRequest.builder()
                 .key(key)

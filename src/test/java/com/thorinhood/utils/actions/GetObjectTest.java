@@ -75,13 +75,50 @@ public class GetObjectTest extends BaseTest {
         }
     }
 
+    @Test
+    public void getObjectWithHeaders() throws Exception {
+        S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        String content = "hello, s3!!!";
+        Map<String, String> metadata = Map.of("key", "value");
+        createBucketRaw("bucket", s3);
+        putObjectRaw(s3, "bucket", "folder1/file.txt", content, metadata);
+
+        getObject(s3, "bucket", "folder1/file.txt", content, metadata, calcETag(content), null);
+        getObject(s3, "bucket", "folder1/file.txt", content, metadata, null, "aaa");
+
+        try {
+            getObject(s3, "bucket", "folder1/file.txt", content, metadata, "aaa", null);
+            Assertions.fail("Precondition exception is not thrown");
+        } catch (S3Exception exception) {
+            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.PRECONDITION_FAILED);
+            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(),
+                    "At least one of the pre-conditions you specified did not hold");
+        }
+
+        try {
+            getObject(s3, "bucket", "folder1/file.txt", content, metadata, null, calcETag(content));
+            Assertions.fail("Precondition exception is not thrown");
+        } catch (S3Exception exception) {
+        }
+    }
+
     private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata)
             throws Exception {
-        GetObjectRequest request = GetObjectRequest.builder()
+        getObject(s3, bucket, key, content, metadata, null, null);
+    }
+
+    private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata,
+                           String ifMatch, String ifNoneMatch) throws Exception {
+        GetObjectRequest.Builder request = GetObjectRequest.builder()
                 .bucket(bucket)
-                .key(key)
-                .build();
-        ResponseInputStream<GetObjectResponse> response = s3.getObject(request);
+                .key(key);
+        if (ifMatch != null) {
+            request.ifMatch(ifMatch);
+        }
+        if (ifNoneMatch != null) {
+            request.ifNoneMatch(ifNoneMatch);
+        }
+        ResponseInputStream<GetObjectResponse> response = s3.getObject(request.build());
         Assertions.assertEquals(content.getBytes().length, response.response().contentLength());
         Assertions.assertEquals(calcETag(content), response.response().eTag());
         if (metadata != null) {
