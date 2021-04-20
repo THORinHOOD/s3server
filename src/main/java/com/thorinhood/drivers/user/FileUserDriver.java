@@ -38,6 +38,21 @@ public class FileUserDriver extends FileDriver implements UserDriver {
     }
 
     @Override
+    public void addUser(String pathToIdentity) throws Exception {
+        File userFile = new File(pathToIdentity);
+        if (!userFile.exists() || !userFile.isFile()) {
+            throw new Exception("Can't find user json : " + pathToIdentity);
+        }
+        S3User s3User;
+        try {
+            s3User = objectMapper.readValue(userFile, S3User.class);
+        } catch (IOException exception) {
+            throw new Exception("Can't parse user json file : " + pathToIdentity);
+        }
+        addUser(s3User);
+    }
+
+    @Override
     public Optional<S3User> getS3User(String accessKey) throws S3Exception {
         String userPath = USERS_FOLDER_PATH + File.separatorChar + accessKey + File.separatorChar + USER_FILE_NAME;
         File file = new File(userPath);

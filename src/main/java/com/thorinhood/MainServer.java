@@ -21,6 +21,7 @@ public class MainServer {
 
     public static final String BASE_PATH = "basePath";
     public static final String PORT = "port";
+    public static final String USERS = "users";
 
     public static void main(String[] args) throws Exception {
         Map<String, String> parsedArgs = ArgumentParser.parseArguments(args);
@@ -50,9 +51,22 @@ public class MainServer {
         PolicyDriver policyDriver = fileFactory.createPolicyDriver();
         EntityDriver entityDriver = fileFactory.createEntityDriver();
         S3Driver s3Driver = new S3DriverImpl(metadataDriver, aclDriver, policyDriver, entityDriver);
+        if (parsedArgs.containsKey(USERS)) {
+            addAllRootUsers(userDriver, parsedArgs.get(USERS));
+        }
         Server server = new Server(port, s3Driver, userDriver);
         log.info("port : {}", port);
         log.info("base path : {}", parsedArgs.get(BASE_PATH));
         server.run();
     }
+
+    private static void addAllRootUsers(UserDriver userDriver, String files) throws Exception {
+        if (files == null || files.isEmpty() || files.isBlank()) {
+            throw new Exception(USERS + " the parameter must contain the paths to the files with users");
+        }
+        for (String s : files.split(",")) {
+            userDriver.addUser(s);
+        }
+    }
+
 }

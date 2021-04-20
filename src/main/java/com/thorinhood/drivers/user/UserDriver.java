@@ -8,6 +8,7 @@ import java.util.Optional;
 public interface UserDriver {
 
     void addUser(S3User s3User) throws S3Exception;
+    void addUser(String pathToIdentity) throws Exception;
     Optional<S3User> getS3User(String accessKey) throws S3Exception;
     void removeUser(String accessKey) throws S3Exception;
 
