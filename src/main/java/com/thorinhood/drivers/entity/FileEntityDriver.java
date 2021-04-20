@@ -179,6 +179,13 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         return objects;
     }
 
+    @Override
+    public boolean isBucketExists(String bucket) throws S3Exception {
+        String absolutePath = BASE_FOLDER_PATH + File.separatorChar + bucket;
+        File bucketFile = new File(absolutePath);
+        return bucketFile.exists() && bucketFile.isDirectory();
+    }
+
     private boolean processFolders(File file, String bucket) {
         File folder = file.getParentFile();
         if (folder.exists() && folder.isDirectory()) {

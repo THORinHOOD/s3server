@@ -9,7 +9,7 @@ import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
 
 import java.io.File;
 
-public class CreateBucketTest extends ActionTest {
+public class CreateBucketTest extends BaseTest {
 
     public CreateBucketTest() {
         super("/home/thorinhood/testS3Java", 9999);

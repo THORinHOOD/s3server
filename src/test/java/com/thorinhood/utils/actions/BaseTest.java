@@ -13,6 +13,7 @@ import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.utils.utils.SdkUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -21,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class ActionTest {
+public class BaseTest {
 
     protected FileDriversFactory FILE_DRIVERS_FACTORY;
     protected UserDriver USER_DRIVER;
@@ -44,7 +45,7 @@ public class ActionTest {
 
     private Thread serverThread;
 
-    public ActionTest(String basePath, int port) {
+    public BaseTest(String basePath, int port) {
         this.BASE_PATH = basePath;
         this.port = port;
         createUsers();
@@ -60,6 +61,11 @@ public class ActionTest {
                 "secretKey");
     }
 
+
+    @BeforeEach
+    void beforeEach() throws Exception {
+        reloadFs();
+    }
 
     @BeforeAll
     void init() throws Exception {

@@ -33,12 +33,12 @@ public abstract class Processor {
                 this.getClass().getSimpleName().indexOf("Processor"));
     }
 
-    protected void checkRequestPermission(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
-        checkRequestPermission(request, METHOD_NAME, isBucketAcl);
+    protected void checkRequest(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
+        checkRequest(request, METHOD_NAME, isBucketAcl);
     }
 
-    protected void checkRequestPermission(ParsedRequest request, String methodName, boolean isBucketAcl)
-            throws S3Exception {
+    protected void checkRequest(ParsedRequest request, String methodName, boolean isBucketAcl) throws S3Exception {
+        S3_DRIVER.isBucketExists(request.getBucket());
         boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, request.getBucket(), request.getKey(),
                 methodName, request.getS3User());
         boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getBucket(), request.getKey(), methodName,

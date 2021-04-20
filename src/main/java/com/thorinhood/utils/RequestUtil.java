@@ -8,6 +8,7 @@ import com.thorinhood.exceptions.S3Exception;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.net.URLDecoder;
@@ -55,6 +56,7 @@ public class RequestUtil {
                 .setMethod(request.method())
                 .setMetadata(metadata)
                 .setS3User(s3User.get())
+                .setRawUri(request.uri())
                 .build();
     }
 
@@ -94,7 +96,7 @@ public class RequestUtil {
     }
 
     private Map<String, List<String>> parseQueryParams(FullHttpRequest request) {
-        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
+        String uri = QueryStringDecoder.decodeComponent(request.uri());
         int indexStart = uri.indexOf("?");
         if (indexStart == -1) {
             return Map.of();
@@ -143,7 +145,7 @@ public class RequestUtil {
     }
 
     private String[] extractBucketKey(FullHttpRequest request) throws S3Exception {
-        String uri = URLDecoder.decode(request.uri(), StandardCharsets.UTF_8);
+        String uri = QueryStringDecoder.decodeComponent(request.uri());
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             throw S3Exception.build("Incorrect uri path")
                     .setStatus(BAD_REQUEST)

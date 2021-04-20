@@ -28,7 +28,7 @@ public class GetObjectProcessor extends Processor {
     @Override
     public void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                              Object[] arguments) throws Exception {
-        checkRequestPermission(parsedRequest, false);
+        checkRequest(parsedRequest, false);
 
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
 

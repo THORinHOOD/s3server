@@ -24,7 +24,7 @@ public class DeleteObjectProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequestPermission(parsedRequest, true);
+        checkRequest(parsedRequest, true);
         S3_DRIVER.deleteObject(parsedRequest.getBucket(), parsedRequest.getKey());
         sendResponseWithoutContent(context, OK, request, Map.of(
                 "Content-Length", 0,

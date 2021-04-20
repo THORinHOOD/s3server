@@ -1,6 +1,7 @@
 package com.thorinhood.drivers.main;
 
 import com.thorinhood.data.S3Content;
+import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
 import com.thorinhood.data.acl.*;
 import com.thorinhood.data.policy.BucketPolicy;
@@ -13,6 +14,7 @@ import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -98,6 +100,18 @@ public class S3DriverImpl implements S3Driver {
     @Override
     public void putBucketPolicy(String bucket, byte[] bytes) throws S3Exception {
         policyDriver.putBucketPolicy(bucket, bytes);
+    }
+
+    @Override
+    public void isBucketExists(String bucket) throws S3Exception {
+        if (!entityDriver.isBucketExists(bucket)) {
+            throw S3Exception.build("Bucket does not exist")
+                    .setStatus(HttpResponseStatus.NOT_FOUND)
+                    .setCode(S3ResponseErrorCodes.NO_SUCH_BUCKET)
+                    .setMessage("The specified bucket does not exist")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
     }
 
     private boolean checkPermission(Function<Permission, Set<String>> methodsGetter, AccessControlPolicy acl,

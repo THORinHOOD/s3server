@@ -29,7 +29,7 @@ public class ListObjectsProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequestPermission(parsedRequest, "s3:ListBucket", true);
+        checkRequest(parsedRequest, "s3:ListBucket", true);
         List<S3Content> s3Contents = S3_DRIVER.getBucketObjects(parsedRequest.getBucket());
         ListBucketResult listBucketResult = ListBucketResult.builder()
                 .setMaxKeys(1000) // TODO

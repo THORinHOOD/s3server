@@ -29,7 +29,7 @@ public class PutObjectProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments) throws Exception {
-        checkRequestPermission(parsedRequest, true);
+        checkRequest(parsedRequest, true);
         if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK ||
             parsedRequest.getPayloadSignType() == PayloadSignType.UNSIGNED_PAYLOAD) {
             singleChunkRead(parsedRequest, request, context);

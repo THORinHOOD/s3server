@@ -45,7 +45,7 @@ public class SignUtil {
 
         String canonicalRequest = createCanonicalRequest(
                 parsedRequest,
-                parsedRequest.getBucket() + parsedRequest.getKey(),
+                parsedRequest.getRawUri(),
                 contentSha256
         );
         String stringToSign = createStringToSign(canonicalRequest, parsedRequest);

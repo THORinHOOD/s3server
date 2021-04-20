@@ -12,7 +12,8 @@ public abstract class BucketPolicyProcessor extends Processor {
     }
 
     @Override
-    protected void checkRequestPermission(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
+    protected void checkRequest(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
+        S3_DRIVER.isBucketExists(request.getBucket());
         boolean aclCheckResult = S3_DRIVER.isOwner(isBucketAcl, request.getBucket(), request.getKey(),
                 request.getS3User());
         if (!aclCheckResult) {

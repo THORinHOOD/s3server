@@ -4,6 +4,7 @@ import com.thorinhood.data.S3User;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +22,7 @@ public class ParsedRequest {
     private HttpMethod method;
     private Map<String, String> metadata;
     private S3User s3User;
+    private String uri;
 
     public static Builder builder() {
         return new Builder();
@@ -93,6 +95,10 @@ public class ParsedRequest {
         return s3User;
     }
 
+    public String getRawUri() {
+        return uri;
+    }
+
     public static class Builder {
         private final ParsedRequest parsedRequest;
 
@@ -157,6 +163,11 @@ public class ParsedRequest {
 
         public Builder setS3User(S3User s3User) {
             parsedRequest.s3User = s3User;
+            return this;
+        }
+
+        public Builder setRawUri(String uri) {
+            parsedRequest.uri = uri;
             return this;
         }
 
