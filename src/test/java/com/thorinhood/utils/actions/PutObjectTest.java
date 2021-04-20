@@ -10,12 +10,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class PutObjectTest extends BaseTest {
 
@@ -59,7 +55,7 @@ public class PutObjectTest extends BaseTest {
                 "folder1/folder3",
                 "file.txt",
                 "hello, s3!!!");
-        checkPutObject("bucket", "folder1", "file.txt", "hello, s3!!!",
+        checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
                 null);
     }
 
@@ -78,9 +74,9 @@ public class PutObjectTest extends BaseTest {
                 "folder1",
                 "file.txt",
                 "hello, s3!!!");
-        checkPutObject("bucket", "folder1", "file.txt", "hello, s3!!!",
+        checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
                 null);
-        checkPutObject("bucket2", "folder1", "file.txt", "hello, s3!!!",
+        checkObject("bucket2", "folder1", "file.txt", "hello, s3!!!",
                 null);
     }
 
@@ -98,9 +94,9 @@ public class PutObjectTest extends BaseTest {
                 "folder1",
                 "file2.txt",
                 "hello, s3, again!!!");
-        checkPutObject("bucket", "folder1", "file.txt", "hello, s3!!!",
+        checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
                 null);
-        checkPutObject("bucket", "folder1", "file2.txt", "hello, s3, again!!!",
+        checkObject("bucket", "folder1", "file2.txt", "hello, s3, again!!!",
                 null);
     }
 
@@ -222,49 +218,7 @@ public class PutObjectTest extends BaseTest {
         }
         PutObjectResponse response = s3Client.putObject(request.build(), RequestBody.fromString(content));
         Assertions.assertEquals(response.eTag(), calcETag(content));
-        checkPutObject(bucket, keyWithoutName, fileName, content, metadata);
-    }
-
-    private void checkPutObject(String bucket, String keyWithoutName, String fileName, String content,
-                                Map<String, String> metadata) throws IOException {
-        File file = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
-                buildKey(keyWithoutName, fileName));
-        Assertions.assertTrue(file.exists() && file.isFile());
-        File acl = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
-                (keyWithoutName == null || keyWithoutName.isEmpty() ? ".#" + fileName + File.separatorChar +
-                        fileName + ".acl" :
-                        keyWithoutName + File.separatorChar + ".#" + fileName + File.separatorChar + fileName + ".acl"));
-        Assertions.assertTrue(acl.exists() && acl.isFile());
-        checkContent(file, content);
-        if (metadata != null) {
-            checkMetadata(bucket, keyWithoutName, fileName, metadata);
-        }
-    }
-
-    private void checkMetadata(String bucket, String keyWithoutName, String fileName, Map<String, String> metadata)
-            throws IOException {
-        File metadataFile = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
-                (keyWithoutName == null || keyWithoutName.isEmpty() ? ".#" + fileName + File.separatorChar +
-                    fileName + ".meta" :
-                    keyWithoutName + File.separatorChar + ".#" + fileName + File.separatorChar + fileName + ".meta"));
-        Assertions.assertTrue(metadataFile.exists() && metadataFile.isFile());
-        String metadataActualString = Files.readString(metadataFile.toPath());
-        Map<String, String> actualMetadata = Arrays.stream(metadataActualString.split("\n"))
-                .collect(Collectors.toMap(
-                        line -> line.substring(0, line.indexOf("=")),
-                        line -> line.substring(line.indexOf("=") + 1)
-                ));
-        assertMaps(metadata, actualMetadata);
-    }
-
-    private void checkContent(File file, String expected) throws IOException {
-        String actual = Files.readString(file.toPath());
-        Assertions.assertEquals(expected, actual);
-    }
-
-    private String buildKey(String keyWithoutFileName, String fileName) {
-        return (keyWithoutFileName == null || keyWithoutFileName.isEmpty() ? fileName : keyWithoutFileName +
-                File.separatorChar + fileName);
+        checkObject(bucket, keyWithoutName, fileName, content, metadata);
     }
 
 }

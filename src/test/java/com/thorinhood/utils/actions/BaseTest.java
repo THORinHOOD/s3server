@@ -19,9 +19,14 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BaseTest {
@@ -124,6 +129,66 @@ public class BaseTest {
             request.metadata(metadata);
         }
         s3Client.putObject(request.build(), RequestBody.fromString(content));
+    }
+
+    protected void checkObjectNotExists(String bucket, String keyWithoutName, String fileName) throws IOException {
+        File file = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
+                buildKey(keyWithoutName, fileName));
+        Assertions.assertTrue(!file.exists() || !file.isFile());
+        File acl = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
+                (keyWithoutName == null || keyWithoutName.isEmpty() ? ".#" + fileName + File.separatorChar +
+                        fileName + ".acl" :
+                        keyWithoutName + File.separatorChar + ".#" + fileName + File.separatorChar + fileName +
+                                ".acl"));
+        Assertions.assertTrue(!acl.exists() || !acl.isFile());
+        File metadataFile = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
+                (keyWithoutName == null || keyWithoutName.isEmpty() ? ".#" + fileName + File.separatorChar +
+                        fileName + ".meta" :
+                        keyWithoutName + File.separatorChar + ".#" + fileName + File.separatorChar + fileName +
+                                ".meta"));
+        Assertions.assertTrue(!metadataFile.exists() || !metadataFile.isFile());
+    }
+
+    protected void checkObject(String bucket, String keyWithoutName, String fileName, String content,
+                               Map<String, String> metadata) throws IOException {
+        File file = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
+                buildKey(keyWithoutName, fileName));
+        Assertions.assertTrue(file.exists() && file.isFile());
+        File acl = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
+                (keyWithoutName == null || keyWithoutName.isEmpty() ? ".#" + fileName + File.separatorChar +
+                        fileName + ".acl" :
+                        keyWithoutName + File.separatorChar + ".#" + fileName + File.separatorChar + fileName + ".acl"));
+        Assertions.assertTrue(acl.exists() && acl.isFile());
+        checkContent(file, content);
+        if (metadata != null) {
+            checkObjectMetadata(bucket, keyWithoutName, fileName, metadata);
+        }
+    }
+
+    private void checkObjectMetadata(String bucket, String keyWithoutName, String fileName,
+                                     Map<String, String> metadata) throws IOException {
+        File metadataFile = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
+                (keyWithoutName == null || keyWithoutName.isEmpty() ? ".#" + fileName + File.separatorChar +
+                        fileName + ".meta" :
+                        keyWithoutName + File.separatorChar + ".#" + fileName + File.separatorChar + fileName + ".meta"));
+        Assertions.assertTrue(metadataFile.exists() && metadataFile.isFile());
+        String metadataActualString = Files.readString(metadataFile.toPath());
+        Map<String, String> actualMetadata = Arrays.stream(metadataActualString.split("\n"))
+                .collect(Collectors.toMap(
+                        line -> line.substring(0, line.indexOf("=")),
+                        line -> line.substring(line.indexOf("=") + 1)
+                ));
+        assertMaps(metadata, actualMetadata);
+    }
+
+    private void checkContent(File file, String expected) throws IOException {
+        String actual = Files.readString(file.toPath());
+        Assertions.assertEquals(expected, actual);
+    }
+
+    protected String buildKey(String keyWithoutFileName, String fileName) {
+        return (keyWithoutFileName == null || keyWithoutFileName.isEmpty() ? fileName : keyWithoutFileName +
+                File.separatorChar + fileName);
     }
 
     protected String calcETag(String content) {
