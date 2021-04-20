@@ -2,6 +2,10 @@ package com.thorinhood.utils.utils;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryMode;
+import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.core.retry.conditions.RetryCondition;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
@@ -16,7 +20,7 @@ public class SdkUtil {
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey,
                         secretKey)))
                 .endpointOverride(URI.create("http://localhost:" + port))
-                .region(region);
+                                .region(region);
         if (!chunked) {
             s3.serviceConfiguration(S3Configuration.builder()
                     .chunkedEncodingEnabled(false)

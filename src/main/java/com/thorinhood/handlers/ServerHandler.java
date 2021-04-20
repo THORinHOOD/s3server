@@ -86,8 +86,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     }
 
     private boolean process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
-        ParsedRequest parsedRequest = requestUtil.parseRequest(request);
+        ParsedRequest parsedRequest = null;
         try {
+            parsedRequest = requestUtil.parseRequest(request);
             requestUtil.checkRequest(parsedRequest);
         } catch (S3Exception exception) {
             Processor.sendError(context, request, exception);

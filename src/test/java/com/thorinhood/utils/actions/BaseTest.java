@@ -11,15 +11,17 @@ import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.utils.utils.SdkUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInstance;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.junit.jupiter.api.*;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BaseTest {
@@ -101,6 +103,39 @@ public class BaseTest {
 
     protected void initUsers() {
         ALL_TEST_USERS.forEach(s3User -> USER_DRIVER.addUser(s3User));
+    }
+
+    protected void createBucketRaw(String bucket, S3Client s3Client) {
+        CreateBucketRequest request = CreateBucketRequest.builder()
+                .bucket(bucket)
+                .build();
+        try {
+            s3Client.createBucket(request);
+        } catch (Exception exception) {
+        }
+    }
+
+    protected void putObjectRaw(S3Client s3Client, String bucket, String key, String content,
+                                Map<String, String> metadata) {
+        PutObjectRequest.Builder request = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key);
+        if (metadata != null) {
+            request.metadata(metadata);
+        }
+        s3Client.putObject(request.build(), RequestBody.fromString(content));
+    }
+
+    protected String calcETag(String content) {
+        return DigestUtils.md5Hex(content.getBytes());
+    }
+
+    protected <KEY, VALUE> void assertMaps(Map<KEY, VALUE> expected, Map<KEY, VALUE> actual) {
+        Assertions.assertEquals(expected.size(), actual.size());
+        for (Map.Entry<KEY, VALUE> expectedEntry : expected.entrySet()) {
+            Assertions.assertTrue(actual.containsKey(expectedEntry.getKey()));
+            Assertions.assertEquals(expectedEntry.getValue(), actual.get(expectedEntry.getKey()));
+        }
     }
 
     private void createUsers() {

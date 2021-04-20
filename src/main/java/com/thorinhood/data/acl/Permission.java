@@ -1,7 +1,5 @@
 package com.thorinhood.data.acl;
 
-import com.google.common.collect.ImmutableSet;
-
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,13 +22,13 @@ public enum Permission {
             Set.of("s3:PutObjectAcl", "s3:PutObjectVersionAcl")
     ),
     FULL_CONTROL (
-            ImmutableSet.of(
+            Set.of(
                     READ.getMethodsBucket(),
                     WRITE.getMethodsBucket(),
                     READ_ACP.getMethodsBucket(),
                     WRITE_ACP.getMethodsBucket()
             ).stream().flatMap(Collection::stream).collect(Collectors.toSet()),
-            ImmutableSet.of(
+            Set.of(
                     READ.getMethodsObject(),
                     WRITE.getMethodsObject(),
                     READ_ACP.getMethodsObject(),
