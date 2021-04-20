@@ -81,7 +81,7 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
 
     private String getObjectMetaFile(String bucket, String key, boolean safely) {
         String pathToMetaFolder = getPathToObjectMetadataFolder(bucket, key, safely);
-        return pathToMetaFolder + File.separatorChar + key + ".meta";
+        return pathToMetaFolder + File.separatorChar + extractFileName(key) + ".meta";
     }
 
 }

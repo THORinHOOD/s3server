@@ -1,5 +1,8 @@
 package com.thorinhood.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.beans.ConstructorProperties;
 
 public class S3User {
@@ -59,6 +62,7 @@ public class S3User {
         return accountName;
     }
 
+    @JsonIgnore
     public boolean isRootUser() {
         return path == null && userName == null;
     }

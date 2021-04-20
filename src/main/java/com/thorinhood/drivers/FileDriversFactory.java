@@ -27,6 +27,10 @@ baseFolderPath + File.separatorChar + CONFIG_FOLDER_NAME + File.separatorChar + 
         createFolder(USERS_FOLDER_PATH);
     }
 
+    public void clearAll() throws Exception {
+        deleteFolder(BASE_FOLDER_PATH);
+    }
+
     public UserDriver createUserDriver() {
         return new FileUserDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH);
     }
