@@ -113,7 +113,10 @@ public class RequestUtil {
                 String values = param.substring(ind + 1);
                 result.put(key, new ArrayList<>(Arrays.asList(values.split(","))));
             }
-            String key = param.substring(0, ind);
+            String key = param;
+            if (ind != -1) {
+                key = param.substring(0, ind);
+            }
             if (result.get(key).isEmpty()) {
                 result.get(param).add(null);
             }
