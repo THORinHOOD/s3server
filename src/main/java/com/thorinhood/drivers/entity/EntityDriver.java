@@ -15,6 +15,7 @@ public interface EntityDriver {
     HasMetaData getObject(String bucket, String key, HttpHeaders httpHeaders) throws S3Exception;
     S3Object putObject(String bucket, String key, byte[] bytes, Map<String, String> metadata) throws S3Exception;
     void deleteObject(String bucket, String key) throws S3Exception;
+    void deleteBucket(String bucket) throws S3Exception;
     List<HasMetaData> getBucketObjects(String bucket) throws S3Exception;
     boolean isBucketExists(String bucket) throws S3Exception;
 

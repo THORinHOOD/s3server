@@ -213,6 +213,12 @@ public class S3DriverImpl implements S3Driver {
         entityDriver.deleteObject(bucket, key);
     }
 
+
+    @Override
+    public void deleteBucket(String bucket) throws S3Exception {
+        entityDriver.deleteBucket(bucket);
+    }
+
     @Override
     public List<S3Content> getBucketObjects(String bucket) throws S3Exception {
         List<HasMetaData> hasMetaDataObjects = entityDriver.getBucketObjects(bucket);

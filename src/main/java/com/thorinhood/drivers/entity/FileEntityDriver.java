@@ -150,6 +150,14 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
+    public void deleteBucket(String bucket) throws S3Exception {
+        String pathToBucket = fullPathToBucket(bucket);
+        String pathToBucketMetadataFolder = getPathToBucketMetadataFolder(bucket, false);
+        deleteFolder(pathToBucket);
+        deleteFolder(pathToBucketMetadataFolder);
+    }
+
+    @Override
     public List<HasMetaData> getBucketObjects(String bucket) throws S3Exception {
         Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + bucket);
         List<HasMetaData> objects = new ArrayList<>();

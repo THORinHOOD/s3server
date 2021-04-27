@@ -118,4 +118,8 @@ public class FileDriver {
         return BASE_FOLDER_PATH + File.separatorChar + bucket + key;
     }
 
+    protected String fullPathToBucket(String bucket) {
+        return BASE_FOLDER_PATH + File.separatorChar + bucket;
+    }
+
 }

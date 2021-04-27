@@ -32,6 +32,7 @@ public interface S3Driver extends AclPermissionChecker {
     S3Object putObject(String bucket, String key, byte[] bytes, Map<String, String> metadata, S3User s3User)
             throws S3Exception;
     void deleteObject(String bucket, String key) throws S3Exception;
+    void deleteBucket(String bucket) throws S3Exception;
 
     // Lists
     List<S3Content> getBucketObjects(String bucket) throws S3Exception;
