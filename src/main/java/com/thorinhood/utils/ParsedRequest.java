@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ParsedRequest {
 
@@ -23,6 +24,7 @@ public class ParsedRequest {
     private Map<String, String> metadata;
     private S3User s3User;
     private String uri;
+    private Set<String> signedHeaders;
 
     public static Builder builder() {
         return new Builder();
@@ -99,6 +101,10 @@ public class ParsedRequest {
         return uri;
     }
 
+    public Set<String> getSignedHeaders() {
+        return signedHeaders;
+    }
+
     public static class Builder {
         private final ParsedRequest parsedRequest;
 
@@ -168,6 +174,11 @@ public class ParsedRequest {
 
         public Builder setRawUri(String uri) {
             parsedRequest.uri = uri;
+            return this;
+        }
+
+        public Builder setSignedHeaders(Set<String> signedHeaders) {
+            parsedRequest.signedHeaders = signedHeaders;
             return this;
         }
 

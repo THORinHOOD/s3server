@@ -57,7 +57,15 @@ public class RequestUtil {
                 .setMetadata(metadata)
                 .setS3User(s3User.get())
                 .setRawUri(request.uri())
+                .setSignedHeaders(extractSignedHeaders(request))
                 .build();
+    }
+
+    private Set<String> extractSignedHeaders(FullHttpRequest request) {
+        String authorization = request.headers().get("Authorization");
+        String headers = authorization.substring(authorization.indexOf("SignedHeaders=") + "SignedHeaders=".length());
+        headers = headers.substring(0, headers.indexOf(",")).trim();
+        return Set.of(headers.split(";"));
     }
 
     public void checkRequest(ParsedRequest parsedRequest) throws S3Exception {

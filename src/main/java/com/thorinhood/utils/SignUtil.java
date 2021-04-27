@@ -19,7 +19,7 @@ public class SignUtil {
 
     public static final String LINE_SEPARATOR = "\n";
     public static final Set<String> IGNORE_HEADERS = Set.of("connection", "x-amzn-trace-id", "user-agent", "expect",
-            "authorization");
+            "authorization", "accept-encoding", "content-length");
 
     public static String calcPayloadSignature(FullHttpRequest request, Credential credential, String prevSignature,
                                               byte[] currentChunkData, String secretKey) {
@@ -68,7 +68,7 @@ public class SignUtil {
                                                  String contentSha256) {
         Map<String, String> headers = new TreeMap<>();
         for (Map.Entry<String, String> entry : parsedRequest.getHeaders().entries()) {
-            if (!IGNORE_HEADERS.contains(entry.getKey().toLowerCase())) {
+            if (parsedRequest.getSignedHeaders().contains(entry.getKey().toLowerCase())) {
                 if (!(entry.getKey().equals("content-length") && Long.parseLong(entry.getValue()) == 0L)) {
                     headers.put(entry.getKey().toLowerCase(), entry.getValue());
                 }

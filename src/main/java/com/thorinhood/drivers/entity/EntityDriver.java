@@ -18,6 +18,6 @@ public interface EntityDriver {
     void deleteBucket(String bucket) throws S3Exception;
     List<HasMetaData> getBucketObjects(String bucket) throws S3Exception;
     boolean isBucketExists(String bucket) throws S3Exception;
-
+    boolean isObjectExists(String bucket, String key) throws S3Exception;
 
 }

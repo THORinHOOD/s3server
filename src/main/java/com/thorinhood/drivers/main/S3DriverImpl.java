@@ -114,6 +114,18 @@ public class S3DriverImpl implements S3Driver {
         }
     }
 
+    @Override
+    public void isObjectExists(String bucket, String key) throws S3Exception {
+        if (!entityDriver.isObjectExists(bucket, key)) {
+            throw S3Exception.build("Object does not exist")
+                    .setStatus(HttpResponseStatus.NOT_FOUND)
+                    .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
+                    .setMessage("The specified object does not exist")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+    }
+
     private boolean checkPermission(Function<Permission, Set<String>> methodsGetter, AccessControlPolicy acl,
                                     String methodName, S3User s3User) {
         return acl.getAccessControlList().stream()
@@ -154,6 +166,7 @@ public class S3DriverImpl implements S3Driver {
 
     private boolean checkObjectAclPermission(String bucket, String key, String methodName, S3User s3User)
             throws S3Exception {
+        isObjectExists(bucket, key);
         AccessControlPolicy acl = getObjectAcl(bucket, key);
         return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
     }

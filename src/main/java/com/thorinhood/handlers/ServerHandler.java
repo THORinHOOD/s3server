@@ -126,20 +126,11 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
 
         if (request.method().equals(HttpMethod.PUT)) {
-            Optional<Document> content = XmlUtil.parseXmlFromByteBuf(request.content());
-            if (content.isPresent()) {
-                NodeList nodeList = content.get().getChildNodes();
-                if (nodeList.getLength() == 1 && nodeList.item(0).getNodeName()
-                        .equals("CreateBucketConfiguration")) {
-                    createBucketProcessor.process(context, request, parsedRequest, content.get());
-                    return true;
-                }
+            if (parsedRequest.isPathToObject()) {
+                putObjectProcessor.process(context, request, parsedRequest);
+            } else {
+                createBucketProcessor.process(context, request, parsedRequest);
             }
-        }
-
-        if (request.method().equals(HttpMethod.PUT)) {
-            putObjectProcessor.process(context, request, parsedRequest);
-            return true;
         }
 
         if (request.method().equals(HttpMethod.DELETE)) {
