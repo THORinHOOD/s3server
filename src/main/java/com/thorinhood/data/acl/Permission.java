@@ -26,7 +26,8 @@ public enum Permission {
                     READ.getMethodsBucket(),
                     WRITE.getMethodsBucket(),
                     READ_ACP.getMethodsBucket(),
-                    WRITE_ACP.getMethodsBucket()
+                    WRITE_ACP.getMethodsBucket(),
+                    Set.of("s3:DeleteBucket")
             ).stream().flatMap(Collection::stream).collect(Collectors.toSet()),
             Set.of(
                     READ.getMethodsObject(),

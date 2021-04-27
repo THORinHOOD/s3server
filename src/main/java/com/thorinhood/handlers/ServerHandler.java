@@ -8,10 +8,7 @@ import com.thorinhood.processors.acl.GetBucketAclProcessor;
 import com.thorinhood.processors.acl.GetObjectAclProcessor;
 import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
-import com.thorinhood.processors.actions.CreateBucketProcessor;
-import com.thorinhood.processors.actions.DeleteObjectProcessor;
-import com.thorinhood.processors.actions.GetObjectProcessor;
-import com.thorinhood.processors.actions.PutObjectProcessor;
+import com.thorinhood.processors.actions.*;
 import com.thorinhood.processors.lists.ListObjectsProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
@@ -50,6 +47,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final GetBucketPolicyProcessor getBucketPolicyProcessor;
     private final DeleteObjectProcessor deleteObjectProcessor;
     private final ListObjectsProcessor listObjectsProcessor;
+    private final DeleteBucketProcessor deleteBucketProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
@@ -64,6 +62,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         getBucketPolicyProcessor = new GetBucketPolicyProcessor(s3Driver);
         deleteObjectProcessor = new DeleteObjectProcessor(s3Driver);
         listObjectsProcessor = new ListObjectsProcessor(s3Driver);
+        deleteBucketProcessor = new DeleteBucketProcessor(s3Driver);
     }
 
     @Override
@@ -144,7 +143,11 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
 
         if (request.method().equals(HttpMethod.DELETE)) {
-            deleteObjectProcessor.process(context, request, parsedRequest);
+            if (parsedRequest.isPathToObject()) {
+                deleteObjectProcessor.process(context, request, parsedRequest);
+            } else {
+                deleteBucketProcessor.process(context, request, parsedRequest);
+            }
             return true;
         }
 
