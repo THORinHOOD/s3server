@@ -1,5 +1,6 @@
 package com.thorinhood.drivers.main;
 
+import com.thorinhood.data.GetBucketObjectsRequest;
 import com.thorinhood.data.S3Content;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
@@ -233,18 +234,19 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public List<S3Content> getBucketObjects(String bucket) throws S3Exception {
-        List<HasMetaData> hasMetaDataObjects = entityDriver.getBucketObjects(bucket);
+    public List<S3Content> getBucketObjects(GetBucketObjectsRequest request) throws S3Exception {
+        List<HasMetaData> hasMetaDataObjects = entityDriver.getBucketObjects(request);
         return hasMetaDataObjects.stream()
                 .map(hasMetaDataObject -> {
-                    Map<String, String> metaData = metadataDriver.getObjectMetadata(bucket, hasMetaDataObject.getKey());
-                    return hasMetaDataObject.setMetaData(metaData);
+                    Map<String, String> metaData = metadataDriver.getObjectMetadata(request.getBucket(),
+                            hasMetaDataObject.getKey());
+                    return hasMetaDataObject.setMetaData(metaData); // TODO
                 })
                 .map(s3Object -> S3Content.builder()
                         .setETag(s3Object.getETag())
                         .setKey(s3Object.getKey().substring(1))
 //                        .setLastModified(s3Object.getLastModified()) // TODO
-                        .setOwner(aclDriver.getObjectAcl(bucket, s3Object.getKey()).getOwner())
+                        .setOwner(aclDriver.getObjectAcl(request.getBucket(), s3Object.getKey()).getOwner())
                         .setSize(s3Object.getRawBytes().length)
                         .setStorageClass("none") // TODO
                         .build())

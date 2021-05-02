@@ -1,13 +1,17 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
+import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 public class ParsedRequest {
 
@@ -103,6 +107,26 @@ public class ParsedRequest {
 
     public Set<String> getSignedHeaders() {
         return signedHeaders;
+    }
+
+    public <T> T getQueryParam(String key, T defaultValue, Function<String, T> converter) throws S3Exception {
+        if (!queryParams.containsKey(key)) {
+            return defaultValue;
+        }
+        List<String> values = queryParams.get(key);
+        if (values.size() != 1) {
+            return defaultValue;
+        }
+        try {
+            return converter.apply(values.get(0));
+        } catch (Exception exception) {
+            throw S3Exception.build("Can't parse query parameter")
+                    .setStatus(HttpResponseStatus.BAD_REQUEST)
+                    .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
+                    .setMessage("Can't parse query parameter : " + key)
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
     }
 
     public static class Builder {

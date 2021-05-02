@@ -158,6 +158,41 @@ public class ListObjectsTest extends BaseTest {
         }
     }
 
+    @Test
+    public void listObjectsMaxKeys() {
+        S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        createBucketRaw("bucket", s3);
+        String content = "hello, s3!!!";
+        putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
+        putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
+        putObjectRaw(s3, "bucket", "file.txt", content, null);
+
+        String eTag = calcETag(content);
+        long size = content.getBytes().length;
+        List<S3Object> expected = List.of(
+                S3Object.builder()
+                        .eTag(eTag)
+                        .key("folder1/file.txt")
+                        .owner(Owner.builder()
+                                .id(ROOT_USER.getCanonicalUserId())
+                                .displayName(ROOT_USER.getAccountName())
+                                .build())
+                        .size(size)
+                        .build(),
+                S3Object.builder()
+                        .eTag(eTag)
+                        .key("file.txt")
+                        .owner(Owner.builder()
+                                .id(ROOT_USER.getCanonicalUserId())
+                                .displayName(ROOT_USER.getAccountName())
+                                .build())
+                        .size(size)
+                        .build()
+        );
+        s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        listObjects(s3, "bucket", 2, expected);
+    }
+
     public void listObjects(S3Client s3, String bucket, Integer maxKeys, List<S3Object> expected) {
         ListObjectsRequest.Builder request = ListObjectsRequest.builder()
                 .bucket(bucket);

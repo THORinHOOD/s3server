@@ -1,5 +1,6 @@
 package com.thorinhood.drivers.entity;
 
+import com.thorinhood.data.GetBucketObjectsRequest;
 import com.thorinhood.data.S3Headers;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
@@ -158,8 +159,8 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
-    public List<HasMetaData> getBucketObjects(String bucket) throws S3Exception {
-        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + bucket);
+    public List<HasMetaData> getBucketObjects(GetBucketObjectsRequest request) throws S3Exception {
+        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + request.getBucket());
         List<HasMetaData> objects = new ArrayList<>();
         try {
             Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
@@ -173,8 +174,11 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     String path = file.toString();
-                    String key = path.substring(path.indexOf(bucket) + bucket.length());
-                    objects.add(getObject(bucket, key, null));
+                    String key = path.substring(path.indexOf(request.getBucket()) + request.getBucket().length());
+                    objects.add(getObject(request.getBucket(), key, null));
+                    if (objects.size() >= request.getMaxKeys()) {
+                        return FileVisitResult.TERMINATE;
+                    }
                     return FileVisitResult.CONTINUE;
                 }
             });

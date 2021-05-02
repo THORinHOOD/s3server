@@ -1,5 +1,6 @@
 package com.thorinhood.processors.lists;
 
+import com.thorinhood.data.GetBucketObjectsRequest;
 import com.thorinhood.data.ListBucketResult;
 import com.thorinhood.data.S3Content;
 import com.thorinhood.drivers.main.S3Driver;
@@ -30,9 +31,13 @@ public class ListObjectsProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         checkRequest(parsedRequest, "s3:ListBucket", true);
-        List<S3Content> s3Contents = S3_DRIVER.getBucketObjects(parsedRequest.getBucket());
+        GetBucketObjectsRequest getBucketObjectsRequest = GetBucketObjectsRequest.builder()
+                .setBucket(parsedRequest.getBucket())
+                .setMaxKeys(parsedRequest.getQueryParam("max-keys", 1000, Integer::valueOf))
+                .build();
+        List<S3Content> s3Contents = S3_DRIVER.getBucketObjects(getBucketObjectsRequest);
         ListBucketResult listBucketResult = ListBucketResult.builder()
-                .setMaxKeys(1000) // TODO
+                .setMaxKeys(getBucketObjectsRequest.getMaxKeys())
                 .setName(parsedRequest.getBucket())
                 .setContents(s3Contents)
                 .build();

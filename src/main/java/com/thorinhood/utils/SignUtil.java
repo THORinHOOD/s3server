@@ -18,8 +18,6 @@ import java.util.*;
 public class SignUtil {
 
     public static final String LINE_SEPARATOR = "\n";
-    public static final Set<String> IGNORE_HEADERS = Set.of("connection", "x-amzn-trace-id", "user-agent", "expect",
-            "authorization", "accept-encoding", "content-length");
 
     public static String calcPayloadSignature(FullHttpRequest request, Credential credential, String prevSignature,
                                               byte[] currentChunkData, String secretKey) {
