@@ -1,5 +1,6 @@
 package com.thorinhood.drivers.metadata;
 
+import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 
@@ -17,8 +18,8 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
     }
 
     @Override
-    public void putObjectMetadata(String bucket, String key, Map<String, String> metadata) throws S3Exception {
-        File file = new File(getObjectMetaFile(bucket, key, true));
+    public void putObjectMetadata(S3ObjectPath s3ObjectPath, Map<String, String> metadata) throws S3Exception {
+        File file = new File(getObjectMetaFile(s3ObjectPath, true));
         try {
             if (!file.exists() && !file.createNewFile()) {
                 throw S3Exception.INTERNAL_ERROR("Can't create meta file")
@@ -41,8 +42,8 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
     }
 
     @Override
-    public Map<String, String> getObjectMetadata(String bucket, String key) throws S3Exception {
-        File file = new File(getObjectMetaFile(bucket, key, false));
+    public Map<String, String> getObjectMetadata(S3ObjectPath s3ObjectPath) throws S3Exception {
+        File file = new File(getObjectMetaFile(s3ObjectPath, false));
         try {
             if (!file.exists()) {
                 return Map.of();
@@ -74,14 +75,14 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
         }
     }
 
-    private String getBucketMetaFile(String bucket, boolean safely) {
-        String pathToMetaFolder = getPathToBucketMetadataFolder(bucket, safely);
-        return pathToMetaFolder + File.separatorChar + bucket + ".meta";
+    private String getBucketMetaFile(S3ObjectPath s3ObjectPath, boolean safely) {
+        String pathToMetaFolder = getPathToBucketMetadataFolder(s3ObjectPath, safely);
+        return pathToMetaFolder + File.separatorChar + s3ObjectPath.getBucket() + ".meta";
     }
 
-    private String getObjectMetaFile(String bucket, String key, boolean safely) {
-        String pathToMetaFolder = getPathToObjectMetadataFolder(bucket, key, safely);
-        return pathToMetaFolder + File.separatorChar + extractFileName(key) + ".meta";
+    private String getObjectMetaFile(S3ObjectPath s3ObjectPath, boolean safely) {
+        String pathToMetaFolder = getPathToObjectMetadataFolder(s3ObjectPath, safely);
+        return pathToMetaFolder + File.separatorChar + s3ObjectPath.getName() + ".meta";
     }
 
 }

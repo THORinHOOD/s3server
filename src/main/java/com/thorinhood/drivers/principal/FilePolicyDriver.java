@@ -3,6 +3,7 @@ package com.thorinhood.drivers.principal;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.drivers.FileDriver;
@@ -27,7 +28,7 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
     }
 
     @Override
-    public void putBucketPolicy(String bucket, byte[] bytes) throws S3Exception {
+    public void putBucketPolicy(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
         BucketPolicy bucketPolicy = null;
         try {
             bucketPolicy = objectMapper.readValue(bytes, BucketPolicy.class);
@@ -39,12 +40,12 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
                     .setResource("1")
                     .setRequestId("1");
         }
-        putBucketPolicy(bucket, bucketPolicy);
+        putBucketPolicy(s3BucketPath, bucketPolicy);
     }
 
     @Override
-    public void putBucketPolicy(String bucket, BucketPolicy bucketPolicy) throws S3Exception {
-        String pathToBucketPolicyFile = getPathToBucketPolicyFile(bucket, true);
+    public void putBucketPolicy(S3BucketPath s3BucketPath, BucketPolicy bucketPolicy) throws S3Exception {
+        String pathToBucketPolicyFile = getPathToBucketPolicyFile(s3BucketPath, true);
         try {
             objectMapper.writeValue(new File(pathToBucketPolicyFile), bucketPolicy);
         } catch (IOException exception) {
@@ -56,8 +57,8 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
     }
 
     @Override
-    public Optional<BucketPolicy> getBucketPolicy(String bucket) throws S3Exception {
-        String pathToBucketPolicy = getPathToBucketPolicyFile(bucket, false);
+    public Optional<BucketPolicy> getBucketPolicy(S3BucketPath s3BucketPath) throws S3Exception {
+        String pathToBucketPolicy = getPathToBucketPolicyFile(s3BucketPath, false);
         BucketPolicy bucketPolicy = null;
         File file = new File(pathToBucketPolicy);
         if (!file.exists() || !file.isFile()) {
@@ -86,8 +87,9 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
         }
     }
 
-    private String getPathToBucketPolicyFile(String bucket, boolean safely) {
-        return getPathToBucketMetadataFolder(bucket, safely) + File.separatorChar + bucket + POSTFIX_POLICY_FILE;
+    private String getPathToBucketPolicyFile(S3BucketPath s3BucketPath, boolean safely) {
+        return getPathToBucketMetadataFolder(s3BucketPath, safely) + File.separatorChar + s3BucketPath.getBucket() +
+                POSTFIX_POLICY_FILE;
     }
 
 }

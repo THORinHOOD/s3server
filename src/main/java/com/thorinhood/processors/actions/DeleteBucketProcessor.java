@@ -25,7 +25,7 @@ public class DeleteBucketProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         checkRequest(parsedRequest, true);
-        S3_DRIVER.deleteBucket(parsedRequest.getBucket());
+        S3_DRIVER.deleteBucket(parsedRequest.getS3BucketPath());
         sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime()
         ));

@@ -32,8 +32,7 @@ public class GetObjectProcessor extends Processor {
 
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
 
-        S3Object s3Object = S3_DRIVER.getObject(parsedRequest.getBucket(), parsedRequest.getKey(),
-                parsedRequest.getHeaders());
+        S3Object s3Object = S3_DRIVER.getObject(parsedRequest.getS3ObjectPath(), parsedRequest.getHeaders());
 
         RandomAccessFile raf;
         try {

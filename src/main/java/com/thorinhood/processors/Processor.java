@@ -38,11 +38,11 @@ public abstract class Processor {
     }
 
     protected void checkRequest(ParsedRequest request, String methodName, boolean isBucketAcl) throws S3Exception {
-        S3_DRIVER.isBucketExists(request.getBucket());
-        boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, request.getBucket(), request.getKey(),
+        S3_DRIVER.isBucketExists(request.getS3BucketPath());
+        boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, request.getS3ObjectPathUnsafe(),
                 methodName, request.getS3User());
-        boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getBucket(), request.getKey(), methodName,
-                request.getS3User());
+        boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),
+                request.getS3ObjectPathUnsafe().getKeyUnsafe(), methodName, request.getS3User());
         if (!(aclCheckResult && policyCheckResult)) {
             throw S3Exception.ACCESS_DENIED()
                     .setResource("1")

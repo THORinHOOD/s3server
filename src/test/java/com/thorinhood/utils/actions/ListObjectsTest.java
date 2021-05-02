@@ -55,7 +55,7 @@ public class ListObjectsTest extends BaseTest {
                         .size(size)
                         .build()
                 );
-        listObjects(s3, "bucket", null, expected);
+        listObjects(s3, "bucket", null, null, expected);
     }
 
     @Test
@@ -100,7 +100,7 @@ public class ListObjectsTest extends BaseTest {
         );
         s3 = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(), NOT_AUTH_ROOT_USER.getSecretKey());
         try {
-            listObjects(s3, "bucket", null, expected);
+            listObjects(s3, "bucket", null, null, expected);
             Assertions.fail("Access denied exception not thrown");
         } catch (S3Exception exception) {
             Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
@@ -150,7 +150,7 @@ public class ListObjectsTest extends BaseTest {
         );
         s3 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
         try {
-            listObjects(s3, "bucket", null, expected);
+            listObjects(s3, "bucket", null, null, expected);
             Assertions.fail("Access denied exception not thrown");
         } catch (S3Exception exception) {
             Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
@@ -190,17 +190,56 @@ public class ListObjectsTest extends BaseTest {
                         .build()
         );
         s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        listObjects(s3, "bucket", 2, expected);
+        listObjects(s3, "bucket", 2, null, expected);
     }
 
-    public void listObjects(S3Client s3, String bucket, Integer maxKeys, List<S3Object> expected) {
+    @Test
+    public void listObjectsPrefix() {
+        S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        createBucketRaw("bucket", s3);
+        String content = "hello, s3!!!";
+        putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
+        putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
+        putObjectRaw(s3, "bucket", "file.txt", content, null);
+        putObjectRaw(s3, "bucket", "afile.txt", content, null);
+        putObjectRaw(s3, "bucket", "file/dfile.txt", content, null);
+
+        String eTag = calcETag(content);
+        long size = content.getBytes().length;
+        List<S3Object> expected = List.of(
+                S3Object.builder()
+                        .eTag(eTag)
+                        .key("file/dfile.txt")
+                        .owner(Owner.builder()
+                                .id(ROOT_USER.getCanonicalUserId())
+                                .displayName(ROOT_USER.getAccountName())
+                                .build())
+                        .size(size)
+                        .build(),
+                S3Object.builder()
+                        .eTag(eTag)
+                        .key("file.txt")
+                        .owner(Owner.builder()
+                                .id(ROOT_USER.getCanonicalUserId())
+                                .displayName(ROOT_USER.getAccountName())
+                                .build())
+                        .size(size)
+                        .build()
+        );
+        s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        listObjects(s3, "bucket", null, "file", expected);
+    }
+
+    public void listObjects(S3Client s3, String bucket, Integer maxKeys, String prefix, List<S3Object> expected) {
         ListObjectsRequest.Builder request = ListObjectsRequest.builder()
                 .bucket(bucket);
         if (maxKeys != null) {
             request.maxKeys(maxKeys);
         }
+        request.prefix(prefix);
         ListObjectsResponse response = s3.listObjects(request.build());
         Assertions.assertEquals(maxKeys != null ? maxKeys : 1000, response.maxKeys());
+        Assertions.assertEquals(prefix, response.prefix());
         Assertions.assertEquals(bucket, response.name());
         Assertions.assertEquals(expected.size(), response.contents().size());
 

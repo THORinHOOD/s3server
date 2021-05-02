@@ -1,9 +1,6 @@
 package com.thorinhood.drivers.main;
 
-import com.thorinhood.data.GetBucketObjectsRequest;
-import com.thorinhood.data.S3Content;
-import com.thorinhood.data.S3ResponseErrorCodes;
-import com.thorinhood.data.S3User;
+import com.thorinhood.data.*;
 import com.thorinhood.data.acl.*;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.policy.Statement;
@@ -19,6 +16,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -41,15 +39,16 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkBucketPolicy(String bucket, String key, String methodName, S3User s3User) throws S3Exception {
-        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(bucket);
+    public boolean checkBucketPolicy(S3BucketPath s3BucketPath, String key, String methodName, S3User s3User) throws S3Exception {
+        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(s3BucketPath);
         if (bucketPolicy.isEmpty()) {
             return s3User.isRootUser();
         }
         boolean result = s3User.isRootUser();
         for (Statement statement : bucketPolicy.get().getStatements()) {
             if (checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn())) {
-                if (checkStatement(statement, bucket, key, methodName, s3User, !s3User.isRootUser())) {
+                if (checkStatement(statement, s3BucketPath.getBucket(), key, methodName, s3User,
+                        !s3User.isRootUser())) {
                     result = !s3User.isRootUser();
                 }
             }
@@ -85,8 +84,8 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public Optional<byte[]> getBucketPolicyBytes(String bucket) throws S3Exception {
-        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(bucket);
+    public Optional<byte[]> getBucketPolicyBytes(S3BucketPath s3BucketPath) throws S3Exception {
+        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(s3BucketPath);
         if (bucketPolicy.isEmpty()) {
             return Optional.empty();
         }
@@ -94,18 +93,18 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public Optional<BucketPolicy> getBucketPolicy(String bucket) throws S3Exception {
-        return policyDriver.getBucketPolicy(bucket);
+    public Optional<BucketPolicy> getBucketPolicy(S3BucketPath s3BucketPath) throws S3Exception {
+        return policyDriver.getBucketPolicy(s3BucketPath);
     }
 
     @Override
-    public void putBucketPolicy(String bucket, byte[] bytes) throws S3Exception {
-        policyDriver.putBucketPolicy(bucket, bytes);
+    public void putBucketPolicy(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
+        policyDriver.putBucketPolicy(s3BucketPath, bytes);
     }
 
     @Override
-    public void isBucketExists(String bucket) throws S3Exception {
-        if (!entityDriver.isBucketExists(bucket)) {
+    public void isBucketExists(S3BucketPath s3BucketPath) throws S3Exception {
+        if (!entityDriver.isBucketExists(s3BucketPath)) {
             throw S3Exception.build("Bucket does not exist")
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_BUCKET)
@@ -116,8 +115,8 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public void isObjectExists(String bucket, String key) throws S3Exception {
-        if (!entityDriver.isObjectExists(bucket, key)) {
+    public void isObjectExists(S3ObjectPath s3ObjectPath) throws S3Exception {
+        if (!entityDriver.isObjectExists(s3ObjectPath)) {
             throw S3Exception.build("Object does not exist")
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
@@ -140,18 +139,23 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkAclPermission(boolean isBucketAcl, String bucket, String key, String methodName,
-                                      S3User s3User) throws S3Exception {
-        return (isBucketAcl ?
-                checkBucketAclPermission(bucket, methodName, s3User) :
-                checkObjectAclPermission(bucket, key, methodName, s3User));
+    public boolean checkAclPermission(boolean isBucketAcl, S3ObjectPath s3ObjectPath, String methodName, S3User s3User)
+            throws S3Exception {
+        if (isBucketAcl) {
+            AccessControlPolicy acl = getBucketAcl(s3ObjectPath);
+            return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
+        } else {
+            isObjectExists(s3ObjectPath);
+            AccessControlPolicy acl = getObjectAcl(s3ObjectPath);
+            return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
+        }
     }
 
     @Override
-    public boolean isOwner(boolean isBucket, String bucket, String key, S3User s3User) throws S3Exception {
+    public boolean isOwner(boolean isBucket, S3ObjectPath s3ObjectPath, S3User s3User) throws S3Exception {
         return (isBucket ?
-                isOwner(getBucketAcl(bucket), s3User) :
-                isOwner(getObjectAcl(bucket, key), s3User));
+                isOwner(getBucketAcl(s3ObjectPath), s3User) :
+                isOwner(getObjectAcl(s3ObjectPath), s3User));
     }
 
     private boolean isOwner(AccessControlPolicy acl, S3User s3User) throws S3Exception {
@@ -159,78 +163,64 @@ public class S3DriverImpl implements S3Driver {
                acl.getOwner().getId().equals(s3User.getCanonicalUserId());
     }
 
-    private boolean checkBucketAclPermission(String bucket, String methodName, S3User s3User)
-            throws S3Exception {
-        AccessControlPolicy acl = getBucketAcl(bucket);
-        return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
-    }
-
-    private boolean checkObjectAclPermission(String bucket, String key, String methodName, S3User s3User)
-            throws S3Exception {
-        isObjectExists(bucket, key);
-        AccessControlPolicy acl = getObjectAcl(bucket, key);
-        return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
+    @Override
+    public AccessControlPolicy getBucketAcl(S3BucketPath s3BucketPath) throws S3Exception {
+        return aclDriver.getBucketAcl(s3BucketPath);
     }
 
     @Override
-    public AccessControlPolicy getBucketAcl(String bucket) throws S3Exception {
-        return aclDriver.getBucketAcl(bucket);
+    public AccessControlPolicy getObjectAcl(S3ObjectPath s3ObjectPath) throws S3Exception {
+        return aclDriver.getObjectAcl(s3ObjectPath);
     }
 
     @Override
-    public AccessControlPolicy getObjectAcl(String bucket, String key) throws S3Exception {
-        return aclDriver.getObjectAcl(bucket, key);
+    public void putBucketAcl(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
+        putBucketAcl(s3BucketPath, aclDriver.parseFromBytes(bytes));
+    }
+
+    private void putBucketAcl(S3BucketPath s3BucketPath, AccessControlPolicy acl) throws S3Exception {
+        aclDriver.putBucketAcl(s3BucketPath, acl);
     }
 
     @Override
-    public void putBucketAcl(String bucket, byte[] bytes) throws S3Exception {
-        putBucketAcl(bucket, aclDriver.parseFromBytes(bytes));
+    public String putObjectAcl(S3ObjectPath s3ObjectPath, byte[] bytes) throws S3Exception {
+        return putObjectAcl(s3ObjectPath, aclDriver.parseFromBytes(bytes));
     }
 
-    private void putBucketAcl(String bucket, AccessControlPolicy acl) throws S3Exception {
-        aclDriver.putBucketAcl(bucket, acl);
-    }
-
-    @Override
-    public String putObjectAcl(String bucket, String key, byte[] bytes) throws S3Exception {
-        return putObjectAcl(bucket, key, aclDriver.parseFromBytes(bytes));
-    }
-
-    private String putObjectAcl(String bucket, String key, AccessControlPolicy acl) throws S3Exception {
-        return aclDriver.putObjectAcl(bucket, key, acl);
+    private String putObjectAcl(S3ObjectPath s3ObjectPath, AccessControlPolicy acl) throws S3Exception {
+        return aclDriver.putObjectAcl(s3ObjectPath, acl);
     }
 
     @Override
-    public void createBucket(String bucket, S3User s3User) throws S3Exception {
-        entityDriver.createBucket(bucket, s3User);
-        putBucketAcl(bucket, createDefaultAccessControlPolicy(s3User));
+    public void createBucket(S3BucketPath s3BucketPath, S3User s3User) throws S3Exception {
+        entityDriver.createBucket(s3BucketPath, s3User);
+        putBucketAcl(s3BucketPath, createDefaultAccessControlPolicy(s3User));
     }
 
     @Override
-    public S3Object getObject(String bucket, String key, HttpHeaders httpHeaders) throws S3Exception {
-        HasMetaData rawS3Object = entityDriver.getObject(bucket, key, httpHeaders);
-        Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(bucket, key);
+    public S3Object getObject(S3ObjectPath s3ObjectPath, HttpHeaders httpHeaders) throws S3Exception {
+        HasMetaData rawS3Object = entityDriver.getObject(s3ObjectPath, httpHeaders);
+        Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3ObjectPath);
         return rawS3Object.setMetaData(objectMetadata);
     }
 
     @Override
-    public S3Object putObject(String bucket, String key, byte[] bytes, Map<String, String> metadata, S3User s3User)
+    public S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata, S3User s3User)
             throws S3Exception {
-        S3Object s3Object = entityDriver.putObject(bucket, key, bytes, metadata);
-        metadataDriver.putObjectMetadata(bucket, key, metadata);
-        aclDriver.putObjectAcl(bucket, key, createDefaultAccessControlPolicy(s3User));
+        S3Object s3Object = entityDriver.putObject(s3ObjectPath, bytes, metadata);
+        metadataDriver.putObjectMetadata(s3ObjectPath, metadata);
+        aclDriver.putObjectAcl(s3ObjectPath, createDefaultAccessControlPolicy(s3User));
         return s3Object;
     }
 
     @Override
-    public void deleteObject(String bucket, String key) throws S3Exception {
-        entityDriver.deleteObject(bucket, key);
+    public void deleteObject(S3ObjectPath s3ObjectPath) throws S3Exception {
+        entityDriver.deleteObject(s3ObjectPath);
     }
 
-
     @Override
-    public void deleteBucket(String bucket) throws S3Exception {
-        entityDriver.deleteBucket(bucket);
+    public void deleteBucket(S3BucketPath s3BucketPath) throws S3Exception {
+        entityDriver.deleteBucket(s3BucketPath);
     }
 
     @Override
@@ -238,15 +228,14 @@ public class S3DriverImpl implements S3Driver {
         List<HasMetaData> hasMetaDataObjects = entityDriver.getBucketObjects(request);
         return hasMetaDataObjects.stream()
                 .map(hasMetaDataObject -> {
-                    Map<String, String> metaData = metadataDriver.getObjectMetadata(request.getBucket(),
-                            hasMetaDataObject.getKey());
+                    Map<String, String> metaData = metadataDriver.getObjectMetadata(hasMetaDataObject.getS3Path());
                     return hasMetaDataObject.setMetaData(metaData); // TODO
                 })
                 .map(s3Object -> S3Content.builder()
                         .setETag(s3Object.getETag())
-                        .setKey(s3Object.getKey().substring(1))
+                        .setKey(s3Object.getS3Path().getKey())
 //                        .setLastModified(s3Object.getLastModified()) // TODO
-                        .setOwner(aclDriver.getObjectAcl(request.getBucket(), s3Object.getKey()).getOwner())
+                        .setOwner(aclDriver.getObjectAcl(s3Object.getS3Path()).getOwner())
                         .setSize(s3Object.getRawBytes().length)
                         .setStorageClass("none") // TODO
                         .build())

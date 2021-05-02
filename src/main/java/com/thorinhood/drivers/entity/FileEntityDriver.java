@@ -1,9 +1,6 @@
 package com.thorinhood.drivers.entity;
 
-import com.thorinhood.data.GetBucketObjectsRequest;
-import com.thorinhood.data.S3Headers;
-import com.thorinhood.data.S3ResponseErrorCodes;
-import com.thorinhood.data.S3User;
+import com.thorinhood.data.*;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.drivers.FileDriver;
@@ -50,35 +47,35 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
-    public void createBucket(String bucket, S3User s3User) throws S3Exception {
-        String absolutePath = BASE_FOLDER_PATH + File.separatorChar + bucket;
+    public void createBucket(S3BucketPath s3BucketPath, S3User s3User) throws S3Exception {
+        String absolutePath = s3BucketPath.getFullPathToBucket(BASE_FOLDER_PATH);
         File bucketFile = new File(absolutePath);
         if (bucketFile.exists()) {
             throw S3Exception.build("Bucket already exists : " + absolutePath)
                     .setStatus(HttpResponseStatus.CONFLICT)
                     .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
                     .setMessage("Your previous request to create the named bucket succeeded and you already own it.")
-                    .setResource(File.separatorChar + bucket)
+                    .setResource(File.separatorChar + s3BucketPath.getBucket())
                     .setRequestId("1"); // TODO
         }
         if (!bucketFile.mkdir()) {
             throw S3Exception.INTERNAL_ERROR("Can't create bucket: " + absolutePath)
                     .setMessage("Can't create bucket")
-                    .setResource(File.separatorChar + bucket)
+                    .setResource(File.separatorChar + s3BucketPath.getBucket())
                     .setRequestId("1"); // TODO
         }
     }
 
     @Override
-    public HasMetaData getObject(String bucket, String key, HttpHeaders httpHeaders) throws S3Exception {
-        String absolutePath = fullPath(bucket, key);
+    public HasMetaData getObject(S3ObjectPath s3ObjectPath, HttpHeaders httpHeaders) throws S3Exception {
+        String absolutePath = s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH);
         File file = new File(absolutePath);
         if (file.isHidden() || !file.exists() || !file.isFile()) {
             throw S3Exception.build("File not found: " + absolutePath)
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
-                    .setResource(File.separatorChar + bucket + key)
+                    .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
                     .setRequestId("1"); // TODO
         }
 
@@ -91,7 +88,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             }
             return S3Object.build()
                     .setAbsolutePath(absolutePath)
-                    .setKey(key)
+                    .setS3Path(s3ObjectPath)
                     .setETag(eTag)
                     .setFile(file)
                     .setRawBytes(bytes)
@@ -99,19 +96,19 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         } catch (IOException | ParseException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
-                    .setResource(File.separatorChar + bucket + key)
+                    .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
                     .setRequestId("1"); // TODO
         }
     }
 
     @Override
-    public S3Object putObject(String bucket, String key, byte[] bytes, Map<String, String> metadata) throws S3Exception {
-        String absolutePath = fullPath(bucket, key);
+    public S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata) throws S3Exception {
+        String absolutePath = s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH);
         File file = new File(absolutePath);
-        if (!processFolders(file, bucket)) {
+        if (!processFolders(file, s3ObjectPath.getBucket())) {
             throw S3Exception.INTERNAL_ERROR("Can't create folders: " + absolutePath)
                     .setMessage("Internal error : can't create folder")
-                    .setResource(File.separatorChar + bucket + key)
+                    .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
                     .setRequestId("1"); // TODO
         }
         try {
@@ -122,7 +119,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 outputStream.close();
                 return S3Object.build()
                         .setAbsolutePath(absolutePath)
-                        .setKey(key)
+                        .setS3Path(s3ObjectPath)
                         .setETag(calculateETag(bytes))
                         .setFile(file)
                         .setRawBytes(bytes)
@@ -131,29 +128,29 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             } else {
                 throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                         .setMessage("Internal error : can't create object")
-                        .setResource(File.separatorChar + bucket + key)
+                        .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
                         .setRequestId("1"); // TODO
             }
         } catch (IOException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage(exception.getMessage())
-                    .setResource(File.separatorChar + bucket + key)
+                    .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
                     .setRequestId("1"); // TODO
         }
     }
 
     @Override
-    public void deleteObject(String bucket, String key) throws S3Exception {
-        String pathToObject = fullPath(bucket, key);
-        String pathToObjectMetadataFolder = getPathToObjectMetadataFolder(bucket, key, false);
+    public void deleteObject(S3ObjectPath s3ObjectPath) throws S3Exception {
+        String pathToObject = s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH);
+        String pathToObjectMetadataFolder = getPathToObjectMetadataFolder(s3ObjectPath, false);
         deleteFolder(pathToObjectMetadataFolder);
         deleteFile(pathToObject);
     }
 
     @Override
-    public void deleteBucket(String bucket) throws S3Exception {
-        String pathToBucket = fullPathToBucket(bucket);
-        String pathToBucketMetadataFolder = getPathToBucketMetadataFolder(bucket, false);
+    public void deleteBucket(S3BucketPath s3BucketPath) throws S3Exception {
+        String pathToBucket = s3BucketPath.getFullPathToBucket(BASE_FOLDER_PATH);
+        String pathToBucketMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, false);
         deleteFolder(pathToBucket);
         deleteFolder(pathToBucketMetadataFolder);
     }
@@ -169,13 +166,24 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     if (dir.getFileName().toString().startsWith(".#")) {
                         return FileVisitResult.SKIP_SUBTREE;
                     }
-                    return FileVisitResult.CONTINUE;
+                    int from = dir.toString().indexOf(request.getBucket()) + request.getBucket().length() + 1;
+                    if (from >= dir.toString().length()) {
+                        return FileVisitResult.CONTINUE;
+                    }
+                    String key = dir.toString().substring(from);
+                    return checkPrefix(request.getPrefix(), key) ? FileVisitResult.CONTINUE :
+                            FileVisitResult.SKIP_SUBTREE;
                 }
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    String path = file.toString();
-                    String key = path.substring(path.indexOf(request.getBucket()) + request.getBucket().length());
-                    objects.add(getObject(request.getBucket(), key, null));
+                    int indexOfBucket = file.toString().indexOf(request.getBucket());
+                    int from = indexOfBucket + request.getBucket().length() + 1;
+                    String path = file.toString().substring(from);
+                    if (!checkPrefix(request.getPrefix(), path)) {
+                        return FileVisitResult.CONTINUE;
+                    }
+                    String key = file.toString().substring(indexOfBucket);
+                    objects.add(getObject(S3ObjectPath.relative(key), null));
                     if (objects.size() >= request.getMaxKeys()) {
                         return FileVisitResult.TERMINATE;
                     }
@@ -191,17 +199,22 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         return objects;
     }
 
+    private boolean checkPrefix(String prefix, String path) {
+        if (prefix == null) {
+            return true;
+        }
+        return path.startsWith(prefix);
+    }
+
     @Override
-    public boolean isBucketExists(String bucket) throws S3Exception {
-        String absolutePath = BASE_FOLDER_PATH + File.separatorChar + bucket;
-        File bucketFile = new File(absolutePath);
+    public boolean isBucketExists(S3BucketPath s3BucketPath) throws S3Exception {
+        File bucketFile = new File(s3BucketPath.getFullPathToBucket(BASE_FOLDER_PATH));
         return bucketFile.exists() && bucketFile.isDirectory();
     }
 
     @Override
-    public boolean isObjectExists(String bucket, String key) throws S3Exception {
-        String absolutePath = BASE_FOLDER_PATH + File.separatorChar + bucket + key;
-        File file = new File(absolutePath);
+    public boolean isObjectExists(S3ObjectPath s3ObjectPath) throws S3Exception {
+        File file = new File(s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH));
         return file.exists() && file.isFile();
     }
 

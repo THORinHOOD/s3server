@@ -1,5 +1,7 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.data.S3BucketPath;
+import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.data.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
 import com.thorinhood.exceptions.S3Exception;
@@ -16,8 +18,7 @@ import java.util.function.Function;
 public class ParsedRequest {
 
     private byte[] bytes;
-    private String bucket;
-    private String key;
+    private S3ObjectPath s3ObjectPath;
     private String signature;
     private Credential credential;
     private Integer decodedContentLength;
@@ -38,19 +39,31 @@ public class ParsedRequest {
     }
 
     public boolean isPathToObject() {
-        return !key.equals("");
+        return !s3ObjectPath.isBucket();
     }
 
     public byte[] getBytes() {
         return bytes;
     }
 
-    public String getBucket() {
-        return bucket;
+    public S3BucketPath getS3BucketPath() {
+        return s3ObjectPath;
     }
 
-    public String getKey() {
-        return key;
+    public S3ObjectPath getS3ObjectPath() {
+        if (s3ObjectPath.isBucket()) {
+            throw S3Exception.build("Incorrect path to object : " + s3ObjectPath)
+                    .setStatus(HttpResponseStatus.BAD_REQUEST)
+                    .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
+                    .setMessage("Incorrect path to object : " + s3ObjectPath)
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+        return s3ObjectPath;
+    }
+
+    public S3ObjectPath getS3ObjectPathUnsafe() {
+        return s3ObjectPath;
     }
 
     public String getSignature() {
@@ -141,13 +154,8 @@ public class ParsedRequest {
             return this;
         }
 
-        public Builder setBucket(String bucket) {
-            parsedRequest.bucket = bucket;
-            return this;
-        }
-
-        public Builder setKey(String key) {
-            parsedRequest.key = key;
+        public Builder setS3ObjectPath(S3ObjectPath s3ObjectPath) {
+            parsedRequest.s3ObjectPath = s3ObjectPath;
             return this;
         }
 

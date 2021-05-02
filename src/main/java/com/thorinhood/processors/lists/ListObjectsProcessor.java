@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Function;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
@@ -32,14 +33,16 @@ public class ListObjectsProcessor extends Processor {
                                 Object... arguments) throws Exception {
         checkRequest(parsedRequest, "s3:ListBucket", true);
         GetBucketObjectsRequest getBucketObjectsRequest = GetBucketObjectsRequest.builder()
-                .setBucket(parsedRequest.getBucket())
+                .setBucket(parsedRequest.getS3BucketPath().getBucket())
+                .setPrefix(parsedRequest.getQueryParam("prefix", null, Function.identity()))
                 .setMaxKeys(parsedRequest.getQueryParam("max-keys", 1000, Integer::valueOf))
                 .build();
         List<S3Content> s3Contents = S3_DRIVER.getBucketObjects(getBucketObjectsRequest);
         ListBucketResult listBucketResult = ListBucketResult.builder()
                 .setMaxKeys(getBucketObjectsRequest.getMaxKeys())
-                .setName(parsedRequest.getBucket())
+                .setName(parsedRequest.getS3BucketPath().getBucket())
                 .setContents(s3Contents)
+                .setPrefix(getBucketObjectsRequest.getPrefix())
                 .build();
         String xml = listBucketResult.buildXmlText();
         sendResponse(context, request, OK, response -> {

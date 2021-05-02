@@ -3,6 +3,8 @@ package com.thorinhood.data;
 public class GetBucketObjectsRequest {
 
     private String bucket;
+    private String prefix;
+    private String marker;
     private int maxKeys = 1000;
 
     public static Builder builder() {
@@ -10,6 +12,14 @@ public class GetBucketObjectsRequest {
     }
 
     private GetBucketObjectsRequest() {
+    }
+
+    public String getMarker() {
+        return marker;
+    }
+
+    public String getPrefix() {
+        return prefix;
     }
 
     public String getBucket() {
@@ -34,6 +44,16 @@ public class GetBucketObjectsRequest {
 
         public Builder setMaxKeys(int maxKeys) {
             request.maxKeys = maxKeys;
+            return this;
+        }
+
+        public Builder setPrefix(String prefix) {
+            request.prefix = prefix;
+            return this;
+        }
+
+        public Builder setMarker(String marker) {
+            request.marker = marker;
             return this;
         }
 

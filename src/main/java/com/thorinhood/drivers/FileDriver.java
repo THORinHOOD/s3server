@@ -1,5 +1,7 @@
 package com.thorinhood.drivers;
 
+import com.thorinhood.data.S3BucketPath;
+import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.exceptions.S3Exception;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,18 +32,29 @@ public class FileDriver {
         this.USERS_FOLDER_PATH = usersFolderPath;
     }
 
-    protected String getPathToBucketMetadataFolder(String bucket, boolean safely) throws S3Exception {
-        String path = BASE_FOLDER_PATH + File.separatorChar + METADATA_FOLDER_PREFIX + bucket;
+    protected String getPathToBucketMetadataFolder(S3BucketPath s3BucketPath, boolean safely) throws S3Exception {
+        if (s3BucketPath.getBucket() == null) {
+            throw S3Exception.INTERNAL_ERROR("Can't build path to bucket metadata folder : " + s3BucketPath)
+                    .setMessage("Can't build path to bucket metadata folder : " + s3BucketPath)
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
+        String path = BASE_FOLDER_PATH + File.separatorChar + METADATA_FOLDER_PREFIX + s3BucketPath.getBucket();
         if (safely) {
             createFolder(path);
         }
         return path;
     }
 
-    protected String getPathToObjectMetadataFolder(String bucket, String key, boolean safely) throws S3Exception {
-        String fileName = extractFileName(key);
-        String path = extractPathToFile(key, fileName);
-        String result = BASE_FOLDER_PATH + File.separatorChar + bucket + path + METADATA_FOLDER_PREFIX + fileName;
+    protected String getPathToObjectMetadataFolder(S3ObjectPath s3ObjectPath, boolean safely) throws S3Exception {
+        if (s3ObjectPath.getName() == null) {
+            throw S3Exception.INTERNAL_ERROR("Object name is null : " + s3ObjectPath)
+                    .setMessage("Object name is null : " + s3ObjectPath)
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
+        String result = s3ObjectPath.getFullPathToObjectFolder(BASE_FOLDER_PATH) + METADATA_FOLDER_PREFIX +
+                s3ObjectPath.getName();
         if (safely) {
             createFolder(result);
         }
@@ -104,22 +117,6 @@ public class FileDriver {
                 .setMessage(msg)
                 .setResource("1")
                 .setRequestId("1"); // TODO
-    }
-
-    protected String extractFileName(String key) {
-        return key.substring(key.lastIndexOf("/") + 1);
-    }
-
-    protected String extractPathToFile(String key, String fileName) {
-        return key.substring(0, key.indexOf(fileName));
-    }
-
-    protected String fullPath(String bucket, String key) {
-        return BASE_FOLDER_PATH + File.separatorChar + bucket + key;
-    }
-
-    protected String fullPathToBucket(String bucket) {
-        return BASE_FOLDER_PATH + File.separatorChar + bucket;
     }
 
 }

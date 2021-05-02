@@ -13,7 +13,7 @@ public class ListBucketResult implements XmlObject {
 //    private String nextMarker;
     private List<S3Content> contents;
     private String name;
-//    private String prefix;
+    private String prefix;
 //    private String delimiter;
     private int maxKeys = 1000;
 //    private List<String> commonPrefixes;
@@ -30,7 +30,8 @@ public class ListBucketResult implements XmlObject {
     public Element buildXmlRootNode(Document doc) {
         Element root = createElement(doc, "ListBucketResult",
                             createTextElement(doc, "Name", name),
-                            createTextElement(doc, "MaxKeys", String.valueOf(maxKeys)));
+                            createTextElement(doc, "MaxKeys", String.valueOf(maxKeys)),
+                            createTextElement(doc, "Prefix", prefix));
         if (contents != null && !contents.isEmpty()) {
             contents.forEach(content -> root.appendChild(content.buildXmlRootNode(doc)));
         }
@@ -57,6 +58,11 @@ public class ListBucketResult implements XmlObject {
 
         public Builder setMaxKeys(int maxKeys) {
             listBucketResult.maxKeys = maxKeys;
+            return this;
+        }
+
+        public Builder setPrefix(String prefix) {
+            listBucketResult.prefix = prefix;
             return this;
         }
 

@@ -28,8 +28,7 @@ public class GetObjectAclProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         checkRequest(parsedRequest, false);
-        AccessControlPolicy accessControlPolicy = S3_DRIVER.getObjectAcl(parsedRequest.getBucket(),
-                parsedRequest.getKey());
+        AccessControlPolicy accessControlPolicy = S3_DRIVER.getObjectAcl(parsedRequest.getS3ObjectPath());
         String xml = accessControlPolicy.buildXmlText();
         sendResponse(context, request, OK, response -> {
             HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);

@@ -24,7 +24,7 @@ public class PutBucketPolicyProcessor extends BucketPolicyProcessor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         checkRequest(parsedRequest, true);
-        S3_DRIVER.putBucketPolicy(parsedRequest.getBucket(), parsedRequest.getBytes());
+        S3_DRIVER.putBucketPolicy(parsedRequest.getS3BucketPath(), parsedRequest.getBytes());
         sendResponseWithoutContent(context, OK, request, Map.of(
                 "Date", DateTimeUtil.currentDateTime()
         ));

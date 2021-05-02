@@ -53,8 +53,7 @@ public class PutObjectProcessor extends Processor {
     private void singleChunkRead(ParsedRequest parsedRequest, FullHttpRequest request, ChannelHandlerContext context)
         throws S3Exception {
             S3Object s3Object = S3_DRIVER.putObject(
-                    parsedRequest.getBucket(),
-                    parsedRequest.getKey(),
+                    parsedRequest.getS3ObjectPath(),
                     parsedRequest.getBytes(),
                     parsedRequest.getMetadata(),
                     parsedRequest.getS3User());
