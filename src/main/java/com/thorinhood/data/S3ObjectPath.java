@@ -13,11 +13,15 @@ public class S3ObjectPath extends S3BucketPath {
         return new S3ObjectPath(bucket, subKey, name);
     }
 
+    public static S3ObjectPath raw(String bucket, String key) {
+        return relative(bucket + File.separatorChar + key);
+    }
+
     public static S3ObjectPath relative(String bucketKey) {
-        int firstSlash = bucketKey.indexOf("/");
+        int firstSlash = bucketKey.indexOf(File.separatorChar);
         String bucket = bucketKey.substring(0, firstSlash);
         bucketKey = bucketKey.substring(firstSlash + 1);
-        int lastSlash = bucketKey.lastIndexOf("/");
+        int lastSlash = bucketKey.lastIndexOf(File.separatorChar);
         if (lastSlash == -1) {
             return new S3ObjectPath(bucket, "", bucketKey);
         }

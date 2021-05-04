@@ -1,21 +1,18 @@
 package com.thorinhood.data;
 
-public class GetBucketObjectsRequest {
+public class GetBucketObjects {
 
     private String bucket;
     private String prefix;
-    private String marker;
+    private String startAfter;
+    private String continuationToken;
     private int maxKeys = 1000;
 
     public static Builder builder() {
         return new Builder();
     }
 
-    private GetBucketObjectsRequest() {
-    }
-
-    public String getMarker() {
-        return marker;
+    private GetBucketObjects() {
     }
 
     public String getPrefix() {
@@ -30,11 +27,19 @@ public class GetBucketObjectsRequest {
         return maxKeys;
     }
 
+    public String getStartAfter() {
+        return startAfter;
+    }
+
+    public String getContinuationToken() {
+        return continuationToken;
+    }
+
     public static class Builder {
-        private final GetBucketObjectsRequest request;
+        private final GetBucketObjects request;
 
         public Builder() {
-            this.request = new GetBucketObjectsRequest();
+            this.request = new GetBucketObjects();
         }
 
         public Builder setBucket(String bucket) {
@@ -52,12 +57,17 @@ public class GetBucketObjectsRequest {
             return this;
         }
 
-        public Builder setMarker(String marker) {
-            request.marker = marker;
+        public Builder setStartAfter(String startAfter) {
+            request.startAfter = startAfter;
             return this;
         }
 
-        public GetBucketObjectsRequest build() {
+        public Builder setContinuationToken(String continuationToken) {
+            request.continuationToken = continuationToken;
+            return this;
+        }
+
+        public GetBucketObjects build() {
             return request;
         }
     }

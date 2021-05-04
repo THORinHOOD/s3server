@@ -9,12 +9,11 @@ import com.thorinhood.processors.acl.GetObjectAclProcessor;
 import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.processors.actions.*;
-import com.thorinhood.processors.lists.ListObjectsProcessor;
+import com.thorinhood.processors.lists.ListObjectsV2Processor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
 import com.thorinhood.utils.ParsedRequest;
 import com.thorinhood.utils.RequestUtil;
-import com.thorinhood.utils.XmlUtil;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -23,12 +22,9 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @ChannelHandler.Sharable
 public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -46,7 +42,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final PutBucketPolicyProcessor putBucketPolicyProcessor;
     private final GetBucketPolicyProcessor getBucketPolicyProcessor;
     private final DeleteObjectProcessor deleteObjectProcessor;
-    private final ListObjectsProcessor listObjectsProcessor;
+    private final ListObjectsV2Processor listObjectsV2Processor;
     private final DeleteBucketProcessor deleteBucketProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
@@ -61,7 +57,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         putBucketPolicyProcessor = new PutBucketPolicyProcessor(s3Driver);
         getBucketPolicyProcessor = new GetBucketPolicyProcessor(s3Driver);
         deleteObjectProcessor = new DeleteObjectProcessor(s3Driver);
-        listObjectsProcessor = new ListObjectsProcessor(s3Driver);
+        listObjectsV2Processor = new ListObjectsV2Processor(s3Driver);
         deleteBucketProcessor = new DeleteBucketProcessor(s3Driver);
     }
 
@@ -103,8 +99,8 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 }
             } else if (isPolicyRequest(request)) {
                 getBucketPolicyProcessor.process(context, request, parsedRequest);
-            } else if (!parsedRequest.isPathToObject()) {
-                listObjectsProcessor.process(context, request, parsedRequest);
+            } else if (!parsedRequest.isPathToObject() && checkRequestS3Type(request, "list-type", "2")) {
+                listObjectsV2Processor.process(context, request, parsedRequest);
             } else {
                 getObjectProcessor.process(context, request, parsedRequest);
             }
@@ -151,6 +147,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
     private boolean isAclRequest(FullHttpRequest request) {
         return checkRequestS3Type(request, "acl");
+    }
+
+    private boolean checkRequestS3Type(FullHttpRequest request, String key, String value) {
+        QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+        Map<String, List<String>> params = queryStringDecoder.parameters();
+        return params.containsKey(key) && params.get(key) != null && params.get(key).size() == 1 &&
+                params.get(key).get(0).equals(value);
     }
 
     private boolean checkRequestS3Type(FullHttpRequest request, String type) {

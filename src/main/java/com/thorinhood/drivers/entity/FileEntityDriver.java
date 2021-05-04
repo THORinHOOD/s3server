@@ -7,6 +7,7 @@ import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import com.thorinhood.utils.DateTimeUtil;
+import com.thorinhood.utils.Pair;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -16,16 +17,12 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class FileEntityDriver extends FileDriver implements EntityDriver {
 
@@ -156,47 +153,53 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
-    public List<HasMetaData> getBucketObjects(GetBucketObjectsRequest request) throws S3Exception {
-        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + request.getBucket());
+    public Pair<Pair<List<HasMetaData>, Boolean>, String> getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception {
+        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + getBucketObjects.getBucket());
         List<HasMetaData> objects = new ArrayList<>();
+        boolean truncated = false;
+        boolean start = false;
+        String nextContinuationToken = null;
         try {
-            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                    if (dir.getFileName().toString().startsWith(".#")) {
-                        return FileVisitResult.SKIP_SUBTREE;
+            try (Stream<Path> tree = Files.walk(path)) {
+                int from = path.toString().length() + 1;
+                List<String> allObjects = tree.filter(current -> !isMetadataFolder(current) &&
+                        !isMetadataFile(current) && !Files.isDirectory(current))
+                        .map(objectPath -> objectPath.toString().substring(from))
+                        .sorted(String::compareTo)
+                        .collect(Collectors.toList());
+                for (int i = 0; (i < allObjects.size()) && !truncated; i++) {
+                    String currentPath = allObjects.get(i);
+                    String objectMd5 = DigestUtils.md5Hex(currentPath);
+                    if (objects.size() == getBucketObjects.getMaxKeys()) {
+                        truncated = true;
+                        nextContinuationToken = objectMd5;
+                    } else {
+                        if (getBucketObjects.getContinuationToken() != null) {
+                            if (objectMd5.equals(getBucketObjects.getContinuationToken())) {
+                                start = true;
+                            }
+                        } else {
+                            start = true;
+                        }
+                        if (start) {
+                            if (getBucketObjects.getStartAfter() == null ||
+                                    getBucketObjects.getStartAfter().compareTo(currentPath) >= 0) {
+                                if (checkPrefix(getBucketObjects.getPrefix(), currentPath)) {
+                                    objects.add(getObject(S3ObjectPath.raw(getBucketObjects.getBucket(), currentPath),
+                                            null));
+                                }
+                            }
+                        }
                     }
-                    int from = dir.toString().indexOf(request.getBucket()) + request.getBucket().length() + 1;
-                    if (from >= dir.toString().length()) {
-                        return FileVisitResult.CONTINUE;
-                    }
-                    String key = dir.toString().substring(from);
-                    return checkPrefix(request.getPrefix(), key) ? FileVisitResult.CONTINUE :
-                            FileVisitResult.SKIP_SUBTREE;
                 }
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    int indexOfBucket = file.toString().indexOf(request.getBucket());
-                    int from = indexOfBucket + request.getBucket().length() + 1;
-                    String path = file.toString().substring(from);
-                    if (!checkPrefix(request.getPrefix(), path)) {
-                        return FileVisitResult.CONTINUE;
-                    }
-                    String key = file.toString().substring(indexOfBucket);
-                    objects.add(getObject(S3ObjectPath.relative(key), null));
-                    if (objects.size() >= request.getMaxKeys()) {
-                        return FileVisitResult.TERMINATE;
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
+            }
         } catch (IOException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't list bucket objects")
                     .setMessage("Can't list bucket objects")
                     .setResource("1")
                     .setRequestId("1");
         }
-        return objects;
+        return Pair.of(Pair.of(objects, truncated), nextContinuationToken);
     }
 
     private boolean checkPrefix(String prefix, String path) {

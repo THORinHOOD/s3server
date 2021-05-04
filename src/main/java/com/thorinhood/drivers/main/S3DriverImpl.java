@@ -11,12 +11,12 @@ import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.utils.Pair;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -224,9 +224,9 @@ public class S3DriverImpl implements S3Driver {
     }
 
     @Override
-    public List<S3Content> getBucketObjects(GetBucketObjectsRequest request) throws S3Exception {
-        List<HasMetaData> hasMetaDataObjects = entityDriver.getBucketObjects(request);
-        return hasMetaDataObjects.stream()
+    public ListBucketResult getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception {
+        Pair<Pair<List<HasMetaData>, Boolean>, String> result = entityDriver.getBucketObjects(getBucketObjects);
+        List<S3Content> s3Contents = result.getFirst().getFirst().stream()
                 .map(hasMetaDataObject -> {
                     Map<String, String> metaData = metadataDriver.getObjectMetadata(hasMetaDataObject.getS3Path());
                     return hasMetaDataObject.setMetaData(metaData); // TODO
@@ -240,6 +240,17 @@ public class S3DriverImpl implements S3Driver {
                         .setStorageClass("none") // TODO
                         .build())
                 .collect(Collectors.toList());
+        return ListBucketResult.builder()
+                .setMaxKeys(getBucketObjects.getMaxKeys())
+                .setName(getBucketObjects.getBucket())
+                .setContents(s3Contents)
+                .setPrefix(getBucketObjects.getPrefix())
+                .setStartAfter(getBucketObjects.getStartAfter())
+                .setIsTruncated(result.getFirst().getSecond())
+                .setKeyCount(s3Contents.size())
+                .setContinuationToken(getBucketObjects.getContinuationToken())
+                .setNextContinuationToken(result.getSecond())
+                .build();
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

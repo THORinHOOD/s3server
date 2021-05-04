@@ -61,6 +61,14 @@ public class FileDriver {
         return result;
     }
 
+    protected boolean isMetadataFolder(Path path) {
+        return Files.isDirectory(path) && path.getFileName().toString().startsWith(METADATA_FOLDER_PREFIX);
+    }
+
+    protected boolean isMetadataFile(Path path) {
+        return Files.isRegularFile(path) && isMetadataFolder(path.getParent());
+    }
+
     protected boolean existsFolder(String path) {
         File folder = new File(path);
         return folder.isDirectory() && folder.exists();
