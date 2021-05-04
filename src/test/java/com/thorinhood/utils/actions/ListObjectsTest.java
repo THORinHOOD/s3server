@@ -231,13 +231,13 @@ public class ListObjectsTest extends BaseTest {
     }
 
     public void listObjects(S3Client s3, String bucket, Integer maxKeys, String prefix, List<S3Object> expected) {
-        ListObjectsRequest.Builder request = ListObjectsRequest.builder()
+        ListObjectsV2Request.Builder request = ListObjectsV2Request.builder()
                 .bucket(bucket);
         if (maxKeys != null) {
             request.maxKeys(maxKeys);
         }
         request.prefix(prefix);
-        ListObjectsResponse response = s3.listObjects(request.build());
+        ListObjectsV2Response response = s3.listObjectsV2(request.build());
         Assertions.assertEquals(maxKeys != null ? maxKeys : 1000, response.maxKeys());
         Assertions.assertEquals(prefix, response.prefix());
         Assertions.assertEquals(bucket, response.name());
