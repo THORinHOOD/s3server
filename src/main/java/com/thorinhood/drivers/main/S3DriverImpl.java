@@ -11,12 +11,14 @@ import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.Pair;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.text.ParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -231,14 +233,25 @@ public class S3DriverImpl implements S3Driver {
                     Map<String, String> metaData = metadataDriver.getObjectMetadata(hasMetaDataObject.getS3Path());
                     return hasMetaDataObject.setMetaData(metaData); // TODO
                 })
-                .map(s3Object -> S3Content.builder()
-                        .setETag(s3Object.getETag())
-                        .setKey(s3Object.getS3Path().getKey())
-//                        .setLastModified(s3Object.getLastModified()) // TODO
-                        .setOwner(aclDriver.getObjectAcl(s3Object.getS3Path()).getOwner())
-                        .setSize(s3Object.getRawBytes().length)
-                        .setStorageClass("none") // TODO
-                        .build())
+                .map(s3Object -> {
+//                    try {
+                        return S3Content.builder()
+                                .setETag(s3Object.getETag())
+                                .setKey(s3Object.getS3Path().getKey())
+                                .setLastModified(DateTimeUtil.parseDateTimeISO(s3Object.getFile()))
+                                .setOwner(aclDriver.getObjectAcl(s3Object.getS3Path()).getOwner())
+                                .setSize(s3Object.getRawBytes().length)
+                                .setStorageClass("STANDART") // TODO
+                                .build();
+//                    } catch (ParseException e) {
+//                        throw S3Exception.INTERNAL_ERROR("Can't parse last modified time of object : " +
+//                                s3Object.getAbsolutePath())
+//                                .setMessage("Can't parse last modified time of object : " +
+//                                        s3Object.getAbsolutePath())
+//                                .setResource("1")
+//                                .setRequestId("1"); // TODO
+//                    }
+                })
                 .collect(Collectors.toList());
         return ListBucketResult.builder()
                 .setMaxKeys(getBucketObjects.getMaxKeys())
