@@ -183,7 +183,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                         }
                         if (start) {
                             if (getBucketObjects.getStartAfter() == null ||
-                                    getBucketObjects.getStartAfter().compareTo(currentPath) >= 0) {
+                                    getBucketObjects.getStartAfter().compareTo(currentPath) <= 0) {
                                 if (checkPrefix(getBucketObjects.getPrefix(), currentPath)) {
                                     objects.add(getObject(S3ObjectPath.raw(getBucketObjects.getBucket(), currentPath),
                                             null));

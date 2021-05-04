@@ -9,14 +9,14 @@ import software.amazon.awssdk.services.s3.model.*;
 import java.util.List;
 import java.util.Map;
 
-public class ListObjectsTest extends BaseTest {
+public class ListObjectsV2Test extends BaseTest {
 
-    public ListObjectsTest() {
+    public ListObjectsV2Test() {
         super("/home/thorinhood/testS3Java", 9999);
     }
 
     @Test
-    public void listObjectsSimple() {
+    public void listObjectsV2Simple() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw("bucket", s3);
         String content = "hello, s3!!!";
@@ -55,11 +55,11 @@ public class ListObjectsTest extends BaseTest {
                         .size(size)
                         .build()
                 );
-        listObjects(s3, "bucket", null, null, expected);
+        listObjects(s3, "bucket", null, null, null, expected);
     }
 
     @Test
-    public void listObjectsUnauthorized() {
+    public void listObjectsV2Unauthorized() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw("bucket", s3);
         String content = "hello, s3!!!";
@@ -100,7 +100,7 @@ public class ListObjectsTest extends BaseTest {
         );
         s3 = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(), NOT_AUTH_ROOT_USER.getSecretKey());
         try {
-            listObjects(s3, "bucket", null, null, expected);
+            listObjects(s3, "bucket", null, null, null, expected);
             Assertions.fail("Access denied exception not thrown");
         } catch (S3Exception exception) {
             Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
@@ -109,7 +109,7 @@ public class ListObjectsTest extends BaseTest {
     }
 
     @Test
-    public void listObjectsAnotherUser() {
+    public void listObjectsV2AnotherUser() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw("bucket", s3);
         String content = "hello, s3!!!";
@@ -150,7 +150,7 @@ public class ListObjectsTest extends BaseTest {
         );
         s3 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
         try {
-            listObjects(s3, "bucket", null, null, expected);
+            listObjects(s3, "bucket", null, null, null, expected);
             Assertions.fail("Access denied exception not thrown");
         } catch (S3Exception exception) {
             Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
@@ -159,7 +159,7 @@ public class ListObjectsTest extends BaseTest {
     }
 
     @Test
-    public void listObjectsMaxKeys() {
+    public void listObjectsV2MaxKeys() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw("bucket", s3);
         String content = "hello, s3!!!";
@@ -190,11 +190,11 @@ public class ListObjectsTest extends BaseTest {
                         .build()
         );
         s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        listObjects(s3, "bucket", 2, null, expected);
+        listObjects(s3, "bucket", 2, null, null, expected);
     }
 
     @Test
-    public void listObjectsPrefix() {
+    public void listObjectsV2Prefix() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw("bucket", s3);
         String content = "hello, s3!!!";
@@ -227,16 +227,55 @@ public class ListObjectsTest extends BaseTest {
                         .build()
         );
         s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        listObjects(s3, "bucket", null, "file", expected);
+        listObjects(s3, "bucket", null, "file", null, expected);
     }
 
-    public void listObjects(S3Client s3, String bucket, Integer maxKeys, String prefix, List<S3Object> expected) {
+    @Test
+    public void listObjectsV2StartAfter() {
+        S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        createBucketRaw("bucket", s3);
+        String content = "hello, s3!!!";
+        putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
+        putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
+        putObjectRaw(s3, "bucket", "file.txt", content, null);
+        putObjectRaw(s3, "bucket", "afile.txt", content, null);
+        putObjectRaw(s3, "bucket", "file/dfile.txt", content, null);
+
+        String eTag = calcETag(content);
+        long size = content.getBytes().length;
+        List<S3Object> expected = List.of(
+                S3Object.builder()
+                        .eTag(eTag)
+                        .key("folder1/folder2/file.txt")
+                        .owner(Owner.builder()
+                                .id(ROOT_USER.getCanonicalUserId())
+                                .displayName(ROOT_USER.getAccountName())
+                                .build())
+                        .size(size)
+                        .build(),
+                S3Object.builder()
+                        .eTag(eTag)
+                        .key("folder1/file.txt")
+                        .owner(Owner.builder()
+                                .id(ROOT_USER.getCanonicalUserId())
+                                .displayName(ROOT_USER.getAccountName())
+                                .build())
+                        .size(size)
+                        .build()
+        );
+        s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        listObjects(s3, "bucket", null, null, "folder1", expected);
+    }
+
+    public void listObjects(S3Client s3, String bucket, Integer maxKeys, String prefix, String startAfter,
+                            List<S3Object> expected) {
         ListObjectsV2Request.Builder request = ListObjectsV2Request.builder()
                 .bucket(bucket);
         if (maxKeys != null) {
             request.maxKeys(maxKeys);
         }
-        request.prefix(prefix);
+        request.prefix(prefix)
+               .startAfter(startAfter);
         ListObjectsV2Response response = s3.listObjectsV2(request.build());
         Assertions.assertEquals(maxKeys != null ? maxKeys : 1000, response.maxKeys());
         Assertions.assertEquals(prefix, response.prefix());
