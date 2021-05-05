@@ -20,6 +20,7 @@ public class FileDriver {
 
     protected static final String METADATA_FOLDER_PREFIX = ".#";
     protected static final String CONFIG_FOLDER_NAME = ".##config";
+    protected static final String MULTIPART_FOLDER_NAME = "multipart";
     protected static final String USERS_FOLDER_NAME = "users";
 
     protected final String BASE_FOLDER_PATH;

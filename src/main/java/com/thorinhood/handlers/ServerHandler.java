@@ -11,6 +11,7 @@ import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.processors.actions.*;
 import com.thorinhood.processors.lists.ListBucketsProcessor;
 import com.thorinhood.processors.lists.ListObjectsV2Processor;
+import com.thorinhood.processors.multipart.CreateMultipartUploadProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
 import com.thorinhood.utils.ParsedRequest;
@@ -46,6 +47,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final ListObjectsV2Processor listObjectsV2Processor;
     private final DeleteBucketProcessor deleteBucketProcessor;
     private final ListBucketsProcessor listBucketsProcessor;
+    private final CreateMultipartUploadProcessor createMultipartUploadProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
@@ -62,6 +64,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         listObjectsV2Processor = new ListObjectsV2Processor(s3Driver);
         deleteBucketProcessor = new DeleteBucketProcessor(s3Driver);
         listBucketsProcessor = new ListBucketsProcessor(s3Driver);
+        createMultipartUploadProcessor = new CreateMultipartUploadProcessor(s3Driver);
     }
 
     @Override
@@ -91,6 +94,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         } catch (S3Exception exception) {
             Processor.sendError(context, request, exception);
             return false;
+        }
+
+        if (request.method().equals(HttpMethod.POST)) {
+            if (checkRequestS3Type(request, "uploads")) {
+                createMultipartUploadProcessor.process(context, request, parsedRequest);
+            }
+            return true;
         }
 
         if (request.method().equals(HttpMethod.GET)) {

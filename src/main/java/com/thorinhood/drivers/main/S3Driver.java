@@ -3,11 +3,12 @@ package com.thorinhood.drivers.main;
 import com.thorinhood.data.*;
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.policy.BucketPolicy;
+import com.thorinhood.data.results.GetBucketsResult;
+import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpHeaders;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,4 +38,7 @@ public interface S3Driver extends AclPermissionChecker {
     // Lists
     ListBucketResult getBucketObjects(GetBucketObjects request) throws S3Exception;
     GetBucketsResult getBuckets(S3User s3User) throws S3Exception;
+
+    //Multipart
+    String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception;
 }

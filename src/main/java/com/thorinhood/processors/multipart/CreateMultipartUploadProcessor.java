@@ -1,6 +1,6 @@
-package com.thorinhood.processors.lists;
+package com.thorinhood.processors.multipart;
 
-import com.thorinhood.data.results.GetBucketsResult;
+import com.thorinhood.data.results.InitiateMultipartUploadResult;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
@@ -15,18 +15,24 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 
-public class ListBucketsProcessor extends Processor {
+public class CreateMultipartUploadProcessor extends Processor {
 
-    private static final Logger log = LogManager.getLogger(ListBucketsProcessor.class);
+    private static final Logger log = LogManager.getLogger(CreateMultipartUploadProcessor.class);
 
-    public ListBucketsProcessor(S3Driver s3Driver) {
+    public CreateMultipartUploadProcessor(S3Driver s3Driver) {
         super(s3Driver);
     }
 
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        GetBucketsResult result = S3_DRIVER.getBuckets(parsedRequest.getS3User());
+        checkRequest(parsedRequest, "s3:PutObject", true);
+        String uploadId = S3_DRIVER.createMultipartUpload(parsedRequest.getS3ObjectPath());
+        InitiateMultipartUploadResult result = InitiateMultipartUploadResult.builder()
+                .setBucket(parsedRequest.getS3ObjectPath().getBucket())
+                .setKey(parsedRequest.getS3ObjectPath().getKeyWithBucket())
+                .setUploadId(uploadId)
+                .build();
         String xml = result.buildXmlText();
         sendResponse(context, request, HttpResponseStatus.OK, response -> {
             HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
@@ -39,5 +45,4 @@ public class ListBucketsProcessor extends Processor {
     protected Logger getLogger() {
         return log;
     }
-
 }

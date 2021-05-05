@@ -4,6 +4,8 @@ import com.thorinhood.data.*;
 import com.thorinhood.data.acl.*;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.policy.Statement;
+import com.thorinhood.data.results.GetBucketsResult;
+import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
@@ -265,6 +267,11 @@ public class S3DriverImpl implements S3Driver {
                         .setId(s3User.getCanonicalUserId())
                         .build())
                 .build();
+    }
+
+    @Override
+    public String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception {
+        return entityDriver.createMultipartUpload(s3ObjectPath);
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

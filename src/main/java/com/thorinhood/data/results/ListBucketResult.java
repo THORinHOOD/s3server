@@ -1,5 +1,6 @@
-package com.thorinhood.data;
+package com.thorinhood.data.results;
 
+import com.thorinhood.data.S3Content;
 import com.thorinhood.utils.XmlObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

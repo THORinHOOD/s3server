@@ -258,6 +258,26 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         return buckets;
     }
 
+    @Override
+    public String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception {
+        File tmp = new File(s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH));
+        if (!processFolders(tmp, s3ObjectPath.getBucket())) {
+            throw S3Exception.INTERNAL_ERROR("Can't create folders: " + tmp.getAbsolutePath())
+                    .setMessage("Internal error : can't create folder")
+                    .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
+                    .setRequestId("1"); // TODO
+        }
+        String multipartFolder = getPathToObjectMultipartFolder(s3ObjectPath, true);
+        String uploadId;
+        if (!existsFolder(multipartFolder)) {
+            createFolder(multipartFolder);
+        }
+        uploadId = DigestUtils.md5Hex(DateTimeUtil.currentDateTime() + tmp.getAbsolutePath());
+        String currentUploadFolder = multipartFolder + File.separatorChar + uploadId;
+        createFolder(currentUploadFolder);
+        return uploadId;
+    }
+
     private boolean processFolders(File file, String bucket) {
         File folder = file.getParentFile();
         if (folder.exists() && folder.isDirectory()) {
@@ -291,4 +311,9 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_UNMODIFIED_SINCE))); // TODO
         }
     }
+
+    private String getPathToObjectMultipartFolder(S3ObjectPath s3ObjectPath, boolean safely) {
+        return getPathToObjectMetadataFolder(s3ObjectPath, safely) + File.separatorChar + MULTIPART_FOLDER_NAME;
+    }
+
 }

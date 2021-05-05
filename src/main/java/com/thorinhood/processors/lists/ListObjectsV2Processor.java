@@ -1,7 +1,7 @@
 package com.thorinhood.processors.lists;
 
 import com.thorinhood.data.GetBucketObjects;
-import com.thorinhood.data.ListBucketResult;
+import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
