@@ -91,7 +91,7 @@ public class S3ObjectPath extends S3BucketPath {
                     .setResource("1")
                     .setRequestId("1");
         }
-        return pathToBucket + subKey;
+        return pathToBucket + File.separatorChar + subKey;
     }
 
     public boolean isBucket() {

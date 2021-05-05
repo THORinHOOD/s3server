@@ -172,7 +172,7 @@ public class RequestUtil {
         if (secondSlash != -1) {
             String key = uri.substring(secondSlash);
             int lastSlash = key.lastIndexOf("/");
-            return S3ObjectPath.raw(uri.substring(1, secondSlash), key.substring(0, lastSlash + 1),
+            return S3ObjectPath.raw(uri.substring(1, secondSlash), key.substring(1, lastSlash + 1),
                     key.substring(lastSlash + 1));
         }
         return S3ObjectPath.raw(uri.substring(1), null, null);
