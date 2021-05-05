@@ -36,4 +36,5 @@ public interface S3Driver extends AclPermissionChecker {
 
     // Lists
     ListBucketResult getBucketObjects(GetBucketObjects request) throws S3Exception;
+    GetBucketsResult getBuckets(S3User s3User) throws S3Exception;
 }

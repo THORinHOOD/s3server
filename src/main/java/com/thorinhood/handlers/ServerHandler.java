@@ -9,6 +9,7 @@ import com.thorinhood.processors.acl.GetObjectAclProcessor;
 import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.processors.actions.*;
+import com.thorinhood.processors.lists.ListBucketsProcessor;
 import com.thorinhood.processors.lists.ListObjectsV2Processor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
@@ -44,6 +45,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final DeleteObjectProcessor deleteObjectProcessor;
     private final ListObjectsV2Processor listObjectsV2Processor;
     private final DeleteBucketProcessor deleteBucketProcessor;
+    private final ListBucketsProcessor listBucketsProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
@@ -59,6 +61,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         deleteObjectProcessor = new DeleteObjectProcessor(s3Driver);
         listObjectsV2Processor = new ListObjectsV2Processor(s3Driver);
         deleteBucketProcessor = new DeleteBucketProcessor(s3Driver);
+        listBucketsProcessor = new ListBucketsProcessor(s3Driver);
     }
 
     @Override
@@ -101,8 +104,10 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 getBucketPolicyProcessor.process(context, request, parsedRequest);
             } else if (!parsedRequest.isPathToObject() && checkRequestS3Type(request, "list-type", "2")) {
                 listObjectsV2Processor.process(context, request, parsedRequest);
-            } else {
+            } else if (parsedRequest.isPathToObject()) {
                 getObjectProcessor.process(context, request, parsedRequest);
+            } else {
+                listBucketsProcessor.process(context, request, parsedRequest);
             }
             return true;
         }

@@ -1,6 +1,5 @@
 package com.thorinhood.data;
 
-import com.thorinhood.data.acl.Owner;
 import com.thorinhood.utils.XmlObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

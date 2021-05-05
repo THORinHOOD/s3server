@@ -18,8 +18,12 @@ public class DateTimeUtil {
         return SDF.format(new Date(file.lastModified()));
     }
 
+    public static String parseDateTimeISO(long millis) {
+        return SDF_SECOND.format(new Date(millis));
+    }
+
     public static String parseDateTimeISO(File file) {
-        return SDF_SECOND.format(new Date(file.lastModified()));
+        return parseDateTimeISO(file.lastModified());
     }
 
     public static Date parseStrTime(String dateTime) throws ParseException {

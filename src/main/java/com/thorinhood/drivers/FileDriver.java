@@ -61,6 +61,10 @@ public class FileDriver {
         return result;
     }
 
+    protected boolean isConfigFolder(Path path) {
+        return Files.isDirectory(path) && path.getFileName().toString().equals(CONFIG_FOLDER_NAME);
+    }
+
     protected boolean isMetadataFolder(Path path) {
         return Files.isDirectory(path) && path.getFileName().toString().startsWith(METADATA_FOLDER_PREFIX);
     }

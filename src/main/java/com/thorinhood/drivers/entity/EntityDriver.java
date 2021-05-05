@@ -23,5 +23,5 @@ public interface EntityDriver {
     Pair<Pair<List<HasMetaData>, Boolean>, String> getBucketObjects(GetBucketObjects request) throws S3Exception;
     boolean isBucketExists(S3BucketPath s3BucketPath) throws S3Exception;
     boolean isObjectExists(S3ObjectPath s3ObjectPath) throws S3Exception;
-
+    List<Pair<String, String>> getBuckets(S3User s3User) throws S3Exception;
 }

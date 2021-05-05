@@ -19,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -212,13 +213,47 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     @Override
     public boolean isBucketExists(S3BucketPath s3BucketPath) throws S3Exception {
         File bucketFile = new File(s3BucketPath.getFullPathToBucket(BASE_FOLDER_PATH));
-        return bucketFile.exists() && bucketFile.isDirectory();
+        File metadataFolder = new File(getPathToBucketMetadataFolder(s3BucketPath, false));
+        return bucketFile.exists() && bucketFile.isDirectory() && metadataFolder.exists() &&
+                metadataFolder.isDirectory();
     }
 
     @Override
     public boolean isObjectExists(S3ObjectPath s3ObjectPath) throws S3Exception {
         File file = new File(s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH));
         return file.exists() && file.isFile();
+    }
+
+    @Override
+    public List<Pair<String, String>> getBuckets(S3User s3User) throws S3Exception {
+        Path path = Path.of(BASE_FOLDER_PATH);
+        List<Pair<String, String>> buckets;
+        try {
+            try (Stream<Path> tree = Files.walk(path, 1)) {
+                buckets = tree.filter(entity -> !isMetadataFolder(entity) && !isConfigFolder(entity) &&
+                        Files.isDirectory(entity) && !entity.equals(path) &&
+                        isBucketExists(S3BucketPath.build(entity.getFileName().toString())))
+                    .map(entity -> {
+                        File bucket = entity.toFile();
+                        try {
+                            BasicFileAttributes attr = Files.readAttributes(entity, BasicFileAttributes.class);
+                            return Pair.of(bucket.getName(),
+                                    DateTimeUtil.parseDateTimeISO(attr.creationTime().toMillis()));
+                        } catch (IOException e) {
+                            throw S3Exception.INTERNAL_ERROR("Can't get bucket attributes :" + entity.getFileName())
+                                    .setMessage("Can't get bucket attributes : " + entity.getFileName())
+                                    .setResource("1")
+                                    .setRequestId("1"); // TODO
+                        }
+                    }).collect(Collectors.toList());
+            }
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR("Can't list bucket objects")
+                    .setMessage("Can't list bucket objects")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+        return buckets;
     }
 
     private boolean processFolders(File file, String bucket) {

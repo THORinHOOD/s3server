@@ -18,7 +18,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.text.ParseException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -233,25 +232,14 @@ public class S3DriverImpl implements S3Driver {
                     Map<String, String> metaData = metadataDriver.getObjectMetadata(hasMetaDataObject.getS3Path());
                     return hasMetaDataObject.setMetaData(metaData); // TODO
                 })
-                .map(s3Object -> {
-//                    try {
-                        return S3Content.builder()
-                                .setETag(s3Object.getETag())
-                                .setKey(s3Object.getS3Path().getKey())
-                                .setLastModified(DateTimeUtil.parseDateTimeISO(s3Object.getFile()))
-                                .setOwner(aclDriver.getObjectAcl(s3Object.getS3Path()).getOwner())
-                                .setSize(s3Object.getRawBytes().length)
-                                .setStorageClass("STANDART") // TODO
-                                .build();
-//                    } catch (ParseException e) {
-//                        throw S3Exception.INTERNAL_ERROR("Can't parse last modified time of object : " +
-//                                s3Object.getAbsolutePath())
-//                                .setMessage("Can't parse last modified time of object : " +
-//                                        s3Object.getAbsolutePath())
-//                                .setResource("1")
-//                                .setRequestId("1"); // TODO
-//                    }
-                })
+                .map(s3Object -> S3Content.builder()
+                        .setETag(s3Object.getETag())
+                        .setKey(s3Object.getS3Path().getKey())
+                        .setLastModified(DateTimeUtil.parseDateTimeISO(s3Object.getFile()))
+                        .setOwner(aclDriver.getObjectAcl(s3Object.getS3Path()).getOwner())
+                        .setSize(s3Object.getRawBytes().length)
+                        .setStorageClass("STANDART") // TODO
+                        .build())
                 .collect(Collectors.toList());
         return ListBucketResult.builder()
                 .setMaxKeys(getBucketObjects.getMaxKeys())
@@ -263,6 +251,18 @@ public class S3DriverImpl implements S3Driver {
                 .setKeyCount(s3Contents.size())
                 .setContinuationToken(getBucketObjects.getContinuationToken())
                 .setNextContinuationToken(result.getSecond())
+                .build();
+    }
+
+    @Override
+    public GetBucketsResult getBuckets(S3User s3User) throws S3Exception {
+        List<Pair<String, String>> buckets = entityDriver.getBuckets(s3User);
+        return GetBucketsResult.builder()
+                .setBuckets(buckets)
+                .setOwner(Owner.builder()
+                        .setDisplayName(s3User.getAccountName())
+                        .setId(s3User.getCanonicalUserId())
+                        .build())
                 .build();
     }
 
