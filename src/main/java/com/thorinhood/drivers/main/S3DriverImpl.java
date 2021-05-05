@@ -6,6 +6,7 @@ import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.policy.Statement;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;

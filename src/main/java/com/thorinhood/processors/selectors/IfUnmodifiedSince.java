@@ -1,6 +1,6 @@
 package com.thorinhood.processors.selectors;
 
-import com.thorinhood.data.S3ResponseErrorCodes;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;
 

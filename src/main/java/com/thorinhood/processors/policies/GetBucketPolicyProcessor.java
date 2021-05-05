@@ -1,6 +1,6 @@
 package com.thorinhood.processors.policies;
 
-import com.thorinhood.data.S3ResponseErrorCodes;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;

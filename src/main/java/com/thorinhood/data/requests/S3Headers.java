@@ -1,4 +1,4 @@
-package com.thorinhood.data;
+package com.thorinhood.data.requests;
 
 public class S3Headers {
 

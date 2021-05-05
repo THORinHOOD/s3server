@@ -2,14 +2,13 @@ package com.thorinhood.utils;
 
 import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.S3ObjectPath;
-import com.thorinhood.data.S3ResponseErrorCodes;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

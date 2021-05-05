@@ -1,6 +1,6 @@
 package com.thorinhood.exceptions;
 
-import com.thorinhood.data.S3ResponseErrorCodes;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.utils.XmlObject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.w3c.dom.Document;

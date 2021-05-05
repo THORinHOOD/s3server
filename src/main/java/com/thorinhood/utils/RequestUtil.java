@@ -1,8 +1,8 @@
 package com.thorinhood.utils;
 
-import com.thorinhood.data.S3Headers;
+import com.thorinhood.data.requests.S3Headers;
 import com.thorinhood.data.S3ObjectPath;
-import com.thorinhood.data.S3ResponseErrorCodes;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.exceptions.S3Exception;

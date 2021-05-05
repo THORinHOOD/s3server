@@ -3,6 +3,8 @@ package com.thorinhood.drivers.entity;
 import com.thorinhood.data.*;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
+import com.thorinhood.data.requests.S3Headers;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
