@@ -272,10 +272,24 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         if (!existsFolder(multipartFolder)) {
             createFolder(multipartFolder);
         }
-        uploadId = DigestUtils.md5Hex(DateTimeUtil.currentDateTime() + tmp.getAbsolutePath());
+        uploadId = DigestUtils.md5Hex(DateTimeUtil.currentDateTime() + new Random().nextLong() +
+                tmp.getAbsolutePath());
         String currentUploadFolder = multipartFolder + File.separatorChar + uploadId;
         createFolder(currentUploadFolder);
         return uploadId;
+    }
+
+    @Override
+    public void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception {
+        String multipartFolder = getPathToObjectMultipartFolder(s3ObjectPath, true);
+        if (!existsFolder(multipartFolder)) {
+            return;
+        }
+        String uploadFolder = multipartFolder + File.separatorChar + uploadId;
+        if (!existsFolder(uploadFolder)) {
+            return;
+        }
+        deleteFolder(uploadFolder); // TODO Clear empty
     }
 
     private boolean processFolders(File file, String bucket) {

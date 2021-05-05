@@ -274,6 +274,14 @@ public class S3DriverImpl implements S3Driver {
         return entityDriver.createMultipartUpload(s3ObjectPath);
     }
 
+    @Override
+    public void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception {
+        if (uploadId == null) {
+            return;
+        }
+        entityDriver.abortMultipartUpload(s3ObjectPath, uploadId);
+    }
+
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {
         return AccessControlPolicy.builder()
                 .setOwner(Owner.builder()

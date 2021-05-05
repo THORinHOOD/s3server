@@ -11,6 +11,7 @@ import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.processors.actions.*;
 import com.thorinhood.processors.lists.ListBucketsProcessor;
 import com.thorinhood.processors.lists.ListObjectsV2Processor;
+import com.thorinhood.processors.multipart.AbortMultipartUploadProcessor;
 import com.thorinhood.processors.multipart.CreateMultipartUploadProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
@@ -48,6 +49,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final DeleteBucketProcessor deleteBucketProcessor;
     private final ListBucketsProcessor listBucketsProcessor;
     private final CreateMultipartUploadProcessor createMultipartUploadProcessor;
+    private final AbortMultipartUploadProcessor abortMultipartUploadProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
@@ -65,6 +67,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         deleteBucketProcessor = new DeleteBucketProcessor(s3Driver);
         listBucketsProcessor = new ListBucketsProcessor(s3Driver);
         createMultipartUploadProcessor = new CreateMultipartUploadProcessor(s3Driver);
+        abortMultipartUploadProcessor = new AbortMultipartUploadProcessor(s3Driver);
     }
 
     @Override
@@ -145,7 +148,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
 
         if (request.method().equals(HttpMethod.DELETE)) {
-            if (parsedRequest.isPathToObject()) {
+            if (parsedRequest.isPathToObject() && checkRequestS3Type(request, "uploadId")) {
+                abortMultipartUploadProcessor.process(context, request, parsedRequest);
+            } else if (parsedRequest.isPathToObject()) {
                 deleteObjectProcessor.process(context, request, parsedRequest);
             } else {
                 deleteBucketProcessor.process(context, request, parsedRequest);

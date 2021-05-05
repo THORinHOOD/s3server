@@ -41,4 +41,5 @@ public interface S3Driver extends AclPermissionChecker {
 
     //Multipart
     String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception;
+    void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception;
 }

@@ -25,4 +25,6 @@ public interface EntityDriver {
     boolean isObjectExists(S3ObjectPath s3ObjectPath) throws S3Exception;
     List<Pair<String, String>> getBuckets(S3User s3User) throws S3Exception;
     String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception;
+    void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception;
+
 }

@@ -29,7 +29,6 @@ public abstract class BucketPolicyProcessor extends Processor {
                         .setRequestId("1");
             }
         }
-
     }
 
 }
