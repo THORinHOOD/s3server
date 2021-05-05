@@ -13,6 +13,7 @@ import com.thorinhood.processors.lists.ListBucketsProcessor;
 import com.thorinhood.processors.lists.ListObjectsV2Processor;
 import com.thorinhood.processors.multipart.AbortMultipartUploadProcessor;
 import com.thorinhood.processors.multipart.CreateMultipartUploadProcessor;
+import com.thorinhood.processors.multipart.UploadPartProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
 import com.thorinhood.processors.policies.PutBucketPolicyProcessor;
 import com.thorinhood.utils.ParsedRequest;
@@ -50,6 +51,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final ListBucketsProcessor listBucketsProcessor;
     private final CreateMultipartUploadProcessor createMultipartUploadProcessor;
     private final AbortMultipartUploadProcessor abortMultipartUploadProcessor;
+    private final UploadPartProcessor uploadPartProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
@@ -68,6 +70,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         listBucketsProcessor = new ListBucketsProcessor(s3Driver);
         createMultipartUploadProcessor = new CreateMultipartUploadProcessor(s3Driver);
         abortMultipartUploadProcessor = new AbortMultipartUploadProcessor(s3Driver);
+        uploadPartProcessor = new UploadPartProcessor(s3Driver);
     }
 
     @Override
@@ -136,11 +139,10 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             } else if (isPolicyRequest(request)) {
                 putBucketPolicyProcessor.process(context, request, parsedRequest);
                 return true;
-            }
-        }
-
-        if (request.method().equals(HttpMethod.PUT)) {
-            if (parsedRequest.isPathToObject()) {
+            } else if (parsedRequest.isPathToObject() && checkRequestS3Type(request, "partNumber") &&
+                       checkRequestS3Type(request, "uploadId")) {
+                uploadPartProcessor.process(context, request, parsedRequest);
+            } else if (parsedRequest.isPathToObject()) {
                 putObjectProcessor.process(context, request, parsedRequest);
             } else {
                 createBucketProcessor.process(context, request, parsedRequest);

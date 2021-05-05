@@ -1,5 +1,6 @@
 package com.thorinhood.processors;
 
+import com.thorinhood.chunks.ChunkReader;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.ParsedRequest;
@@ -31,6 +32,10 @@ public abstract class Processor {
         this.S3_DRIVER = s3Driver;
         METHOD_NAME = "s3:" + this.getClass().getSimpleName().substring(0,
                 this.getClass().getSimpleName().indexOf("Processor"));
+    }
+
+    protected byte[] processChunkedContent(ParsedRequest parsedRequest, FullHttpRequest request) {
+        return ChunkReader.readChunks(request, parsedRequest);
     }
 
     protected void checkRequest(ParsedRequest request, boolean isBucketAcl) throws S3Exception {

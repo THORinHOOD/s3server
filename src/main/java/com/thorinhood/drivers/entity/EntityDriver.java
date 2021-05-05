@@ -26,5 +26,6 @@ public interface EntityDriver {
     List<Pair<String, String>> getBuckets(S3User s3User) throws S3Exception;
     String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception;
     void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception;
+    String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes) throws S3Exception;
 
 }

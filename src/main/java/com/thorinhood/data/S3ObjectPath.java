@@ -6,8 +6,8 @@ import java.io.File;
 
 public class S3ObjectPath extends S3BucketPath {
 
-    private final String name;
-    private final String subKey;
+    private String name;
+    private String subKey;
 
     public static S3ObjectPath raw(String bucket, String subKey, String name) {
         return new S3ObjectPath(bucket, subKey, name);
@@ -92,6 +92,16 @@ public class S3ObjectPath extends S3BucketPath {
                     .setRequestId("1");
         }
         return pathToBucket + File.separatorChar + subKey;
+    }
+
+    public S3ObjectPath appendToSubKey(String toAppend) {
+        subKey += toAppend;
+        return this;
+    }
+
+    public S3ObjectPath setName(String name) {
+        this.name = name;
+        return this;
     }
 
     public boolean isBucket() {

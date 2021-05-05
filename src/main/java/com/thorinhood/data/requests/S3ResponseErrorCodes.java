@@ -11,4 +11,5 @@ public class S3ResponseErrorCodes {
     public static final String SIGNATURE_DOES_NOT_MATCH = "SignatureDoesNotMatch";
     public static final String PRECONDITION_FAILED = "PreconditionFailed";
     public static final String ACCESS_DENIED = "AccessDenied";
+    public static final String NO_SUCH_UPLOAD = "NoSuchUpload";
 }

@@ -111,32 +111,15 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
                     .setRequestId("1"); // TODO
         }
-        try {
-            log.info("Starting creating file : " + file.getAbsolutePath() + " # " + file.getPath());
-            if (file.createNewFile() || file.exists()) {
-                FileOutputStream outputStream = new FileOutputStream(file);
-                outputStream.write(bytes);
-                outputStream.close();
-                return S3Object.build()
-                        .setAbsolutePath(absolutePath)
-                        .setS3Path(s3ObjectPath)
-                        .setETag(calculateETag(bytes))
-                        .setFile(file)
-                        .setRawBytes(bytes)
-                        .setLastModified(DateTimeUtil.parseDateTime(file))
-                        .setMetaData(metadata);
-            } else {
-                throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                        .setMessage("Internal error : can't create object")
-                        .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
-                        .setRequestId("1"); // TODO
-            }
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                    .setMessage(exception.getMessage())
-                    .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
-                    .setRequestId("1"); // TODO
-        }
+        writeBytesToFile(file, s3ObjectPath.getKeyWithBucket(), bytes);
+        return S3Object.build()
+                .setAbsolutePath(absolutePath)
+                .setS3Path(s3ObjectPath)
+                .setETag(calculateETag(bytes))
+                .setFile(file)
+                .setRawBytes(bytes)
+                .setLastModified(DateTimeUtil.parseDateTime(file))
+                .setMetaData(metadata);
     }
 
     @Override
@@ -269,9 +252,6 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         }
         String multipartFolder = getPathToObjectMultipartFolder(s3ObjectPath, true);
         String uploadId;
-        if (!existsFolder(multipartFolder)) {
-            createFolder(multipartFolder);
-        }
         uploadId = DigestUtils.md5Hex(DateTimeUtil.currentDateTime() + new Random().nextLong() +
                 tmp.getAbsolutePath());
         String currentUploadFolder = multipartFolder + File.separatorChar + uploadId;
@@ -290,6 +270,47 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             return;
         }
         deleteFolder(uploadFolder); // TODO Clear empty
+    }
+
+    @Override
+    public String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes)
+            throws S3Exception {
+        String multipartFolder = getPathToObjectMultipartFolder(s3ObjectPath, false);
+        String currentUploadFolder = multipartFolder + File.separatorChar + uploadId;
+        if (!existsFolder(currentUploadFolder)) {
+            throw S3Exception.build("No such upload : " + uploadId)
+                    .setStatus(HttpResponseStatus.NOT_FOUND)
+                    .setCode(S3ResponseErrorCodes.NO_SUCH_UPLOAD)
+                    .setMessage("The specified multipart upload does not exist. The upload ID might be invalid, " +
+                            "or the multipart upload might have been aborted or completed.")
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
+        String partPath = currentUploadFolder + File.separatorChar + partNumber;
+        File partFile = new File(partPath);
+        writeBytesToFile(partFile, partPath, bytes);
+        return calculateETag(bytes);
+    }
+
+    private void writeBytesToFile(File file, String keyWithBucket, byte[] bytes) {
+        try {
+            log.info("Starting creating file : " + file.getAbsolutePath() + " # " + file.getPath());
+            if (file.createNewFile() || file.exists()) {
+                FileOutputStream outputStream = new FileOutputStream(file);
+                outputStream.write(bytes);
+                outputStream.close();
+            } else {
+                throw S3Exception.INTERNAL_ERROR("Can't create file : " + file.getAbsolutePath())
+                        .setMessage("Internal error : can't create object")
+                        .setResource(File.separatorChar + keyWithBucket)
+                        .setRequestId("1"); // TODO
+            }
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR("Can't create file: " + file.getAbsolutePath())
+                    .setMessage(exception.getMessage())
+                    .setResource(File.separatorChar + keyWithBucket)
+                    .setRequestId("1"); // TODO
+        }
     }
 
     private boolean processFolders(File file, String bucket) {
@@ -327,7 +348,11 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     private String getPathToObjectMultipartFolder(S3ObjectPath s3ObjectPath, boolean safely) {
-        return getPathToObjectMetadataFolder(s3ObjectPath, safely) + File.separatorChar + MULTIPART_FOLDER_NAME;
+        String path = getPathToObjectMetadataFolder(s3ObjectPath, safely) + File.separatorChar + MULTIPART_FOLDER_NAME;
+        if (safely) {
+            createFolder(path);
+        }
+        return path;
     }
 
 }
