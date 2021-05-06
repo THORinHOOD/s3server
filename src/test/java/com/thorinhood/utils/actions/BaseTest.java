@@ -152,8 +152,14 @@ public class BaseTest {
         Assertions.assertTrue(!metadataFile.exists() || !metadataFile.isFile());
     }
 
+
     protected void checkObject(String bucket, String keyWithoutName, String fileName, String content,
                                Map<String, String> metadata) throws IOException {
+        checkObject(bucket, keyWithoutName, fileName, content, metadata, true);
+    }
+
+    protected void checkObject(String bucket, String keyWithoutName, String fileName, String content,
+                               Map<String, String> metadata, boolean checkContent) throws IOException {
         File file = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
                 buildKey(keyWithoutName, fileName));
         Assertions.assertTrue(file.exists() && file.isFile());
@@ -162,7 +168,9 @@ public class BaseTest {
                         fileName + ".acl" :
                         keyWithoutName + File.separatorChar + ".#" + fileName + File.separatorChar + fileName + ".acl"));
         Assertions.assertTrue(acl.exists() && acl.isFile());
-        checkContent(file, content);
+        if (checkContent) {
+            checkContent(file, content);
+        }
         if (metadata != null) {
             checkObjectMetadata(bucket, keyWithoutName, fileName, metadata);
         }
@@ -182,6 +190,11 @@ public class BaseTest {
                         line -> line.substring(line.indexOf("=") + 1)
                 ));
         assertMaps(metadata, actualMetadata);
+    }
+
+    protected void checkContent(File file, List<String> contents) throws IOException {
+        String actual = Files.readString(file.toPath());
+        Assertions.assertTrue(contents.stream().anyMatch(content -> content.equals(actual)));
     }
 
     private void checkContent(File file, String expected) throws IOException {

@@ -3,15 +3,22 @@ package com.thorinhood.utils.actions;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class PutObjectTest extends BaseTest {
 
@@ -56,7 +63,7 @@ public class PutObjectTest extends BaseTest {
                 "file.txt",
                 "hello, s3!!!");
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
-                null);
+                null, true);
     }
 
     @Test
@@ -75,9 +82,9 @@ public class PutObjectTest extends BaseTest {
                 "file.txt",
                 "hello, s3!!!");
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
-                null);
+                null, true);
         checkObject("bucket2", "folder1", "file.txt", "hello, s3!!!",
-                null);
+                null, true);
     }
 
     @Test
@@ -95,9 +102,9 @@ public class PutObjectTest extends BaseTest {
                 "folder1",
                 "file2.txt",
                 "hello, s3, again!!!");
-        checkObject("bucket", "folder1", "file.txt", largeContent, null);
+        checkObject("bucket", "folder1", "file.txt", largeContent, null, true);
         checkObject("bucket", "folder1", "file2.txt", "hello, s3, again!!!",
-                null);
+                null, true);
     }
 
     @Test
@@ -203,6 +210,22 @@ public class PutObjectTest extends BaseTest {
         }
     }
 
+    @Test
+    public void putObjectSeveralRequests() throws Exception {
+        S3Client s3 = getS3Client(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        S3AsyncClient s3Async = getS3AsyncClient(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
+        createBucketRaw("bucket", s3);
+        String firstContent = createContent(5242880);
+        String secondContent = createContent(5242880 * 2);
+        List<String> contents = new ArrayList<>();
+        for (int i = 0; i < 200; i++) {
+            contents.add(i % 2 == 0 ? firstContent : secondContent);
+        }
+        putObjectAsync(s3Async, "bucket", "folder1/folder2", "file.txt", contents,
+                null);
+
+    }
+
     private void putObject(S3Client s3Client, String bucket, String keyWithoutName, String fileName, String content)
             throws IOException {
         putObject(s3Client, bucket, keyWithoutName, fileName, content, null);
@@ -218,7 +241,42 @@ public class PutObjectTest extends BaseTest {
         }
         PutObjectResponse response = s3Client.putObject(request.build(), RequestBody.fromString(content));
         Assertions.assertEquals(response.eTag(), calcETag(content));
-        checkObject(bucket, keyWithoutName, fileName, content, metadata);
+        checkObject(bucket, keyWithoutName, fileName, content, metadata, true);
+    }
+
+    private void putObjectAsync(S3AsyncClient s3, String bucket, String keyWithoutName, String fileName,
+                                List<String> contents, List<Map<String, String>> metadata) throws IOException {
+        List<PutObjectRequest> requests = new ArrayList<>();
+        List<AsyncRequestBody> bodies = new ArrayList<>();
+        for (int i = 0; i < contents.size(); i++) {
+            PutObjectRequest.Builder request = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(buildKey(keyWithoutName, fileName));
+            if (metadata != null) {
+                if (metadata.get(i)!= null) {
+                    request.metadata(metadata.get(i));
+                }
+            }
+            requests.add(request.build());
+            bodies.add(AsyncRequestBody.fromString(contents.get(i)));
+        }
+
+        List<CompletableFuture<PutObjectResponse>> futureList = new ArrayList<>();
+        for (int i = 0; i < requests.size(); i++) {
+            futureList.add(s3.putObject(requests.get(i), bodies.get(i)));
+        }
+        for (int i = 0; i < futureList.size(); i++) {
+            try {
+                PutObjectResponse response = futureList.get(i).get();
+                Assertions.assertEquals(response.eTag(), calcETag(contents.get(i)));
+                checkObject(bucket, keyWithoutName, fileName, contents.get(i),
+                        metadata == null ? null : metadata.get(i), false);
+            } catch (InterruptedException | ExecutionException e) {
+                Assertions.fail(e);
+            }
+        }
+        checkContent(new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar + keyWithoutName +
+                        File.separatorChar + fileName), contents);
     }
 
 }

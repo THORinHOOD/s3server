@@ -93,9 +93,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     .setResource("1")
                     .setRequestId("1")); // TODO
             }
-            log.info(String.format("Request was processed in %d seconds", TimeUnit.MILLISECONDS.toSeconds(
-                System.currentTimeMillis() - start
-            )));
+            log.info(String.format("Request was processed in %d milliseconds", System.currentTimeMillis() - start));
         } catch (Exception exception) {
             exception.printStackTrace();
         }

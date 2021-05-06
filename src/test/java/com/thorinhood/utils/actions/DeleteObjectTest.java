@@ -22,7 +22,7 @@ public class DeleteObjectTest extends BaseTest {
         createBucketRaw("bucket", s3);
         putObjectRaw(s3, "bucket", "file.txt", "hello, s3!!!", Map.of("key", "value"));
         checkObject("bucket", null, "file.txt", "hello, s3!!!",
-                Map.of("key", "value"));
+                Map.of("key", "value"), true);
         deleteObject(s3, "bucket", "file.txt");
         checkObjectNotExists("bucket", null, "file.txt");
     }
@@ -33,7 +33,7 @@ public class DeleteObjectTest extends BaseTest {
         createBucketRaw("bucket", s3);
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1/folder2", "file.txt", "hello, s3!!!",
-                null);
+                null, true);
         deleteObject(s3, "bucket", "folder1/folder2/file.txt");
         checkObjectNotExists("bucket", "folder1/folder2", "file.txt");
     }
@@ -45,9 +45,9 @@ public class DeleteObjectTest extends BaseTest {
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         putObjectRaw(s3, "bucket", "folder1/file2.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
-                null);
+                null, true);
         checkObject("bucket", "folder1", "file2.txt", "hello, s3!!!",
-                null);
+                null, true);
         deleteObject(s3, "bucket", "folder1/file2.txt");
         checkObjectNotExists("bucket", "folder1", "file2.txt");
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
