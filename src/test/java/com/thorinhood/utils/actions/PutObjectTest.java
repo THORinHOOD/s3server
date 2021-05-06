@@ -27,7 +27,7 @@ public class PutObjectTest extends BaseTest {
                 "bucket",
                 null,
                 "file.txt",
-                "hello, s3!!!");
+                createContent(5242880));
     }
 
     @Test
@@ -84,18 +84,18 @@ public class PutObjectTest extends BaseTest {
     public void putChunkedFile() throws Exception {
         S3Client s3 = getS3Client(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw("bucket", s3);
+        String largeContent = createContent(5242880);
         putObject(s3,
                 "bucket",
                 "folder1",
                 "file.txt",
-                "hello, s3!!!");
+                largeContent);
         putObject(s3,
                 "bucket",
                 "folder1",
                 "file2.txt",
                 "hello, s3, again!!!");
-        checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
-                null);
+        checkObject("bucket", "folder1", "file.txt", largeContent, null);
         checkObject("bucket", "folder1", "file2.txt", "hello, s3, again!!!",
                 null);
     }
