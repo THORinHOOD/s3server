@@ -12,7 +12,7 @@ import java.io.File;
 public class CreateBucketTest extends BaseTest {
 
     public CreateBucketTest() {
-        super("/home/thorinhood/testS3Java", 9999);
+        super("testS3Java", 9999);
     }
 
     @Test

@@ -13,7 +13,7 @@ import java.util.Map;
 public class ListObjectsV2Test extends BaseTest {
 
     public ListObjectsV2Test() {
-        super("/home/thorinhood/testS3Java", 9999);
+        super("testS3Java", 9999);
     }
 
     @Test

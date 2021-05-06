@@ -13,7 +13,7 @@ import java.util.Map;
 public class DeleteObjectTest extends BaseTest {
 
     public DeleteObjectTest() {
-        super("/home/thorinhood/testS3Java", 9999);
+        super("testS3Java", 9999);
     }
 
     @Test

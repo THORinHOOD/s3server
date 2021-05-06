@@ -15,6 +15,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.*;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -45,14 +46,14 @@ public class BaseTest {
     protected S3User ROOT_USER_2;
     protected List<S3User> ALL_TEST_USERS;
 
-    protected final S3Client S3_CLIENT;
-
     private final int port;
     protected final String BASE_PATH;
 
     private Thread serverThread;
 
-    public BaseTest(String basePath, int port) {
+    public BaseTest(String baseFolderName, int port) {
+        String home = System.getenv("HOME");
+        String basePath = home + File.separatorChar + baseFolderName;
         this.BASE_PATH = basePath;
         this.port = port;
         createUsers();
@@ -64,8 +65,6 @@ public class BaseTest {
         ENTITY_DRIVER = FILE_DRIVERS_FACTORY.createEntityDriver();
         S3_DRIVER = new S3DriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER);
         SERVER = new Server(port, S3_DRIVER, USER_DRIVER);
-        S3_CLIENT = SdkUtil.build(port, Region.US_WEST_2, false, "accessKey",
-                "secretKey");
     }
 
 
@@ -102,8 +101,12 @@ public class BaseTest {
         initUsers();
     }
 
-    protected S3Client getS3Client(boolean chunked, String accesskey, String secretKey) {
-        return SdkUtil.build(port, Region.US_WEST_2, chunked, accesskey, secretKey);
+    protected S3Client getS3Client(boolean chunked, String accessKey, String secretKey) {
+        return SdkUtil.build(port, Region.US_WEST_2, chunked, accessKey, secretKey);
+    }
+
+    protected S3AsyncClient getS3AsyncClient(boolean chunked, String accessKey, String secretKey) {
+        return SdkUtil.buildAsync(port, Region.US_WEST_2, chunked, accessKey, secretKey);
     }
 
     protected void initUsers() {
@@ -193,6 +196,12 @@ public class BaseTest {
 
     protected String calcETag(String content) {
         return DigestUtils.md5Hex(content.getBytes());
+    }
+
+    protected String createContent(int bytes) {
+        char[] chars = new char[bytes];
+        Arrays.fill(chars, 'a');
+        return new String(chars);
     }
 
     protected <KEY, VALUE> void assertMaps(Map<KEY, VALUE> expected, Map<KEY, VALUE> actual) {

@@ -7,13 +7,26 @@ import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.core.retry.conditions.RetryCondition;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.*;
 
 import java.net.URI;
 
 public class SdkUtil {
+
+    public static S3AsyncClient buildAsync(int port, Region region, boolean chunked, String accessKey,
+                                           String secretKey) {
+        S3AsyncClientBuilder s3 = S3AsyncClient.builder()
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey,
+                        secretKey)))
+                .endpointOverride(URI.create("http://localhost:" + port))
+                .region(region);
+        if (!chunked) {
+            s3.serviceConfiguration(S3Configuration.builder()
+                    .chunkedEncodingEnabled(false)
+                    .build());
+        }
+        return s3.build();
+    }
 
     public static S3Client build(int port, Region region, boolean chunked, String accessKey, String secretKey) {
         S3ClientBuilder s3 = S3Client.builder()

@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @ChannelHandler.Sharable
 public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -81,6 +82,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     @Override
     protected void channelRead0(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
         try {
+            long start = System.currentTimeMillis();
             boolean processed = process(context, request);
             if (!processed) {
                 log.error("Not found any processor for request or error occurred");
@@ -91,6 +93,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     .setResource("1")
                     .setRequestId("1")); // TODO
             }
+            log.info(String.format("Request was processed in %d seconds", TimeUnit.MILLISECONDS.toSeconds(
+                System.currentTimeMillis() - start
+            )));
         } catch (Exception exception) {
             exception.printStackTrace();
         }

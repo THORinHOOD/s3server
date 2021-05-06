@@ -16,7 +16,7 @@ import java.util.Map;
 public class PutObjectTest extends BaseTest {
 
     public PutObjectTest() {
-        super("/home/thorinhood/testS3Java", 9999);
+        super("testS3Java", 9999);
     }
 
     @Test
