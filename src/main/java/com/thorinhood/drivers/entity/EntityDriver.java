@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 public interface EntityDriver {
-
     void createBucket(S3BucketPath s3BucketPath, S3User s3User) throws S3Exception;
     HasMetaData getObject(S3ObjectPath s3ObjectPath, HttpHeaders httpHeaders) throws S3Exception;
     S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata) throws S3Exception;
@@ -29,5 +28,4 @@ public interface EntityDriver {
     void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception;
     String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes) throws S3Exception;
     String completeMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId, List<Part> parts) throws S3Exception;
-
 }

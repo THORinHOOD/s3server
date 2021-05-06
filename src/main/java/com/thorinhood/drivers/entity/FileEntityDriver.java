@@ -38,6 +38,9 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     private static final String INVALID_PART_MESSAGE = "One or more of the specified parts could not be found. " +
             "The part might not have been uploaded, or the specified entity tag might not " +
             "have matched the part's entity tag.";
+    private static final String ENTITY_TOO_SMALL = "Your proposed upload is smaller than the minimum allowed " +
+            "object size. Each part must be at least 5 MB in size.";
+    private static final long MIN_PART_SIZE = 5242880L;
 
     private static S3Exception INVALID_PART_EXCEPTION() {
         return S3Exception.build(INVALID_PART_MESSAGE)
@@ -327,6 +330,18 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file, true))) {
                 for (Part part : parts) {
                     File partFile = partsFiles.get(part.getPartNumber());
+                    long partSizeInBytes = Files.size(partFile.toPath());
+                    if (partSizeInBytes < MIN_PART_SIZE) {
+                        if (file.exists()) {
+                            file.delete();
+                        }
+                        throw S3Exception.build(ENTITY_TOO_SMALL)
+                                .setStatus(HttpResponseStatus.BAD_REQUEST)
+                                .setCode(S3ResponseErrorCodes.ENTITY_TOO_SMALL)
+                                .setMessage(ENTITY_TOO_SMALL)
+                                .setResource("1")
+                                .setRequestId("1");
+                    }
                     try (InputStream input = new BufferedInputStream(new FileInputStream(partFile))) {
                         byte[] buffer = input.readAllBytes();
                         String calculatedEtag = DigestUtils.md5Hex(buffer);
@@ -350,7 +365,6 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
 
     private void writeBytesToFile(File file, String keyWithBucket, byte[] bytes) {
         try {
-            log.info("Starting creating file : " + file.getAbsolutePath() + " # " + file.getPath());
             if (file.createNewFile() || file.exists()) {
                 FileOutputStream outputStream = new FileOutputStream(file);
                 outputStream.write(bytes);

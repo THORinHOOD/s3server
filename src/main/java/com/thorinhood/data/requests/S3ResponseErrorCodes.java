@@ -13,4 +13,5 @@ public class S3ResponseErrorCodes {
     public static final String ACCESS_DENIED = "AccessDenied";
     public static final String NO_SUCH_UPLOAD = "NoSuchUpload";
     public static final String INVALID_PART = "InvalidPart";
+    public static final String ENTITY_TOO_SMALL = "EntityTooSmall";
 }
