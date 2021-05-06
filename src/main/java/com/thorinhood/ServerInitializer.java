@@ -23,8 +23,7 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = socketChannel.pipeline();
         pipeline.addLast(new HttpRequestDecoder());
         pipeline.addLast(new HttpResponseEncoder());
-        pipeline.addLast(new HttpObjectAggregator(Integer.MAX_VALUE)); //TODO ограничение на размер
-//        pipeline.addLast(new ChunkedWriteHandler());
+        pipeline.addLast(new HttpObjectAggregator(Integer.MAX_VALUE));
         pipeline.addLast(serverHandler);
     }
 

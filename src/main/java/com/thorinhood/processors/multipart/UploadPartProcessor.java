@@ -58,6 +58,6 @@ public class UploadPartProcessor extends Processor {
 
     @Override
     protected Logger getLogger() {
-        return null;
+        return log;
     }
 }

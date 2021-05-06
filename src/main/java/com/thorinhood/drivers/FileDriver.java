@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Objects;
 
 public class FileDriver {
 
@@ -74,6 +75,10 @@ public class FileDriver {
         return Files.isRegularFile(path) && isMetadataFolder(path.getParent());
     }
 
+    protected boolean isBucket(Path path) {
+        return Files.isDirectory(path) && path.getParent().toString().equals(BASE_FOLDER_PATH);
+    }
+
     protected boolean existsFolder(String path) {
         File folder = new File(path);
         return folder.isDirectory() && folder.exists();
@@ -112,6 +117,22 @@ public class FileDriver {
             } catch (IOException exception) {
                 exception("Can't delete folder " + path);
             }
+        }
+    }
+
+    protected void deleteEmptyKeys(File file) throws S3Exception {
+        try {
+            Path parent = file.toPath().getParent();
+            while (!isBucket(parent) && !parent.toString().equals(BASE_FOLDER_PATH) &&
+                    Objects.requireNonNull(parent.toFile().list()).length == 0) {
+                Files.delete(parent);
+                parent = parent.getParent();
+            }
+        } catch (Exception e) {
+            throw S3Exception.INTERNAL_ERROR(e.getMessage())
+                    .setMessage(e.getMessage())
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
         }
     }
 

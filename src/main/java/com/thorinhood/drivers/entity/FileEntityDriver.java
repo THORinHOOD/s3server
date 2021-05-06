@@ -1,6 +1,7 @@
 package com.thorinhood.drivers.entity;
 
 import com.thorinhood.data.*;
+import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3Headers;
@@ -16,20 +17,36 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import javax.xml.bind.DatatypeConverter;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
 import java.text.ParseException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class FileEntityDriver extends FileDriver implements EntityDriver {
 
     private static final Logger log = LogManager.getLogger(FileEntityDriver.class);
+
+    private static final String INVALID_PART_MESSAGE = "One or more of the specified parts could not be found. " +
+            "The part might not have been uploaded, or the specified entity tag might not " +
+            "have matched the part's entity tag.";
+
+    private static S3Exception INVALID_PART_EXCEPTION() {
+        return S3Exception.build(INVALID_PART_MESSAGE)
+                .setStatus(HttpResponseStatus.BAD_REQUEST)
+                .setCode(S3ResponseErrorCodes.INVALID_PART)
+                .setMessage(INVALID_PART_MESSAGE)
+                .setResource("1")
+                .setRequestId("1");
+    }
 
     private final Map<String, Selector<String>> strSelectors;
     private final Map<String, Selector<Date>> dateSelectors;
@@ -128,6 +145,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         String pathToObjectMetadataFolder = getPathToObjectMetadataFolder(s3ObjectPath, false);
         deleteFolder(pathToObjectMetadataFolder);
         deleteFile(pathToObject);
+        deleteEmptyKeys(new File(pathToObject));
     }
 
     @Override
@@ -275,21 +293,59 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     @Override
     public String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes)
             throws S3Exception {
-        String multipartFolder = getPathToObjectMultipartFolder(s3ObjectPath, false);
-        String currentUploadFolder = multipartFolder + File.separatorChar + uploadId;
-        if (!existsFolder(currentUploadFolder)) {
-            throw S3Exception.build("No such upload : " + uploadId)
-                    .setStatus(HttpResponseStatus.NOT_FOUND)
-                    .setCode(S3ResponseErrorCodes.NO_SUCH_UPLOAD)
-                    .setMessage("The specified multipart upload does not exist. The upload ID might be invalid, " +
-                            "or the multipart upload might have been aborted or completed.")
-                    .setResource("1")
-                    .setRequestId("1"); // TODO
-        }
+        String currentUploadFolder = getPathToObjectUploadFolder(s3ObjectPath, uploadId, false);
         String partPath = currentUploadFolder + File.separatorChar + partNumber;
         File partFile = new File(partPath);
         writeBytesToFile(partFile, partPath, bytes);
         return calculateETag(bytes);
+    }
+
+    @Override
+    public String completeMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId, List<Part> parts)
+            throws S3Exception {
+        String currentUploadFolder = getPathToObjectUploadFolder(s3ObjectPath, uploadId, false);
+        Path currentUploadFolderPath = Path.of(currentUploadFolder);
+        try (Stream<Path> tree = Files.walk(currentUploadFolderPath, 1)) {
+            Map<Integer, File> partsFiles = tree
+                .filter(current -> !current.toString().equals(currentUploadFolder) && Files.isRegularFile(current) &&
+                    current.getFileName().toString().matches("[0-9]+") &&
+                    Integer.parseInt(current.getFileName().toString()) >= 1 &&
+                    Integer.parseInt(current.getFileName().toString()) <= 10000)
+                .collect(Collectors.toMap(p -> Integer.parseInt(p.getFileName().toString()), Path::toFile));
+
+            if (!parts.stream().allMatch(partInfo -> partsFiles.containsKey(partInfo.getPartNumber()))) {
+                throw INVALID_PART_EXCEPTION();
+            }
+
+            File file = new File(s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH));
+            if (!file.exists() || (file.exists() && file.isDirectory())) {
+                if (!file.createNewFile()) {
+                    throw new Exception("Can't create file");
+                }
+            }
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file, true))) {
+                for (Part part : parts) {
+                    File partFile = partsFiles.get(part.getPartNumber());
+                    try (InputStream input = new BufferedInputStream(new FileInputStream(partFile))) {
+                        byte[] buffer = input.readAllBytes();
+                        String calculatedEtag = DigestUtils.md5Hex(buffer);
+                        if (!part.getETag().equals(calculatedEtag)) {
+                            throw INVALID_PART_EXCEPTION();
+                        }
+                        outputStream.write(buffer);
+                        md.update(buffer);
+                    }
+                }
+            }
+            deleteFolder(currentUploadFolder);
+            return DatatypeConverter.printHexBinary(md.digest()).toLowerCase();
+        } catch (Exception e) {
+            throw S3Exception.INTERNAL_ERROR("Can't process multipart upload : " + currentUploadFolder)
+                    .setMessage("Can't process multipart upload : " + currentUploadFolder)
+                    .setResource("1")
+                    .setRequestId("1");
+        }
     }
 
     private void writeBytesToFile(File file, String keyWithBucket, byte[] bytes) {
@@ -345,6 +401,21 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             dateSelectors.get(S3Headers.IF_UNMODIFIED_SINCE).check(new Date(file.lastModified()),
                     DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_UNMODIFIED_SINCE))); // TODO
         }
+    }
+
+    private String getPathToObjectUploadFolder(S3ObjectPath s3ObjectPath, String uploadId, boolean safely) {
+        String multipartFolder = getPathToObjectMultipartFolder(s3ObjectPath, safely);
+        String currentUploadFolder = multipartFolder + File.separatorChar + uploadId;
+        if (!existsFolder(currentUploadFolder)) {
+            throw S3Exception.build("No such upload : " + uploadId)
+                    .setStatus(HttpResponseStatus.NOT_FOUND)
+                    .setCode(S3ResponseErrorCodes.NO_SUCH_UPLOAD)
+                    .setMessage("The specified multipart upload does not exist. The upload ID might be invalid, " +
+                            "or the multipart upload might have been aborted or completed.")
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
+        return currentUploadFolder;
     }
 
     private String getPathToObjectMultipartFolder(S3ObjectPath s3ObjectPath, boolean safely) {

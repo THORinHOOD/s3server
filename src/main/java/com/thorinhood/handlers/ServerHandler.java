@@ -1,5 +1,6 @@
 package com.thorinhood.handlers;
 
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.exceptions.S3Exception;
@@ -12,6 +13,7 @@ import com.thorinhood.processors.actions.*;
 import com.thorinhood.processors.lists.ListBucketsProcessor;
 import com.thorinhood.processors.lists.ListObjectsV2Processor;
 import com.thorinhood.processors.multipart.AbortMultipartUploadProcessor;
+import com.thorinhood.processors.multipart.CompleteMultipartUploadProcessor;
 import com.thorinhood.processors.multipart.CreateMultipartUploadProcessor;
 import com.thorinhood.processors.multipart.UploadPartProcessor;
 import com.thorinhood.processors.policies.GetBucketPolicyProcessor;
@@ -23,6 +25,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -52,6 +55,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final CreateMultipartUploadProcessor createMultipartUploadProcessor;
     private final AbortMultipartUploadProcessor abortMultipartUploadProcessor;
     private final UploadPartProcessor uploadPartProcessor;
+    private final CompleteMultipartUploadProcessor completeMultipartUploadProcessor;
 
     public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
         requestUtil = new RequestUtil(userDriver);
@@ -71,6 +75,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         createMultipartUploadProcessor = new CreateMultipartUploadProcessor(s3Driver);
         abortMultipartUploadProcessor = new AbortMultipartUploadProcessor(s3Driver);
         uploadPartProcessor = new UploadPartProcessor(s3Driver);
+        completeMultipartUploadProcessor = new CompleteMultipartUploadProcessor(s3Driver);
     }
 
     @Override
@@ -79,8 +84,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             boolean processed = process(context, request);
             if (!processed) {
                 log.error("Not found any processor for request or error occurred");
+                Processor.sendError(context, request, S3Exception.build("Can't find method")
+                    .setStatus(HttpResponseStatus.NOT_FOUND)
+                    .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
+                    .setMessage("Can't find method")
+                    .setResource("1")
+                    .setRequestId("1")); // TODO
             }
-            //TODO
         } catch (Exception exception) {
             exception.printStackTrace();
         }
@@ -105,8 +115,11 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         if (request.method().equals(HttpMethod.POST)) {
             if (checkRequestS3Type(request, "uploads")) {
                 createMultipartUploadProcessor.process(context, request, parsedRequest);
+                return true;
+            } else if (checkRequestS3Type(request, "uploadId")) {
+                completeMultipartUploadProcessor.process(context, request, parsedRequest);
+                return true;
             }
-            return true;
         }
 
         if (request.method().equals(HttpMethod.GET)) {
@@ -135,7 +148,6 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 } else {
                     putBucketAclProcessor.process(context, request, parsedRequest);
                 }
-                return true;
             } else if (isPolicyRequest(request)) {
                 putBucketPolicyProcessor.process(context, request, parsedRequest);
                 return true;
@@ -147,6 +159,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             } else {
                 createBucketProcessor.process(context, request, parsedRequest);
             }
+            return true;
         }
 
         if (request.method().equals(HttpMethod.DELETE)) {

@@ -2,6 +2,7 @@ package com.thorinhood.drivers.main;
 
 import com.thorinhood.data.*;
 import com.thorinhood.data.acl.*;
+import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.policy.Statement;
 import com.thorinhood.data.results.GetBucketsResult;
@@ -286,6 +287,23 @@ public class S3DriverImpl implements S3Driver {
     public String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes)
             throws S3Exception {
         return entityDriver.putUploadPart(s3ObjectPath, uploadId, partNumber, bytes);
+    }
+
+    @Override
+    public String completeMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId, List<Part> parts, S3User s3User)
+            throws S3Exception {
+        if (parts == null || parts.size() == 0) {
+            throw S3Exception.build("No parts to complete multipart upload")
+                    .setStatus(HttpResponseStatus.BAD_REQUEST)
+                    .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
+                    .setMessage("No parts to complete multipart upload")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+        String eTag = entityDriver.completeMultipartUpload(s3ObjectPath, uploadId, parts);
+        metadataDriver.putObjectMetadata(s3ObjectPath, Map.of());
+        aclDriver.putObjectAcl(s3ObjectPath, createDefaultAccessControlPolicy(s3User));
+        return eTag;
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

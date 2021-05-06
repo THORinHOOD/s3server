@@ -12,4 +12,5 @@ public class S3ResponseErrorCodes {
     public static final String PRECONDITION_FAILED = "PreconditionFailed";
     public static final String ACCESS_DENIED = "AccessDenied";
     public static final String NO_SUCH_UPLOAD = "NoSuchUpload";
+    public static final String INVALID_PART = "InvalidPart";
 }

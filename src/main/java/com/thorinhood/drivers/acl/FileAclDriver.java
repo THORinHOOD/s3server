@@ -5,10 +5,12 @@ import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.acl.Grant;
 import com.thorinhood.data.Owner;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -78,10 +80,13 @@ public class FileAclDriver extends FileDriver implements AclDriver {
         }
     }
 
-    private AccessControlPolicy getAcl(String pathToMetaFile) {
+    private AccessControlPolicy getAcl(String pathToMetaFile) throws S3Exception {
         File file = new File(pathToMetaFile);
         if (!file.exists()) {
-            return null; // TODO
+            throw S3Exception.INTERNAL_ERROR("Can't find acl file : " + pathToMetaFile)
+                    .setMessage("Can't find acl file : " + pathToMetaFile)
+                    .setResource("1")
+                    .setRequestId("1");
         }
         try {
             byte[] bytes = new FileInputStream(file).readAllBytes();
