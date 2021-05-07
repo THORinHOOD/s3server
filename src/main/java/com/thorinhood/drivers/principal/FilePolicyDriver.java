@@ -7,12 +7,15 @@ import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.drivers.FileDriver;
+import com.thorinhood.drivers.PreparedOperationFileCommit;
+import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Optional;
 
 public class FilePolicyDriver extends FileDriver implements PolicyDriver {
@@ -29,9 +32,8 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
 
     @Override
     public void putBucketPolicy(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
-        BucketPolicy bucketPolicy = null;
         try {
-            bucketPolicy = objectMapper.readValue(bytes, BucketPolicy.class);
+            objectMapper.readValue(bytes, BucketPolicy.class);
         } catch (IOException exception) {
             throw S3Exception.build("Can't parse bucket policy")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
@@ -40,20 +42,11 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
                     .setResource("1")
                     .setRequestId("1");
         }
-        putBucketPolicy(s3BucketPath, bucketPolicy);
-    }
-
-    @Override
-    public void putBucketPolicy(S3BucketPath s3BucketPath, BucketPolicy bucketPolicy) throws S3Exception {
         String pathToBucketPolicyFile = getPathToBucketPolicyFile(s3BucketPath, true);
-        try {
-            objectMapper.writeValue(new File(pathToBucketPolicyFile), bucketPolicy);
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't write bucket policy file")
-                    .setMessage("Can't write bucket policy file")
-                    .setResource("1")
-                    .setRequestId("1");
-        }
+        String pathToBucketMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, true);
+        Path target = new File(pathToBucketPolicyFile).toPath();
+        Path source = createPreparedTmpFile(new File(pathToBucketMetadataFolder).toPath(), target, bytes);
+        new PreparedOperationFileCommit(source, target).lockAndCommit();
     }
 
     @Override

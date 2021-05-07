@@ -28,6 +28,13 @@ public class S3Exception extends RuntimeException implements HasStatus, HasCode,
                 .setCode(S3ResponseErrorCodes.INTERNAL_ERROR);
     }
 
+    public static HasResource INTERNAL_ERROR(Exception exception) {
+        return build(exception.getMessage() != null ? exception.getMessage() : exception.toString())
+                .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                .setCode(S3ResponseErrorCodes.INTERNAL_ERROR)
+                .setMessage(exception.getMessage() != null ? exception.getMessage() : exception.toString());
+    }
+
     public static HasStatus build(String internalMessage) {
         return new S3Exception(internalMessage);
     }

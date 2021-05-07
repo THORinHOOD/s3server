@@ -19,7 +19,7 @@ public class DeleteObjectTest extends BaseTest {
     @Test
     public void deleteObjectSimple() throws IOException {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "file.txt", "hello, s3!!!", Map.of("key", "value"));
         checkObject("bucket", null, "file.txt", "hello, s3!!!",
                 Map.of("key", "value"), true);
@@ -30,7 +30,7 @@ public class DeleteObjectTest extends BaseTest {
     @Test
     public void deleteObjectCompositeKey() throws IOException {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1/folder2", "file.txt", "hello, s3!!!",
                 null, true);
@@ -41,7 +41,7 @@ public class DeleteObjectTest extends BaseTest {
     @Test
     public void deleteObjectSimilarFolder() throws IOException {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         putObjectRaw(s3, "bucket", "folder1/file2.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
@@ -57,7 +57,7 @@ public class DeleteObjectTest extends BaseTest {
     @Test
     public void deleteObjectSimilarNames() throws IOException {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         putObjectRaw(s3, "bucket", "folder2/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
@@ -73,8 +73,8 @@ public class DeleteObjectTest extends BaseTest {
     @Test
     public void deleteObjectDifferentBuckets() throws IOException {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
-        createBucketRaw("bucket2", s3);
+        createBucketRaw(s3, "bucket");
+        createBucketRaw(s3, "bucket2");
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         putObjectRaw(s3, "bucket2", "folder1/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
@@ -90,7 +90,7 @@ public class DeleteObjectTest extends BaseTest {
     @Test
     public void deleteObjectUnauthorizedUser() throws IOException {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
                 null);
@@ -107,7 +107,7 @@ public class DeleteObjectTest extends BaseTest {
     @Test
     public void deleteObjectOtherUser() throws IOException {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
                 null);

@@ -1,12 +1,17 @@
 package com.thorinhood.drivers.entity;
 
-import com.thorinhood.data.*;
+import com.thorinhood.data.GetBucketObjects;
+import com.thorinhood.data.S3BucketPath;
+import com.thorinhood.data.S3ObjectPath;
+import com.thorinhood.data.S3User;
 import com.thorinhood.data.multipart.Part;
-import com.thorinhood.data.s3object.HasMetaData;
-import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3Headers;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
+import com.thorinhood.data.s3object.HasMetaData;
+import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.drivers.FileDriver;
+import com.thorinhood.drivers.PreparedOperationFileCommit;
+import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import com.thorinhood.utils.DateTimeUtil;
@@ -19,15 +24,12 @@ import org.apache.logging.log4j.Logger;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.text.ParseException;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -122,7 +124,8 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
-    public S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata) throws S3Exception {
+    public PreparedOperationFileCommitWithResult<S3Object> putObject(S3ObjectPath s3ObjectPath, byte[] bytes,
+                                                                     Map<String, String> metadata) throws S3Exception {
         String absolutePath = s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH);
         File file = new File(absolutePath);
         if (!processFolders(file, s3ObjectPath.getBucket())) {
@@ -131,8 +134,9 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
                     .setRequestId("1"); // TODO
         }
-        writeBytesToFile(file, s3ObjectPath.getKeyWithBucket(), bytes);
-        return S3Object.build()
+        Path objectMetadataFolder = new File(getPathToObjectMetadataFolder(s3ObjectPath, true)).toPath();
+
+        S3Object s3Object = S3Object.build()
                 .setAbsolutePath(absolutePath)
                 .setS3Path(s3ObjectPath)
                 .setETag(calculateETag(bytes))
@@ -140,6 +144,8 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 .setRawBytes(bytes)
                 .setLastModified(DateTimeUtil.parseDateTime(file))
                 .setMetaData(metadata);
+        Path source = createPreparedTmpFile(objectMetadataFolder, file.toPath(), bytes);
+        return new PreparedOperationFileCommitWithResult<>(source, file.toPath(), s3Object);
     }
 
     @Override
@@ -297,9 +303,10 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     public String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes)
             throws S3Exception {
         String currentUploadFolder = getPathToObjectUploadFolder(s3ObjectPath, uploadId, false);
-        String partPath = currentUploadFolder + File.separatorChar + partNumber;
-        File partFile = new File(partPath);
-        writeBytesToFile(partFile, partPath, bytes);
+        String partPathStr = currentUploadFolder + File.separatorChar + partNumber;
+        Path partPath = new File(partPathStr).toPath();
+        Path source = createPreparedTmpFile(new File(currentUploadFolder).toPath(), partPath, bytes);
+        new PreparedOperationFileCommit(source, partPath).lockAndCommit();
         return calculateETag(bytes);
     }
 
@@ -360,26 +367,6 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setMessage("Can't process multipart upload : " + currentUploadFolder)
                     .setResource("1")
                     .setRequestId("1");
-        }
-    }
-
-    private void writeBytesToFile(File file, String keyWithBucket, byte[] bytes) {
-        try {
-            if (file.createNewFile() || file.exists()) {
-                FileOutputStream outputStream = new FileOutputStream(file);
-                outputStream.write(bytes);
-                outputStream.close();
-            } else {
-                throw S3Exception.INTERNAL_ERROR("Can't create file : " + file.getAbsolutePath())
-                        .setMessage("Internal error : can't create object")
-                        .setResource(File.separatorChar + keyWithBucket)
-                        .setRequestId("1"); // TODO
-            }
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't create file: " + file.getAbsolutePath())
-                    .setMessage(exception.getMessage())
-                    .setResource(File.separatorChar + keyWithBucket)
-                    .setRequestId("1"); // TODO
         }
     }
 

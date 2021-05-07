@@ -19,7 +19,7 @@ public class ListObjectsV2Test extends BaseTest {
     @Test
     public void listObjectsV2Simple() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         String content = "hello, s3!!!";
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
@@ -35,7 +35,7 @@ public class ListObjectsV2Test extends BaseTest {
     @Test
     public void listObjectsV2Unauthorized() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         String content = "hello, s3!!!";
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
@@ -58,7 +58,7 @@ public class ListObjectsV2Test extends BaseTest {
     @Test
     public void listObjectsV2AnotherUser() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         String content = "hello, s3!!!";
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
@@ -82,7 +82,7 @@ public class ListObjectsV2Test extends BaseTest {
     @Test
     public void listObjectsV2MaxKeys() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         String content = "hello, s3!!!";
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
@@ -99,7 +99,7 @@ public class ListObjectsV2Test extends BaseTest {
     @Test
     public void listObjectsV2Prefix() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         String content = "hello, s3!!!";
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
@@ -118,7 +118,7 @@ public class ListObjectsV2Test extends BaseTest {
     @Test
     public void listObjectsV2StartAfter() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         String content = "hello, s3!!!";
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));
@@ -137,7 +137,7 @@ public class ListObjectsV2Test extends BaseTest {
     @Test
     public void listObjectsV2ContinuousToken() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         String content = "hello, s3!!!";
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, null);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, Map.of("key", "value"));

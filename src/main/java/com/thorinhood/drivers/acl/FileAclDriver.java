@@ -1,21 +1,22 @@
 package com.thorinhood.drivers.acl;
 
+import com.thorinhood.data.Owner;
 import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.acl.Grant;
-import com.thorinhood.data.Owner;
-import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.FileDriver;
+import com.thorinhood.drivers.PreparedOperationFileCommit;
+import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,9 +27,11 @@ public class FileAclDriver extends FileDriver implements AclDriver {
     }
 
     @Override
-    public String putObjectAcl(S3ObjectPath s3ObjectPath, AccessControlPolicy acl) throws S3Exception {
+    public PreparedOperationFileCommitWithResult<String> putObjectAcl(S3ObjectPath s3ObjectPath, AccessControlPolicy acl)
+            throws S3Exception {
         String pathToMetafile = getPathToObjectAclFile(s3ObjectPath, true);
-        return putAcl(pathToMetafile, acl);
+        String pathToMetadataFolder = getPathToObjectMetadataFolder(s3ObjectPath, true);
+        return putAcl(pathToMetadataFolder, pathToMetafile, acl);
     }
 
     @Override
@@ -38,9 +41,11 @@ public class FileAclDriver extends FileDriver implements AclDriver {
     }
 
     @Override
-    public void putBucketAcl(S3BucketPath s3BucketPath, AccessControlPolicy acl) throws S3Exception {
+    public PreparedOperationFileCommit putBucketAcl(S3BucketPath s3BucketPath, AccessControlPolicy acl)
+            throws S3Exception {
         String pathToMetafile = getPathToBucketAclFile(s3BucketPath, true);
-        putAcl(pathToMetafile, acl);
+        String pathToMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, true);
+        return putAcl(pathToMetadataFolder, pathToMetafile, acl);
     }
 
     @Override
@@ -49,35 +54,14 @@ public class FileAclDriver extends FileDriver implements AclDriver {
         return getAcl(pathToMetafile);
     }
 
-    private String putAcl(String pathToMetafile, AccessControlPolicy acl) throws S3Exception {
-        S3Exception s3exception = S3Exception.INTERNAL_ERROR("Can't create acl bucket file")
-                .setMessage("Can't create acl bucket file")
-                .setResource("1")
-                .setRequestId("1"); // TODO
+    private PreparedOperationFileCommitWithResult<String> putAcl(String pathToMetadataFolder, String pathToMetafile,
+                                                                 AccessControlPolicy acl) throws S3Exception {
         String xml = acl.buildXmlText();
         File metaFile = new File(pathToMetafile);
-        String lastModified = null;
-        if (metaFile.exists()) {
-            lastModified = DateTimeUtil.parseDateTime(metaFile);
-        } else {
-            try {
-                if (!metaFile.createNewFile()) {
-                    throw s3exception;
-                }
-            } catch (IOException exception) {
-                throw s3exception;
-            }
-        }
-        try (FileOutputStream writer = new FileOutputStream(pathToMetafile)) {
-            writer.write(xml.getBytes());
-            writer.flush();
-            return lastModified != null ? lastModified : DateTimeUtil.parseDateTime(new File(pathToMetafile)); // TODO
-        } catch (IOException e) {
-            throw S3Exception.INTERNAL_ERROR(e.getMessage())
-                    .setMessage(e.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
-        }
+        String lastModified = metaFile.exists() ? DateTimeUtil.parseDateTime(metaFile) : null;
+        Path source = createPreparedTmpFile(new File(pathToMetadataFolder).toPath(), metaFile.toPath(), xml.getBytes());
+        return new PreparedOperationFileCommitWithResult<>(source, metaFile.toPath(),
+                lastModified != null ? lastModified : DateTimeUtil.parseDateTime(new File(pathToMetafile)));
     }
 
     private AccessControlPolicy getAcl(String pathToMetaFile) throws S3Exception {

@@ -10,6 +10,8 @@ import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
+import com.thorinhood.drivers.PreparedOperationFileCommit;
+import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -22,21 +24,22 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class S3DriverImpl implements S3Driver {
+public class S3FileDriverImpl implements S3Driver {
 
     private final MetadataDriver metadataDriver;
     private final AclDriver aclDriver;
     private final PolicyDriver policyDriver;
     private final EntityDriver entityDriver;
 
-    private static final Logger log = LogManager.getLogger(S3DriverImpl.class);
+    private static final Logger log = LogManager.getLogger(S3FileDriverImpl.class);
 
-    public S3DriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, PolicyDriver policyDriver,
-                        EntityDriver entityDriver) {
+    public S3FileDriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, PolicyDriver policyDriver,
+                            EntityDriver entityDriver) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
         this.policyDriver = policyDriver;
@@ -180,26 +183,23 @@ public class S3DriverImpl implements S3Driver {
 
     @Override
     public void putBucketAcl(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
-        putBucketAcl(s3BucketPath, aclDriver.parseFromBytes(bytes));
-    }
-
-    private void putBucketAcl(S3BucketPath s3BucketPath, AccessControlPolicy acl) throws S3Exception {
-        aclDriver.putBucketAcl(s3BucketPath, acl);
+        AccessControlPolicy acl = aclDriver.parseFromBytes(bytes);
+        aclDriver.putBucketAcl(s3BucketPath, acl).lockAndCommit();
     }
 
     @Override
     public String putObjectAcl(S3ObjectPath s3ObjectPath, byte[] bytes) throws S3Exception {
-        return putObjectAcl(s3ObjectPath, aclDriver.parseFromBytes(bytes));
-    }
-
-    private String putObjectAcl(S3ObjectPath s3ObjectPath, AccessControlPolicy acl) throws S3Exception {
-        return aclDriver.putObjectAcl(s3ObjectPath, acl);
+        AccessControlPolicy acl = aclDriver.parseFromBytes(bytes);
+        PreparedOperationFileCommitWithResult<String> putAcl = aclDriver.putObjectAcl(s3ObjectPath, acl);
+        putAcl.lockAndCommit();
+        return putAcl.getResult();
     }
 
     @Override
     public void createBucket(S3BucketPath s3BucketPath, S3User s3User) throws S3Exception {
         entityDriver.createBucket(s3BucketPath, s3User);
-        putBucketAcl(s3BucketPath, createDefaultAccessControlPolicy(s3User));
+        AccessControlPolicy acl = createDefaultAccessControlPolicy(s3User);
+        aclDriver.putBucketAcl(s3BucketPath, acl).lockAndCommit();
     }
 
     @Override
@@ -212,10 +212,12 @@ public class S3DriverImpl implements S3Driver {
     @Override
     public S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata, S3User s3User)
             throws S3Exception {
-        S3Object s3Object = entityDriver.putObject(s3ObjectPath, bytes, metadata);
-        metadataDriver.putObjectMetadata(s3ObjectPath, metadata);
-        aclDriver.putObjectAcl(s3ObjectPath, createDefaultAccessControlPolicy(s3User));
-        return s3Object;
+        PreparedOperationFileCommitWithResult<S3Object> putObject = entityDriver.putObject(s3ObjectPath, bytes, metadata);
+        PreparedOperationFileCommit putObjectMetadata = metadataDriver.putObjectMetadata(s3ObjectPath, metadata);
+        PreparedOperationFileCommit putObjectAcl = aclDriver.putObjectAcl(s3ObjectPath,
+                createDefaultAccessControlPolicy(s3User));
+        putObject.lockAndCommitAfter(() -> putObjectMetadata.lockAndCommitAfter(putObjectAcl::lockAndCommit));
+        return putObject.getResult();
     }
 
     @Override
@@ -304,6 +306,10 @@ public class S3DriverImpl implements S3Driver {
         metadataDriver.putObjectMetadata(s3ObjectPath, Map.of());
         aclDriver.putObjectAcl(s3ObjectPath, createDefaultAccessControlPolicy(s3User));
         return eTag;
+    }
+
+    private void createUploadDirectory() {
+
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

@@ -4,7 +4,6 @@ import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -12,7 +11,6 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -30,7 +28,7 @@ public class GetObjectTest extends BaseTest {
         Map<String, String> metadata = Map.of(
                 "key", "value",
                 "key1", "value1");
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "file.txt", content, metadata);
         getObject(s3, "bucket", "file.txt", content, metadata);
     }
@@ -40,7 +38,7 @@ public class GetObjectTest extends BaseTest {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, metadata);
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, metadata);
         getObject(s3, "bucket", "folder1/file.txt", content, metadata);
@@ -52,7 +50,7 @@ public class GetObjectTest extends BaseTest {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, metadata);
         s3 = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(), NOT_AUTH_ROOT_USER.getSecretKey());
         try {
@@ -69,7 +67,7 @@ public class GetObjectTest extends BaseTest {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, metadata);
         s3 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
         try {
@@ -86,7 +84,7 @@ public class GetObjectTest extends BaseTest {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, metadata);
 
         getObject(s3, "bucket", "folder1/file.txt", content, metadata, calcETag(content), null);
@@ -118,11 +116,14 @@ public class GetObjectTest extends BaseTest {
                 "key3", "value3",
                 "key12", "value12"
         );
-        createBucketRaw("bucket", s3);
+        createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/folder2/file.txt", content, metadata);
 
-        getObjectAsync(s3Async, "bucket", "folder1/folder2/file.txt", content, metadata, null,
-                null, 200);
+        List<CompletableFuture<ResponseBytes<GetObjectResponse>>> futureList = getObjectAsync(s3Async, "bucket",
+                "folder1/folder2/file.txt", null, null, 200);
+        for (CompletableFuture<ResponseBytes<GetObjectResponse>> responseBytesCompletableFuture : futureList) {
+            checkGetObject(content, metadata, responseBytesCompletableFuture.get());
+        }
     }
 
     private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata)
@@ -143,43 +144,7 @@ public class GetObjectTest extends BaseTest {
         }
 
         ResponseBytes<GetObjectResponse> response = s3.getObject(request.build(), ResponseTransformer.toBytes());
-        check(content, metadata, response);
+        checkGetObject(content, metadata, response);
     }
-
-    private void getObjectAsync(S3AsyncClient s3, String bucket, String key, String content,
-                                Map<String, String> metadata, String ifMatch, String ifNoneMatch,
-                                int requestsCount) throws Exception {
-        GetObjectRequest.Builder requestBuilder = GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(key);
-        if (ifMatch != null) {
-            requestBuilder.ifMatch(ifMatch);
-        }
-        if (ifNoneMatch != null) {
-            requestBuilder.ifNoneMatch(ifNoneMatch);
-        }
-        GetObjectRequest request = requestBuilder.build();
-        List<CompletableFuture<ResponseBytes<GetObjectResponse>>> futureList = new ArrayList<>();
-        for (int i = 0; i < requestsCount; i++) {
-            futureList.add(s3.getObject(request, AsyncResponseTransformer.toBytes()));
-        }
-        for (int i = 0; i < requestsCount; i++) {
-            check(content, metadata, futureList.get(i).get());
-        }
-    }
-
-    private void check(String expectedContent, Map<String, String> expectedMetadata,
-                       ResponseBytes<GetObjectResponse> response) {
-        Assertions.assertEquals(expectedContent.getBytes().length, response.response().contentLength());
-        Assertions.assertEquals(calcETag(expectedContent), response.response().eTag());
-        if (expectedMetadata != null) {
-            assertMaps(expectedMetadata, response.response().metadata());
-        } else {
-            Assertions.assertTrue(response.response().metadata() == null ||
-                    response.response().metadata().isEmpty());
-        }
-        Assertions.assertEquals(expectedContent, new String(response.asByteArray()));
-    }
-
 
 }

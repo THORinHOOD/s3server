@@ -7,6 +7,7 @@ import com.thorinhood.data.S3User;
 import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
+import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.Pair;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -17,7 +18,8 @@ import java.util.Map;
 public interface EntityDriver {
     void createBucket(S3BucketPath s3BucketPath, S3User s3User) throws S3Exception;
     HasMetaData getObject(S3ObjectPath s3ObjectPath, HttpHeaders httpHeaders) throws S3Exception;
-    S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata) throws S3Exception;
+    PreparedOperationFileCommitWithResult<S3Object> putObject(S3ObjectPath s3ObjectPath, byte[] bytes,
+                                                              Map<String, String> metadata) throws S3Exception;
     void deleteObject(S3ObjectPath s3ObjectPath) throws S3Exception;
     void deleteBucket(S3BucketPath s3BucketPath) throws S3Exception;
     Pair<Pair<List<HasMetaData>, Boolean>, String> getBucketObjects(GetBucketObjects request) throws S3Exception;
@@ -27,5 +29,5 @@ public interface EntityDriver {
     String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception;
     void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception;
     String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes) throws S3Exception;
-    String completeMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId, List<Part> parts) throws S3Exception;
+    String completeMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId, List<Part> parts) throws S3Exception; // TODO
 }

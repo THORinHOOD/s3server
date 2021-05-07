@@ -2,7 +2,7 @@
   <configuration default="false" name="MainServer" type="Application" factoryName="Application" nameIsGenerated="true">
     <option name="MAIN_CLASS_NAME" value="com.thorinhood.MainServer" />
     <module name="s3server" />
-    <option name="PROGRAM_PARAMETERS" value="--port=9090 --basePath=$USER_HOME$/baseBucket --users=$USER_HOME$/users/root.json,$USER_HOME$/users/iam.json" />
+    <option name="PROGRAM_PARAMETERS" value="--port=9090 --basePath=$USER_HOME$/testBucket --users=$USER_HOME$/users/root.json,$USER_HOME$/users/iam.json" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="com.thorinhood.*" />

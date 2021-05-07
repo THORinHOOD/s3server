@@ -6,19 +6,21 @@ import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.main.S3Driver;
-import com.thorinhood.drivers.main.S3DriverImpl;
+import com.thorinhood.drivers.main.S3FileDriverImpl;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.utils.utils.SdkUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.*;
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -63,7 +67,7 @@ public class BaseTest {
         METADATA_DRIVER = FILE_DRIVERS_FACTORY.createMetadataDriver();
         POLICY_DRIVER = FILE_DRIVERS_FACTORY.createPolicyDriver();
         ENTITY_DRIVER = FILE_DRIVERS_FACTORY.createEntityDriver();
-        S3_DRIVER = new S3DriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER);
+        S3_DRIVER = new S3FileDriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER);
         SERVER = new Server(port, S3_DRIVER, USER_DRIVER);
     }
 
@@ -113,14 +117,11 @@ public class BaseTest {
         ALL_TEST_USERS.forEach(s3User -> USER_DRIVER.addUser(s3User));
     }
 
-    protected void createBucketRaw(String bucket, S3Client s3Client) {
+    protected void createBucketRaw(S3Client s3Client, String bucket) {
         CreateBucketRequest request = CreateBucketRequest.builder()
                 .bucket(bucket)
                 .build();
-        try {
-            s3Client.createBucket(request);
-        } catch (Exception exception) {
-        }
+        s3Client.createBucket(request);
     }
 
     protected void putObjectRaw(S3Client s3Client, String bucket, String key, String content,
@@ -215,6 +216,119 @@ public class BaseTest {
         char[] chars = new char[bytes];
         Arrays.fill(chars, 'a');
         return new String(chars);
+    }
+
+    protected List<CompletableFuture<ResponseBytes<GetObjectResponse>>> getObjectAsync(S3AsyncClient s3, String bucket,
+                                                           String key, String ifMatch,
+                                                           String ifNoneMatch, int requestsCount) throws Exception {
+        GetObjectRequest.Builder requestBuilder = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(key);
+        if (ifMatch != null) {
+            requestBuilder.ifMatch(ifMatch);
+        }
+        if (ifNoneMatch != null) {
+            requestBuilder.ifNoneMatch(ifNoneMatch);
+        }
+        GetObjectRequest request = requestBuilder.build();
+        List<CompletableFuture<ResponseBytes<GetObjectResponse>>> futureList = new ArrayList<>();
+        for (int i = 0; i < requestsCount; i++) {
+            futureList.add(s3.getObject(request, AsyncResponseTransformer.toBytes()));
+        }
+        return futureList;
+    }
+
+    protected void checkGetObjectAsync(List<CompletableFuture<ResponseBytes<GetObjectResponse>>> futureList,
+           List<String> content, List<Map<String, String>> metadata) throws ExecutionException, InterruptedException {
+        for (int i = 0; i < futureList.size(); i++) {
+            ResponseBytes<GetObjectResponse> response = futureList.get(i).get();
+            boolean ok = false;
+            for (int j = 0; (j < content.size()) && !ok; j++) {
+                String expectedContent = content.get(j);
+                Map<String, String> expectedMetadata = metadata.get(j);
+                boolean eq = response.response().contentLength().equals((long) expectedContent.getBytes().length) &&
+                        calcETag(expectedContent).equals(response.response().eTag()) &&
+                        (expectedMetadata != null ? equalsMaps(expectedMetadata, response.response().metadata()) :
+                            (response.response().metadata() == null || response.response().metadata().isEmpty())) &&
+                        expectedContent.equals(new String(response.asByteArray()));
+                if (eq) {
+                    ok = true;
+                }
+            }
+            if (!ok) {
+                Assertions.fail("Request got wrong content : length = " + response.response().contentLength());
+            }
+        }
+    }
+
+    protected void checkGetObject(String expectedContent, Map<String, String> expectedMetadata,
+                                  ResponseBytes<GetObjectResponse> response) {
+        Assertions.assertEquals(expectedContent.getBytes().length, response.response().contentLength());
+        Assertions.assertEquals(calcETag(expectedContent), response.response().eTag());
+        if (expectedMetadata != null) {
+            assertMaps(expectedMetadata, response.response().metadata());
+        } else {
+            Assertions.assertTrue(response.response().metadata() == null ||
+                    response.response().metadata().isEmpty());
+        }
+        Assertions.assertEquals(expectedContent, new String(response.asByteArray()));
+    }
+
+    protected List<CompletableFuture<PutObjectResponse>> putObjectAsync(S3AsyncClient s3, String bucket,
+                                    String keyWithoutName, String fileName,
+                                    List<String> contents, List<Map<String, String>> metadata) throws IOException {
+        List<PutObjectRequest> requests = new ArrayList<>();
+        List<AsyncRequestBody> bodies = new ArrayList<>();
+        for (int i = 0; i < contents.size(); i++) {
+            PutObjectRequest.Builder request = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(buildKey(keyWithoutName, fileName));
+            if (metadata != null) {
+                if (metadata.get(i)!= null) {
+                    request.metadata(metadata.get(i));
+                }
+            }
+            requests.add(request.build());
+            bodies.add(AsyncRequestBody.fromString(contents.get(i)));
+        }
+
+        List<CompletableFuture<PutObjectResponse>> futureList = new ArrayList<>();
+        for (int i = 0; i < requests.size(); i++) {
+            futureList.add(s3.putObject(requests.get(i), bodies.get(i)));
+        }
+        return futureList;
+
+    }
+
+    protected void checkPutObjectAsync(String bucket, String keyWithoutName, String fileName,
+                                       List<CompletableFuture<PutObjectResponse>> futureList, List<String> contents,
+                                       List<Map<String, String>> metadata) throws IOException {
+        for (int i = 0; i < futureList.size(); i++) {
+            try {
+                PutObjectResponse response = futureList.get(i).get();
+                Assertions.assertEquals(response.eTag(), calcETag(contents.get(i)));
+            } catch (InterruptedException | ExecutionException e) {
+                Assertions.fail(e);
+            }
+        }
+        checkObject(bucket, keyWithoutName, fileName, null, null, false);
+        checkContent(new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar + keyWithoutName +
+                File.separatorChar + fileName), contents);
+    }
+
+    protected <KEY, VALUE> boolean equalsMaps(Map<KEY, VALUE> expected, Map<KEY, VALUE> actual) {
+        if (expected.size() != actual.size()) {
+            return false;
+        }
+        for (Map.Entry<KEY, VALUE> expectedEntry : expected.entrySet()) {
+            if (!actual.containsKey(expectedEntry.getKey())) {
+                return false;
+            }
+            if (!expectedEntry.getValue().equals(actual.get(expectedEntry.getKey()))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected <KEY, VALUE> void assertMaps(Map<KEY, VALUE> expected, Map<KEY, VALUE> actual) {

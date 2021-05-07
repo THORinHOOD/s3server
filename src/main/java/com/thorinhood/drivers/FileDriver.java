@@ -7,13 +7,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
+import java.util.Random;
 
 public class FileDriver {
 
@@ -82,6 +81,33 @@ public class FileDriver {
     protected boolean existsFolder(String path) {
         File folder = new File(path);
         return folder.isDirectory() && folder.exists();
+    }
+
+    protected Path createPreparedTmpFile(Path tmpFolder, Path file, byte[] bytes) {
+        File tmpFile = new File(tmpFolder.toAbsolutePath().toString() + File.separatorChar +
+            file.getFileName().toString() + "." + new Random().nextLong());
+        while (tmpFile.exists()) {
+            tmpFile = new File(tmpFolder.toAbsolutePath().toString() + File.separatorChar +
+                    file.getFileName().toString() + "." + new Random().nextLong());
+        }
+        try {
+            if (tmpFile.createNewFile()) {
+                try (FileOutputStream outputStream = new FileOutputStream(tmpFile)) {
+                    outputStream.write(bytes);
+                }
+                return tmpFile.toPath();
+            } else {
+                throw S3Exception.INTERNAL_ERROR("Can't create file : " + tmpFile.getAbsolutePath())
+                        .setMessage("Internal error : can't create file")
+                        .setResource("1")
+                        .setRequestId("1"); // TODO
+            }
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
+                    .setMessage(exception.getMessage())
+                    .setResource("1")
+                    .setRequestId("1"); // TODO
+        }
     }
 
     protected void createFolder(String path) throws S3Exception {
