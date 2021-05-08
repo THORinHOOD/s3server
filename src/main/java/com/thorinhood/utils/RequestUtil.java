@@ -1,7 +1,7 @@
 package com.thorinhood.utils;
 
 import com.thorinhood.data.requests.S3Headers;
-import com.thorinhood.data.S3ObjectPath;
+import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.user.UserDriver;
@@ -22,9 +22,11 @@ public class RequestUtil {
     private static final String META_PREFIX = "x-amz-meta-";
 
     private final UserDriver userDriver;
+    private final String BASE_FOLDER_PATH;
 
-    public RequestUtil(UserDriver userDriver) {
+    public RequestUtil(UserDriver userDriver, String baseFolderPath) {
         this.userDriver = userDriver;
+        this.BASE_FOLDER_PATH = baseFolderPath;
     }
 
     public ParsedRequest parseRequest(FullHttpRequest request) throws Exception {
@@ -33,7 +35,7 @@ public class RequestUtil {
         Credential credential = Credential.parse(request);
         String requestSignature = extractSignature(request);
         String decodedContentLength = request.headers().get(S3Headers.X_AMZ_DECODED_CONTENT_LENGTH);
-        S3ObjectPath s3ObjectPath = extractS3Path(request);
+        S3FileObjectPath s3FileObjectPath = extractS3Path(request);
         Map<String, List<String>> queryParams = parseQueryParams(request);
         Map<String, String> metadata = extractMetaData(request);
         Optional<S3User> s3User = userDriver.getS3User(credential.getValue(Credential.ACCESS_KEY));
@@ -43,7 +45,7 @@ public class RequestUtil {
                     .setRequestId("1");
         }
         return ParsedRequest.builder()
-                .setS3ObjectPath(s3ObjectPath)
+                .setS3ObjectPath(s3FileObjectPath)
                 .setBytes(bytes)
                 .setCredential(credential)
                 .setDecodedContentLength(decodedContentLength != null ? Integer.parseInt(decodedContentLength) : 0)
@@ -154,7 +156,7 @@ public class RequestUtil {
         return authorization.substring(authorization.indexOf("Signature=") + "Signature=".length());
     }
 
-    private S3ObjectPath extractS3Path(FullHttpRequest request) throws S3Exception {
+    private S3FileObjectPath extractS3Path(FullHttpRequest request) throws S3Exception {
         String uri = QueryStringDecoder.decodeComponent(request.uri());
         if (uri.isEmpty() || uri.charAt(0) != '/') {
             throw S3Exception.build("Incorrect uri path")
@@ -172,10 +174,10 @@ public class RequestUtil {
         if (secondSlash != -1) {
             String key = uri.substring(secondSlash);
             int lastSlash = key.lastIndexOf("/");
-            return S3ObjectPath.raw(uri.substring(1, secondSlash), key.substring(1, lastSlash + 1),
-                    key.substring(lastSlash + 1));
+            return S3FileObjectPath.raw(BASE_FOLDER_PATH, uri.substring(1, secondSlash),
+                    key.substring(1, lastSlash + 1), key.substring(lastSlash + 1));
         }
-        return S3ObjectPath.raw(uri.substring(1), null, null);
+        return S3FileObjectPath.raw(BASE_FOLDER_PATH, uri.substring(1), null, null);
     }
 
     private byte[] convert(ByteBuf byteBuf) {

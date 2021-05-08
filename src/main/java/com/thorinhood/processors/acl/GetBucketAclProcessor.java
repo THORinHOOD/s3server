@@ -27,7 +27,7 @@ public class GetBucketAclProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, true);
+        checkRequestPermissions(parsedRequest, true);
         AccessControlPolicy accessControlPolicy = S3_DRIVER.getBucketAcl(parsedRequest.getS3BucketPath());
         String xml = accessControlPolicy.buildXmlText();
         sendResponse(context, request, OK, response -> {

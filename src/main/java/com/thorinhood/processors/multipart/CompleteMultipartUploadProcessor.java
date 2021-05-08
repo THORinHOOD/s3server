@@ -29,7 +29,7 @@ public class CompleteMultipartUploadProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, "s3:PutObject", true);
+        checkRequestPermissions(parsedRequest, "s3:PutObject", true);
         Document document = XmlUtil.parseXmlFromBytes(parsedRequest.getBytes());
         CompleteMultipartUpload completeMultipartUpload = CompleteMultipartUpload
                 .buildFromNode(document.getDocumentElement());

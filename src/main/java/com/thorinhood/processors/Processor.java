@@ -38,12 +38,15 @@ public abstract class Processor {
         return ChunkReader.readChunks(request, parsedRequest);
     }
 
-    protected void checkRequest(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
-        checkRequest(request, METHOD_NAME, isBucketAcl);
+    protected void checkRequestPermissions(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
+        checkRequestPermissions(request, METHOD_NAME, isBucketAcl);
     }
 
-    protected void checkRequest(ParsedRequest request, String methodName, boolean isBucketAcl) throws S3Exception {
-        S3_DRIVER.isBucketExists(request.getS3BucketPath());
+    protected void checkRequestPermissions(ParsedRequest request, String methodName, boolean isBucketAcl)
+            throws S3Exception {
+        if (!methodName.equals("s3:CreateBucket")) {
+            S3_DRIVER.isBucketExists(request.getS3BucketPath());
+        }
         boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, request.getS3ObjectPathUnsafe(),
                 methodName, request.getS3User());
         boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),
@@ -62,8 +65,7 @@ public abstract class Processor {
             sendError(ctx, request, s3Exception);
             log.error(s3Exception.getMessage(), s3Exception);
         } catch (Exception exception) {
-            S3Exception s3Exception = S3Exception.INTERNAL_ERROR(exception.getMessage())
-                    .setMessage(exception.getMessage())
+            S3Exception s3Exception = S3Exception.INTERNAL_ERROR(exception)
                     .setResource("1")
                     .setRequestId("1");
             sendError(ctx, request, s3Exception);

@@ -2,7 +2,6 @@ package com.thorinhood.handlers;
 
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.main.S3Driver;
-import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.processors.acl.GetBucketAclProcessor;
@@ -32,7 +31,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 @ChannelHandler.Sharable
 public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -58,8 +56,8 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final UploadPartProcessor uploadPartProcessor;
     private final CompleteMultipartUploadProcessor completeMultipartUploadProcessor;
 
-    public ServerHandler(S3Driver s3Driver, UserDriver userDriver) {
-        requestUtil = new RequestUtil(userDriver);
+    public ServerHandler(S3Driver s3Driver, RequestUtil requestUtil) {
+        this.requestUtil = requestUtil;
         getObjectProcessor = new GetObjectProcessor(s3Driver);
         createBucketProcessor = new CreateBucketProcessor(s3Driver);
         putObjectProcessor = new PutObjectProcessor(s3Driver);

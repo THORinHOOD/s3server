@@ -2,6 +2,7 @@ package com.thorinhood;
 
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.user.UserDriver;
+import com.thorinhood.utils.RequestUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -18,9 +19,9 @@ public class Server {
     private EventLoopGroup workerGroup;
     private ChannelFuture future;
 
-    public Server(int port, S3Driver s3Driver, UserDriver userDriver) {
+    public Server(int port, S3Driver s3Driver, RequestUtil requestUtil) {
         this.port = port;
-        serverInitializer = new ServerInitializer(s3Driver, userDriver);
+        serverInitializer = new ServerInitializer(s3Driver, requestUtil);
     }
 
     public void run() throws Exception {

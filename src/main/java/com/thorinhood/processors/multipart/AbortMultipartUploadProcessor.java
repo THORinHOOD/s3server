@@ -25,7 +25,7 @@ public class AbortMultipartUploadProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, true);
+        checkRequestPermissions(parsedRequest, true);
         S3_DRIVER.abortMultipartUpload(parsedRequest.getS3ObjectPath(),
                 parsedRequest.getQueryParam("uploadId", null, Function.identity()));
         sendResponseWithoutContent(context, HttpResponseStatus.NO_CONTENT, request, Map.of(
@@ -39,7 +39,7 @@ public class AbortMultipartUploadProcessor extends Processor {
     }
 
     @Override
-    protected void checkRequest(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
+    protected void checkRequestPermissions(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
         S3_DRIVER.isBucketExists(request.getS3BucketPath());
         if (!request.getS3User().isRootUser()) {
             boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),

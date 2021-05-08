@@ -1,6 +1,6 @@
 package com.thorinhood.data.s3object;
 
-import com.thorinhood.data.S3ObjectPath;
+import com.thorinhood.data.S3FileObjectPath;
 
 import java.io.File;
 import java.util.Map;
@@ -8,7 +8,7 @@ import java.util.Map;
 public class S3Object implements HasAbsolutePath, HasS3Path, HasETag, HasFile, HasRawBytes, HasLastModified, HasMetaData {
 
     private String absolutePath;
-    private S3ObjectPath s3ObjectPath;
+    private S3FileObjectPath s3FileObjectPath;
     private String ETag;
     private File file;
     private byte[] bytes;
@@ -41,8 +41,8 @@ public class S3Object implements HasAbsolutePath, HasS3Path, HasETag, HasFile, H
     }
 
     @Override
-    public HasETag setS3Path(S3ObjectPath s3ObjectPath) {
-        this.s3ObjectPath = s3ObjectPath;
+    public HasETag setS3Path(S3FileObjectPath s3FileObjectPath) {
+        this.s3FileObjectPath = s3FileObjectPath;
         return this;
     }
 
@@ -74,8 +74,8 @@ public class S3Object implements HasAbsolutePath, HasS3Path, HasETag, HasFile, H
     }
 
     @Override
-    public S3ObjectPath getS3Path() {
-        return s3ObjectPath;
+    public S3FileObjectPath getS3Path() {
+        return s3FileObjectPath;
     }
 
     @Override

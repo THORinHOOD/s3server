@@ -30,7 +30,7 @@ public class UploadPartProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, "s3:PutObject", true);
+        checkRequestPermissions(parsedRequest, "s3:PutObject", true);
         if (parsedRequest.getPayloadSignType() != PayloadSignType.SINGLE_CHUNK &&
                 parsedRequest.getPayloadSignType() != PayloadSignType.UNSIGNED_PAYLOAD) {
             parsedRequest.setBytes(processChunkedContent(parsedRequest, request));

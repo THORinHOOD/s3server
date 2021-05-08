@@ -35,6 +35,16 @@ public class S3Exception extends RuntimeException implements HasStatus, HasCode,
                 .setMessage(exception.getMessage() != null ? exception.getMessage() : exception.toString());
     }
 
+    public static S3Exception NO_SUCH_UPLOAD(String uploadId) {
+        return S3Exception.build("No such upload : " + uploadId)
+                .setStatus(HttpResponseStatus.NOT_FOUND)
+                .setCode(S3ResponseErrorCodes.NO_SUCH_UPLOAD)
+                .setMessage("The specified multipart upload does not exist. The upload ID might be invalid, " +
+                        "or the multipart upload might have been aborted or completed.")
+                .setResource("1")
+                .setRequestId("1"); // TODO
+    }
+
     public static HasStatus build(String internalMessage) {
         return new S3Exception(internalMessage);
     }

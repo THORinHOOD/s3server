@@ -1,5 +1,6 @@
 package com.thorinhood.utils.actions;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -18,6 +19,7 @@ public class MultithreadedTest extends BaseTest {
         super("testS3Java", 9999);
     }
 
+    @Disabled
     @Test
     public void putGetWhileOverwrite() throws Exception {
         S3Client s3 = getS3Client(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());

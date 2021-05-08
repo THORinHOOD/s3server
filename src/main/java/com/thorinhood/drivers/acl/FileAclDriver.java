@@ -1,14 +1,11 @@
 package com.thorinhood.drivers.acl;
 
 import com.thorinhood.data.Owner;
-import com.thorinhood.data.S3BucketPath;
-import com.thorinhood.data.S3ObjectPath;
+import com.thorinhood.data.S3FileBucketPath;
+import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.acl.Grant;
 import com.thorinhood.drivers.FileDriver;
-import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
-import com.thorinhood.drivers.lock.PreparedOperationFileWriteWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
@@ -16,68 +13,68 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileAclDriver extends FileDriver implements AclDriver {
 
-    public FileAclDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
-                         EntityLocker entityLocker) {
-        super(baseFolderPath, configFolderPath, usersFolderPath, entityLocker);
+    public FileAclDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
+        super(baseFolderPath, configFolderPath, usersFolderPath);
     }
 
     @Override
-    public PreparedOperationFileWriteWithResult<String> putObjectAcl(S3ObjectPath s3ObjectPath, AccessControlPolicy acl)
-            throws S3Exception {
-        String pathToMetafile = getPathToObjectAclFile(s3ObjectPath, true);
-        String pathToMetadataFolder = getPathToObjectMetadataFolder(s3ObjectPath, true);
-        return putAcl(pathToMetadataFolder, pathToMetafile, acl);
-    }
-
-    @Override
-    public AccessControlPolicy getObjectAcl(S3ObjectPath s3ObjectPath) throws S3Exception {
-        String pathToMetafile = getPathToObjectAclFile(s3ObjectPath, true);
-        return getAcl(pathToMetafile);
-    }
-
-    @Override
-    public PreparedOperationFileWrite putBucketAcl(S3BucketPath s3BucketPath, AccessControlPolicy acl)
-            throws S3Exception {
-        String pathToMetafile = getPathToBucketAclFile(s3BucketPath, true);
-        String pathToMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, true);
-        return putAcl(pathToMetadataFolder, pathToMetafile, acl);
-    }
-
-    @Override
-    public AccessControlPolicy getBucketAcl(S3BucketPath s3BucketPath) throws S3Exception {
-        String pathToMetafile = getPathToBucketAclFile(s3BucketPath, true);
-        return getAcl(pathToMetafile);
-    }
-
-    private PreparedOperationFileWriteWithResult<String> putAcl(String pathToMetadataFolder, String pathToMetafile,
-                                                                AccessControlPolicy acl) throws S3Exception {
+    public String putObjectAcl(S3FileObjectPath s3FileObjectPath, AccessControlPolicy acl) throws S3Exception {
+        String pathToObjectAclFile = s3FileObjectPath.getPathToObjectAclFile();
+        String pathToMetadataFolder = s3FileObjectPath.getPathToObjectMetadataFolder();
         String xml = acl.buildXmlText();
-        File metaFile = new File(pathToMetafile);
-        String lastModified = metaFile.exists() ? DateTimeUtil.parseDateTime(metaFile) : null;
-        Path source = createPreparedTmpFile(new File(pathToMetadataFolder).toPath(), metaFile.toPath(), xml.getBytes());
-        return new PreparedOperationFileWriteWithResult<>(source, metaFile.toPath(),
-                lastModified != null ? lastModified : DateTimeUtil.parseDateTime(new File(pathToMetafile)),
-                ENTITY_LOCKER);
+        File metadataFolder = new File(pathToMetadataFolder);
+        File metaFile = new File(pathToObjectAclFile);
+        Path source = createPreparedTmpFile(metadataFolder.toPath(), metaFile.toPath(), xml.getBytes());
+        commitFile(source, metaFile.toPath());
+        return metaFile.exists() ? DateTimeUtil.parseDateTime(metaFile) : null;
     }
 
-    private AccessControlPolicy getAcl(String pathToMetaFile) throws S3Exception {
-        File file = new File(pathToMetaFile);
-        if (!file.exists()) {
-            throw S3Exception.INTERNAL_ERROR("Can't find acl file : " + pathToMetaFile)
-                    .setMessage("Can't find acl file : " + pathToMetaFile)
-                    .setResource("1")
-                    .setRequestId("1");
-        }
-        byte[] bytes = ENTITY_LOCKER.read(file.getAbsolutePath(), () -> new FileInputStream(file).readAllBytes());
-        Document document = XmlUtil.parseXmlFromBytes(bytes);
-        return AccessControlPolicy.buildFromNode(document.getDocumentElement());
+    @Override
+    public AccessControlPolicy getObjectAcl(S3FileObjectPath s3FileObjectPath) throws S3Exception {
+        return getAcl(s3FileObjectPath.getPathToObjectAclFile());
+    }
+
+    @Override
+    public void putBucketAcl(S3FileBucketPath s3FileBucketPath, AccessControlPolicy acl) throws S3Exception {
+        String xml = acl.buildXmlText();
+        File metadataFolder = new File(s3FileBucketPath.getPathToBucketMetadataFolder());
+        File metaFile = new File(s3FileBucketPath.getPathToBucketAclFile());
+        Path source = createPreparedTmpFile(metadataFolder.toPath(), metaFile.toPath(), xml.getBytes());
+        commitFile(source, metaFile.toPath());
+    }
+
+    @Override
+    public AccessControlPolicy getBucketAcl(S3FileBucketPath s3FileBucketPath) throws S3Exception {
+        return getAcl(s3FileBucketPath.getPathToBucketAclFile());
+    }
+
+    private AccessControlPolicy getAcl(String pathToAclFile) throws S3Exception {
+            File file = new File(pathToAclFile);
+            if (!file.exists()) {
+                throw S3Exception.INTERNAL_ERROR("Can't find acl file : " + pathToAclFile)
+                        .setMessage("Can't find acl file : " + pathToAclFile)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+            byte[] bytes = null;
+            try {
+                bytes = new FileInputStream(file).readAllBytes();
+            } catch (IOException exception) {
+                throw S3Exception.INTERNAL_ERROR(exception)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+            Document document = XmlUtil.parseXmlFromBytes(bytes);
+            return AccessControlPolicy.buildFromNode(document.getDocumentElement());
     }
 
     public AccessControlPolicy parseFromBytes(byte[] bytes) throws S3Exception {

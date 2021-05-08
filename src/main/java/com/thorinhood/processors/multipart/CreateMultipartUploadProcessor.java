@@ -26,7 +26,7 @@ public class CreateMultipartUploadProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, "s3:PutObject", true);
+        checkRequestPermissions(parsedRequest, "s3:PutObject", true);
         String uploadId = S3_DRIVER.createMultipartUpload(parsedRequest.getS3ObjectPath());
         InitiateMultipartUploadResult result = InitiateMultipartUploadResult.builder()
                 .setBucket(parsedRequest.getS3ObjectPath().getBucket())

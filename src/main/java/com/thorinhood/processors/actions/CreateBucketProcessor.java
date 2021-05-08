@@ -26,7 +26,6 @@ public class CreateBucketProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments) throws Exception {
-        // TODO CHECK
         if (!isBucketNameCorrect(parsedRequest.getS3BucketPath().getBucket())) {
             throw S3Exception.build("Illegal bucket name : " + parsedRequest.getS3BucketPath()
                         .getBucket())

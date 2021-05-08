@@ -2,15 +2,18 @@ package com.thorinhood.utils.actions;
 
 import com.thorinhood.Server;
 import com.thorinhood.data.S3User;
+import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.lock.EntityLocker;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.main.S3FileDriverImpl;
+import com.thorinhood.drivers.metadata.FileMetadataDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.drivers.user.UserDriver;
+import com.thorinhood.utils.RequestUtil;
 import com.thorinhood.utils.utils.SdkUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.*;
@@ -33,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -44,6 +49,8 @@ public class BaseTest {
     protected MetadataDriver METADATA_DRIVER;
     protected PolicyDriver POLICY_DRIVER;
     protected EntityDriver ENTITY_DRIVER;
+    protected FileDriver FILE_DRIVER;
+    protected RequestUtil REQUEST_UTIL;
     protected S3Driver S3_DRIVER;
 
     protected Server SERVER;
@@ -67,15 +74,17 @@ public class BaseTest {
         this.port = port;
         createUsers();
         EntityLocker entityLocker = new EntityLocker();
-        FILE_DRIVERS_FACTORY = new FileDriversFactory(basePath, entityLocker);
+        FILE_DRIVERS_FACTORY = new FileDriversFactory(basePath);
         USER_DRIVER = FILE_DRIVERS_FACTORY.createUserDriver();
         ACL_DRIVER = FILE_DRIVERS_FACTORY.createAclDriver();
         METADATA_DRIVER = FILE_DRIVERS_FACTORY.createMetadataDriver();
         POLICY_DRIVER = FILE_DRIVERS_FACTORY.createPolicyDriver();
         ENTITY_DRIVER = FILE_DRIVERS_FACTORY.createEntityDriver();
-        S3_DRIVER = new S3FileDriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER, entityLocker,
-                basePath);
-        SERVER = new Server(port, S3_DRIVER, USER_DRIVER);
+        FILE_DRIVER = FILE_DRIVERS_FACTORY.createFileDriver();
+        REQUEST_UTIL = new RequestUtil(USER_DRIVER, basePath);
+        S3_DRIVER = new S3FileDriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER, FILE_DRIVER,
+                entityLocker);
+        SERVER = new Server(port, S3_DRIVER, REQUEST_UTIL);
     }
 
 
@@ -219,6 +228,7 @@ public class BaseTest {
                         line -> line.substring(0, line.indexOf("=")),
                         line -> line.substring(line.indexOf("=") + 1)
                 ));
+        actualMetadata.remove(FileMetadataDriver.ETAG);
         assertMaps(metadata, actualMetadata);
     }
 
@@ -268,8 +278,10 @@ public class BaseTest {
     }
 
     protected void checkGetObjectAsync(List<CompletableFuture<ResponseBytes<GetObjectResponse>>> futureList,
-           List<String> content, List<Map<String, String>> metadata) throws ExecutionException, InterruptedException {
+           List<String> content, List<Map<String, String>> metadata)
+            throws ExecutionException, InterruptedException, TimeoutException {
         for (int i = 0; i < futureList.size(); i++) {
+            System.out.println("Wait : " + i);
             ResponseBytes<GetObjectResponse> resp = futureList.get(i).get();
             boolean ok = false;
             for (int j = 0; (j < content.size()) && !ok; j++) {

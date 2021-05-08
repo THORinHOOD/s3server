@@ -8,10 +8,12 @@ import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.core.retry.conditions.RetryCondition;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.*;
 
 import java.net.URI;
+import java.time.Duration;
 
 public class SdkUtil {
 
@@ -20,6 +22,7 @@ public class SdkUtil {
         S3AsyncClientBuilder s3 = S3AsyncClient.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey,
                         secretKey)))
+                .httpClient(NettyNioAsyncHttpClient.builder().readTimeout(Duration.ofSeconds(240)).build())
                 .endpointOverride(URI.create("http://localhost:" + port))
                 .region(region);
         if (!chunked) {

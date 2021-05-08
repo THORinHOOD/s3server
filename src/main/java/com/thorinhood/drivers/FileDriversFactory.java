@@ -4,7 +4,6 @@ import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.acl.FileAclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.entity.FileEntityDriver;
-import com.thorinhood.drivers.lock.EntityLocker;
 import com.thorinhood.drivers.metadata.FileMetadataDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.FilePolicyDriver;
@@ -16,11 +15,10 @@ import java.io.File;
 
 public class FileDriversFactory extends FileDriver {
 
-    public FileDriversFactory(String baseFolderPath, EntityLocker entityLocker) {
+    public FileDriversFactory(String baseFolderPath) {
         super(baseFolderPath,
 baseFolderPath + File.separatorChar + CONFIG_FOLDER_NAME,
-baseFolderPath + File.separatorChar + CONFIG_FOLDER_NAME + File.separatorChar + USERS_FOLDER_NAME,
-                entityLocker);
+baseFolderPath + File.separatorChar + CONFIG_FOLDER_NAME + File.separatorChar + USERS_FOLDER_NAME);
     }
 
     public void init() throws Exception {
@@ -34,23 +32,27 @@ baseFolderPath + File.separatorChar + CONFIG_FOLDER_NAME + File.separatorChar + 
     }
 
     public UserDriver createUserDriver() {
-        return new FileUserDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH, ENTITY_LOCKER);
+        return new FileUserDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH);
     }
 
     public AclDriver createAclDriver() {
-        return new FileAclDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH, ENTITY_LOCKER);
+        return new FileAclDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH);
     }
 
     public MetadataDriver createMetadataDriver() {
-        return new FileMetadataDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH, ENTITY_LOCKER);
+        return new FileMetadataDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH);
     }
 
     public PolicyDriver createPolicyDriver() {
-        return new FilePolicyDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH, ENTITY_LOCKER);
+        return new FilePolicyDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH);
     }
 
     public EntityDriver createEntityDriver() {
-        return new FileEntityDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH, ENTITY_LOCKER);
+        return new FileEntityDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH);
+    }
+
+    public FileDriver createFileDriver() {
+        return new FileDriver(BASE_FOLDER_PATH, CONFIG_FOLDER_PATH, USERS_FOLDER_PATH);
     }
 
 }

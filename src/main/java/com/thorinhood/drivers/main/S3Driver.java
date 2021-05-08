@@ -17,34 +17,33 @@ import java.util.Optional;
 public interface S3Driver extends AclPermissionChecker {
 
     // Permissions
-    AccessControlPolicy getBucketAcl(S3BucketPath s3BucketPath) throws S3Exception;
-    AccessControlPolicy getObjectAcl(S3ObjectPath s3ObjectPath) throws S3Exception;
-    void putBucketAcl(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception;
-    String putObjectAcl(S3ObjectPath s3ObjectPath, byte[] bytes) throws S3Exception;
+    AccessControlPolicy getBucketAcl(S3FileBucketPath s3FileBucketPath) throws S3Exception;
+    AccessControlPolicy getObjectAcl(S3FileObjectPath s3FileObjectPath) throws S3Exception;
+    void putBucketAcl(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception;
+    String putObjectAcl(S3FileObjectPath s3FileObjectPath, byte[] bytes) throws S3Exception;
 
-    boolean checkBucketPolicy(S3BucketPath s3BucketPath, String key, String methodName, S3User s3User) throws S3Exception;
-    Optional<BucketPolicy> getBucketPolicy(S3BucketPath s3BucketPath) throws S3Exception;
-    Optional<byte[]> getBucketPolicyBytes(S3BucketPath s3BucketPath) throws S3Exception;
-    void putBucketPolicy(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception;
-    void isBucketExists(S3BucketPath s3BucketPath) throws S3Exception;
-    void isObjectExists(S3ObjectPath s3ObjectPath) throws S3Exception;
+    boolean checkBucketPolicy(S3FileBucketPath s3FileBucketPath, String key, String methodName, S3User s3User) throws S3Exception;
+    Optional<BucketPolicy> getBucketPolicy(S3FileBucketPath s3FileBucketPath) throws S3Exception;
+    Optional<byte[]> getBucketPolicyBytes(S3FileBucketPath s3FileBucketPath) throws S3Exception;
+    void putBucketPolicy(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception;
+    void isBucketExists(S3FileBucketPath s3FileBucketPath) throws S3Exception;
 
     // Actions
-    void createBucket(S3BucketPath s3BucketPath, S3User s3User) throws S3Exception;
-    S3Object getObject(S3ObjectPath s3ObjectPath, HttpHeaders httpHeaders) throws S3Exception;
-    S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata, S3User s3User)
+    void createBucket(S3FileBucketPath s3FileBucketPath, S3User s3User) throws S3Exception;
+    S3Object getObject(S3FileObjectPath s3FileObjectPath, HttpHeaders httpHeaders) throws S3Exception;
+    S3Object putObject(S3FileObjectPath s3FileObjectPath, byte[] bytes, Map<String, String> metadata, S3User s3User)
             throws S3Exception;
-    void deleteObject(S3ObjectPath s3ObjectPath) throws S3Exception;
-    void deleteBucket(S3BucketPath s3BucketPath) throws S3Exception;
+    void deleteObject(S3FileObjectPath s3FileObjectPath) throws S3Exception;
+    void deleteBucket(S3FileBucketPath s3FileBucketPath) throws S3Exception;
 
     // Lists
     ListBucketResult getBucketObjects(GetBucketObjects request) throws S3Exception;
     GetBucketsResult getBuckets(S3User s3User) throws S3Exception;
 
     //Multipart
-    String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception;
-    void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception;
-    String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes) throws S3Exception;
-    String completeMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId, List<Part> parts, S3User s3User)
+    String createMultipartUpload(S3FileObjectPath s3FileObjectPath) throws S3Exception;
+    void abortMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId) throws S3Exception;
+    String putUploadPart(S3FileObjectPath s3FileObjectPath, String uploadId, int partNumber, byte[] bytes) throws S3Exception;
+    String completeMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId, List<Part> parts, S3User s3User)
             throws S3Exception;
 }

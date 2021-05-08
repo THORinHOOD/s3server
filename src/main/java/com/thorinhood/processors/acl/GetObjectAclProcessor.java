@@ -27,7 +27,7 @@ public class GetObjectAclProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, false);
+        checkRequestPermissions(parsedRequest, false);
         AccessControlPolicy accessControlPolicy = S3_DRIVER.getObjectAcl(parsedRequest.getS3ObjectPath());
         String xml = accessControlPolicy.buildXmlText();
         sendResponse(context, request, OK, response -> {

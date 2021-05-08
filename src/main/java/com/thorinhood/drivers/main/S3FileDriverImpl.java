@@ -10,11 +10,12 @@ import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
+import com.thorinhood.data.s3object.S3ObjectETag;
+import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
-import com.thorinhood.drivers.lock.PreparedOperationFileWriteWithResult;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
+import com.thorinhood.drivers.metadata.FileMetadataDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.exceptions.S3Exception;
@@ -22,10 +23,16 @@ import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.Pair;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -36,30 +43,41 @@ public class S3FileDriverImpl implements S3Driver {
     private final PolicyDriver policyDriver;
     private final EntityDriver entityDriver;
     private final EntityLocker entityLocker;
-    private final String baseFolder;
+    private final FileDriver fileDriver;
 
     private static final Logger log = LogManager.getLogger(S3FileDriverImpl.class);
 
     public S3FileDriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, PolicyDriver policyDriver,
-                            EntityDriver entityDriver, EntityLocker entityLocker, String baseFolder) {
+                            EntityDriver entityDriver, FileDriver fileDriver, EntityLocker entityLocker) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
         this.policyDriver = policyDriver;
         this.entityDriver = entityDriver;
         this.entityLocker = entityLocker;
-        this.baseFolder = baseFolder;
+        this.fileDriver = fileDriver;
     }
 
     @Override
-    public boolean checkBucketPolicy(S3BucketPath s3BucketPath, String key, String methodName, S3User s3User) throws S3Exception {
-        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(s3BucketPath);
+    public boolean checkBucketPolicy(S3FileBucketPath s3FileBucketPath, String key, String methodName, S3User s3User)
+            throws S3Exception {
+        fileDriver.checkBucket(s3FileBucketPath);
+        String policyFilePath = s3FileBucketPath.getPathToBucketPolicyFile();
+        if (!fileDriver.isFileExists(policyFilePath)) {
+            return s3User.isRootUser();
+        }
+        Optional<BucketPolicy> bucketPolicy = entityLocker.readMeta(
+                s3FileBucketPath.getPathToBucket(),
+                s3FileBucketPath.getPathToBucketMetadataFolder(),
+                policyFilePath,
+                () -> getBucketPolicy(s3FileBucketPath)
+        );
         if (bucketPolicy.isEmpty()) {
             return s3User.isRootUser();
         }
         boolean result = s3User.isRootUser();
         for (Statement statement : bucketPolicy.get().getStatements()) {
             if (checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn())) {
-                if (checkStatement(statement, s3BucketPath.getBucket(), key, methodName, s3User,
+                if (checkStatement(statement, s3FileBucketPath.getBucket(), key, methodName, s3User,
                         !s3User.isRootUser())) {
                     result = !s3User.isRootUser();
                 }
@@ -96,8 +114,13 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public Optional<byte[]> getBucketPolicyBytes(S3BucketPath s3BucketPath) throws S3Exception {
-        Optional<BucketPolicy> bucketPolicy = getBucketPolicy(s3BucketPath);
+    public Optional<byte[]> getBucketPolicyBytes(S3FileBucketPath s3FileBucketPath) throws S3Exception {
+        Optional<BucketPolicy> bucketPolicy = entityLocker.readMeta(
+                s3FileBucketPath.getPathToBucket(),
+                s3FileBucketPath.getPathToBucketMetadataFolder(),
+                s3FileBucketPath.getPathToBucketPolicyFile(),
+                () -> getBucketPolicy(s3FileBucketPath)
+        );
         if (bucketPolicy.isEmpty()) {
             return Optional.empty();
         }
@@ -105,36 +128,40 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public Optional<BucketPolicy> getBucketPolicy(S3BucketPath s3BucketPath) throws S3Exception {
-        return policyDriver.getBucketPolicy(s3BucketPath);
+    public Optional<BucketPolicy> getBucketPolicy(S3FileBucketPath s3FileBucketPath) throws S3Exception {
+        return entityLocker.readMeta(
+                s3FileBucketPath.getPathToBucket(),
+                s3FileBucketPath.getPathToBucketMetadataFolder(),
+                s3FileBucketPath.getPathToBucketPolicyFile(),
+                () -> policyDriver.getBucketPolicy(s3FileBucketPath)
+        );
     }
 
     @Override
-    public void putBucketPolicy(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
-        policyDriver.putBucketPolicy(s3BucketPath, bytes);
+    public void putBucketPolicy(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception {
+        entityLocker.writeMeta(
+                s3FileBucketPath.getPathToBucket(),
+                s3FileBucketPath.getPathToBucketMetadataFolder(),
+                s3FileBucketPath.getPathToBucketPolicyFile(),
+                () -> policyDriver.putBucketPolicy(s3FileBucketPath, bytes)
+        );
     }
 
     @Override
-    public void isBucketExists(S3BucketPath s3BucketPath) throws S3Exception {
-        if (!entityDriver.isBucketExists(s3BucketPath)) {
-            throw S3Exception.build("Bucket does not exist")
-                    .setStatus(HttpResponseStatus.NOT_FOUND)
-                    .setCode(S3ResponseErrorCodes.NO_SUCH_BUCKET)
-                    .setMessage("The specified bucket does not exist")
-                    .setResource("1")
-                    .setRequestId("1");
-        }
+    public void isBucketExists(S3FileBucketPath s3FileBucketPath) throws S3Exception {
+        fileDriver.checkBucket(s3FileBucketPath);
     }
 
     @Override
-    public void isObjectExists(S3ObjectPath s3ObjectPath) throws S3Exception {
-        if (!entityDriver.isObjectExists(s3ObjectPath)) {
-            throw S3Exception.build("Object does not exist")
-                    .setStatus(HttpResponseStatus.NOT_FOUND)
-                    .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
-                    .setMessage("The specified object does not exist")
-                    .setResource("1")
-                    .setRequestId("1");
+    public boolean checkAclPermission(boolean isBucketAcl, S3FileObjectPath s3FileObjectPath, String methodName,
+                                      S3User s3User) throws S3Exception {
+        if (isBucketAcl) {
+            AccessControlPolicy acl = getBucketAcl(s3FileObjectPath);
+            return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
+        } else {
+            fileDriver.checkObject(s3FileObjectPath);
+            AccessControlPolicy acl = getObjectAcl(s3FileObjectPath);
+            return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
         }
     }
 
@@ -142,7 +169,7 @@ public class S3FileDriverImpl implements S3Driver {
                                     String methodName, S3User s3User) {
         return acl.getAccessControlList().stream()
                 .filter(grant -> (grant.getGrantee().getDisplayName().equals(s3User.getAccountName()) &&
-                                  grant.getGrantee().getId().equals(s3User.getCanonicalUserId())))
+                        grant.getGrantee().getId().equals(s3User.getCanonicalUserId())))
                 .map(Grant::getPermission)
                 .map(methodsGetter)
                 .flatMap(Collection::stream)
@@ -151,23 +178,10 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkAclPermission(boolean isBucketAcl, S3ObjectPath s3ObjectPath, String methodName, S3User s3User)
-            throws S3Exception {
-        if (isBucketAcl) {
-            AccessControlPolicy acl = getBucketAcl(s3ObjectPath);
-            return checkPermission(Permission::getMethodsBucket, acl, methodName, s3User);
-        } else {
-            isObjectExists(s3ObjectPath);
-            AccessControlPolicy acl = getObjectAcl(s3ObjectPath);
-            return checkPermission(Permission::getMethodsObject, acl, methodName, s3User);
-        }
-    }
-
-    @Override
-    public boolean isOwner(boolean isBucket, S3ObjectPath s3ObjectPath, S3User s3User) throws S3Exception {
+    public boolean isOwner(boolean isBucket, S3FileObjectPath s3FileObjectPath, S3User s3User) throws S3Exception {
         return (isBucket ?
-                isOwner(getBucketAcl(s3ObjectPath), s3User) :
-                isOwner(getObjectAcl(s3ObjectPath), s3User));
+                isOwner(getBucketAcl(s3FileObjectPath), s3User) :
+                isOwner(getObjectAcl(s3FileObjectPath), s3User));
     }
 
     private boolean isOwner(AccessControlPolicy acl, S3User s3User) throws S3Exception {
@@ -176,83 +190,168 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public AccessControlPolicy getBucketAcl(S3BucketPath s3BucketPath) throws S3Exception {
-        return aclDriver.getBucketAcl(s3BucketPath);
+    public AccessControlPolicy getBucketAcl(S3FileBucketPath s3FileBucketPath) throws S3Exception {
+        return entityLocker.readMeta(
+                s3FileBucketPath.getPathToBucket(),
+                s3FileBucketPath.getPathToBucketMetadataFolder(),
+                s3FileBucketPath.getPathToBucketAclFile(),
+                () -> aclDriver.getBucketAcl(s3FileBucketPath)
+        );
     }
 
     @Override
-    public AccessControlPolicy getObjectAcl(S3ObjectPath s3ObjectPath) throws S3Exception {
-        return aclDriver.getObjectAcl(s3ObjectPath);
+    public AccessControlPolicy getObjectAcl(S3FileObjectPath s3FileObjectPath) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
+        return entityLocker.readMeta(
+                s3FileObjectPath.getPathToBucket(),
+                s3FileObjectPath.getPathToObjectMetadataFolder(),
+                s3FileObjectPath.getPathToObjectAclFile(),
+                () -> aclDriver.getObjectAcl(s3FileObjectPath)
+        );
     }
 
     @Override
-    public void putBucketAcl(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
+    public void putBucketAcl(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception {
         AccessControlPolicy acl = aclDriver.parseFromBytes(bytes);
-        aclDriver.putBucketAcl(s3BucketPath, acl).lockAndCommit();
+        entityLocker.writeMeta(
+            s3FileBucketPath.getPathToBucket(),
+            s3FileBucketPath.getPathToBucketMetadataFolder(),
+            s3FileBucketPath.getPathToBucketAclFile(),
+            () -> aclDriver.putBucketAcl(s3FileBucketPath, acl)
+        );
     }
 
     @Override
-    public String putObjectAcl(S3ObjectPath s3ObjectPath, byte[] bytes) throws S3Exception {
+    public String putObjectAcl(S3FileObjectPath s3FileObjectPath, byte[] bytes) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
         AccessControlPolicy acl = aclDriver.parseFromBytes(bytes);
-        PreparedOperationFileWriteWithResult<String> putAcl = aclDriver.putObjectAcl(s3ObjectPath, acl);
-        putAcl.lockAndCommit();
-        return putAcl.getResult();
+        return entityLocker.writeMeta(
+                s3FileObjectPath.getPathToBucket(),
+                s3FileObjectPath.getPathToObjectMetadataFolder(),
+                s3FileObjectPath.getPathToObjectAclFile(),
+                () -> aclDriver.putObjectAcl(s3FileObjectPath, acl)
+        );
     }
 
     @Override
-    public void createBucket(S3BucketPath s3BucketPath, S3User s3User) throws S3Exception {
-        entityDriver.createBucket(s3BucketPath, s3User);
-        AccessControlPolicy acl = createDefaultAccessControlPolicy(s3User);
-        aclDriver.putBucketAcl(s3BucketPath, acl).lockAndCommit();
+    public void createBucket(S3FileBucketPath s3FileBucketPath, S3User s3User) throws S3Exception {
+        entityLocker.writeBucket(
+            s3FileBucketPath.getPathToBucket(),
+            () -> {
+                entityDriver.createBucket(s3FileBucketPath, s3User);
+                fileDriver.createFolder(s3FileBucketPath.getPathToBucketMetadataFolder());
+                aclDriver.putBucketAcl(s3FileBucketPath, createDefaultAccessControlPolicy(s3User));
+            }
+        );
     }
 
     @Override
-    public S3Object getObject(S3ObjectPath s3ObjectPath, HttpHeaders httpHeaders) throws S3Exception {
-        return entityLocker.read(s3ObjectPath.getFullPathToObject(baseFolder), () -> {
-            HasMetaData rawS3Object = entityDriver.getObject(s3ObjectPath, httpHeaders);
-            Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3ObjectPath);
-            return rawS3Object.setMetaData(objectMetadata);
-        });
+    public S3Object getObject(S3FileObjectPath s3FileObjectPath, HttpHeaders httpHeaders) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
+        return entityLocker.readObject(
+            s3FileObjectPath.getPathToBucket(),
+            s3FileObjectPath.getPathToObjectMetadataFolder(),
+            s3FileObjectPath.getPathToObjectMetaFile(),
+            s3FileObjectPath.getPathToObject(),
+            () -> {
+                Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3FileObjectPath);
+                HasMetaData rawS3Object = entityDriver.getObject(s3FileObjectPath,
+                        objectMetadata.get(FileMetadataDriver.ETAG), httpHeaders);
+                objectMetadata.remove(FileMetadataDriver.ETAG);
+                return rawS3Object.setMetaData(objectMetadata);
+            }
+        );
     }
 
     @Override
-    public S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata, S3User s3User)
-            throws S3Exception {
-        PreparedOperationFileWriteWithResult<S3Object> putObject = entityDriver.putObject(s3ObjectPath, bytes, metadata);
-        PreparedOperationFileWrite putObjectMetadata = metadataDriver.putObjectMetadata(s3ObjectPath, metadata);
-        PreparedOperationFileWrite putObjectAcl = aclDriver.putObjectAcl(s3ObjectPath,
-                createDefaultAccessControlPolicy(s3User));
-        putObject.lockAndCommitAfter(() -> putObjectMetadata.lockAndCommitAfter(putObjectAcl::lockAndCommit));
-        return putObject.getResult();
+    public S3Object putObject(S3FileObjectPath s3FileObjectPath, byte[] bytes, Map<String, String> metadata,
+                              S3User s3User) throws S3Exception {
+        return entityLocker.writeObject(
+            s3FileObjectPath.getPathToBucket(),
+            s3FileObjectPath.getPathToObjectMetadataFolder(),
+            s3FileObjectPath.getPathToObjectMetaFile(),
+            s3FileObjectPath.getPathToObjectAclFile(),
+            s3FileObjectPath.getPathToObject(),
+            () -> {
+                fileDriver.createFolder(s3FileObjectPath.getPathToObjectMetadataFolder());
+                S3Object s3Object = entityDriver.putObject(s3FileObjectPath, bytes, metadata);
+                metadataDriver.putObjectMetadata(s3FileObjectPath, metadata, s3Object.getETag());
+                aclDriver.putObjectAcl(s3FileObjectPath, createDefaultAccessControlPolicy(s3User));
+                return s3Object;
+            }
+        );
     }
 
     @Override
-    public void deleteObject(S3ObjectPath s3ObjectPath) throws S3Exception {
-        entityDriver.deleteObject(s3ObjectPath);
+    public void deleteObject(S3FileObjectPath s3FileObjectPath) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
+        entityLocker.deleteObject(
+            s3FileObjectPath.getPathToBucket(),
+            s3FileObjectPath.getPathToObjectMetadataFolder(),
+            s3FileObjectPath.getPathToObjectMetaFile(),
+            s3FileObjectPath.getPathToObjectAclFile(),
+            s3FileObjectPath.getPathToObject(),
+            () -> entityDriver.deleteObject(s3FileObjectPath)
+        );
     }
 
     @Override
-    public void deleteBucket(S3BucketPath s3BucketPath) throws S3Exception {
-        entityDriver.deleteBucket(s3BucketPath);
+    public void deleteBucket(S3FileBucketPath s3FileBucketPath) throws S3Exception {
+        entityLocker.writeBucket(
+            s3FileBucketPath.getPathToBucket(),
+            () -> entityDriver.deleteBucket(s3FileBucketPath)
+        );
     }
 
     @Override
     public ListBucketResult getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception {
-        Pair<Pair<List<HasMetaData>, Boolean>, String> result = entityDriver.getBucketObjects(getBucketObjects);
-        List<S3Content> s3Contents = result.getFirst().getFirst().stream()
-                .map(hasMetaDataObject -> {
-                    Map<String, String> metaData = metadataDriver.getObjectMetadata(hasMetaDataObject.getS3Path());
-                    return hasMetaDataObject.setMetaData(metaData); // TODO
-                })
-                .map(s3Object -> S3Content.builder()
-                        .setETag(s3Object.getETag())
-                        .setKey(s3Object.getS3Path().getKey())
-                        .setLastModified(DateTimeUtil.parseDateTimeISO(s3Object.getFile()))
-                        .setOwner(aclDriver.getObjectAcl(s3Object.getS3Path()).getOwner())
-                        .setSize(s3Object.getRawBytes().length)
-                        .setStorageClass("STANDART") // TODO
-                        .build())
+        Pair<Pair<List<S3FileObjectPath>, Boolean>, String> result = entityDriver.getBucketObjects(getBucketObjects);
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        List<Future<S3ObjectETag>> s3objectETagFutures = result.getFirst().getFirst().stream()
+                .map(s3FileObjectPath -> executorService.submit(() -> {
+                    Map<String, String> metaData = entityLocker.readMeta(
+                        s3FileObjectPath.getPathToBucket(),
+                        s3FileObjectPath.getPathToObjectMetadataFolder(),
+                        s3FileObjectPath.getPathToObjectMetaFile(),
+                        () -> metadataDriver.getObjectMetadata(s3FileObjectPath)
+                    );
+                    return new S3ObjectETag(metaData.get(FileMetadataDriver.ETAG), s3FileObjectPath);
+                }))
                 .collect(Collectors.toList());
+        List<S3ObjectETag> s3ObjectETags = new ArrayList<>();
+        for (Future<S3ObjectETag> s3ObjectETagFuture : s3objectETagFutures) {
+            try {
+                s3ObjectETags.add(s3ObjectETagFuture.get());
+            } catch (InterruptedException | ExecutionException e) {
+                throw S3Exception.INTERNAL_ERROR(e)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+        }
+        List<Future<S3Content>> s3ContentFutures = s3ObjectETags.stream()
+                .map(s3ObjectETag -> executorService.submit(() -> S3Content.builder()
+                        .setETag(s3ObjectETag.getETag())
+                        .setKey(s3ObjectETag.getS3FileObjectPath().getKey())
+                        .setLastModified(DateTimeUtil.parseDateTimeISO(s3ObjectETag.getFile()))
+                        .setOwner(entityLocker.readMeta(
+                                s3ObjectETag.getS3FileObjectPath().getPathToBucket(),
+                                s3ObjectETag.getS3FileObjectPath().getPathToObjectMetadataFolder(),
+                                s3ObjectETag.getS3FileObjectPath().getPathToObjectAclFile(),
+                                () -> aclDriver.getObjectAcl(s3ObjectETag.getS3FileObjectPath()).getOwner()))
+                        .setSize(s3ObjectETag.getFile().length())
+                        .setStorageClass("STANDART")
+                        .build()))
+                .collect(Collectors.toList());
+        List<S3Content> s3Contents = new ArrayList<>();
+        for (Future<S3Content> s3ContentFuture : s3ContentFutures) {
+            try {
+                s3Contents.add(s3ContentFuture.get());
+            } catch (InterruptedException | ExecutionException e) {
+                throw S3Exception.INTERNAL_ERROR(e)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+        }
         return ListBucketResult.builder()
                 .setMaxKeys(getBucketObjects.getMaxKeys())
                 .setName(getBucketObjects.getBucket())
@@ -279,27 +378,57 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public String createMultipartUpload(S3ObjectPath s3ObjectPath) throws S3Exception {
-        return entityDriver.createMultipartUpload(s3ObjectPath);
+    public String createMultipartUpload(S3FileObjectPath s3FileObjectPath) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
+        String uploadId = DigestUtils.md5Hex(DateTimeUtil.currentDateTime() + new Random().nextLong() +
+                new File(s3FileObjectPath.getPathToObject()).getAbsolutePath());
+        entityLocker.createUpload(
+            s3FileObjectPath.getPathToBucket(),
+            s3FileObjectPath.getPathToObjectMetadataFolder(),
+            s3FileObjectPath.getPathToObjectUploadFolder(uploadId),
+            () -> entityDriver.createMultipartUpload(s3FileObjectPath, uploadId)
+        );
+        return uploadId;
     }
 
     @Override
-    public void abortMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId) throws S3Exception {
+    public void abortMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
         if (uploadId == null) {
             return;
         }
-        entityDriver.abortMultipartUpload(s3ObjectPath, uploadId);
+        if (!fileDriver.isFolderExists(s3FileObjectPath.getPathToObjectUploadFolder(uploadId))) {
+            return;
+        }
+        entityLocker.deleteUpload(
+            s3FileObjectPath.getPathToBucket(),
+            s3FileObjectPath.getPathToObjectMetadataFolder(),
+            uploadId,
+            () -> entityDriver.abortMultipartUpload(s3FileObjectPath, uploadId)
+        );
     }
 
     @Override
-    public String putUploadPart(S3ObjectPath s3ObjectPath, String uploadId, int partNumber, byte[] bytes)
+    public String putUploadPart(S3FileObjectPath s3FileObjectPath, String uploadId, int partNumber, byte[] bytes)
             throws S3Exception {
-        return entityDriver.putUploadPart(s3ObjectPath, uploadId, partNumber, bytes);
+        fileDriver.checkObject(s3FileObjectPath);
+        String pathToUpload = s3FileObjectPath.getPathToObjectUploadFolder(uploadId);
+        if (!fileDriver.isFolderExists(pathToUpload)) {
+            throw S3Exception.NO_SUCH_UPLOAD(uploadId);
+        }
+        return entityLocker.writeUpload(
+            s3FileObjectPath.getPathToBucket(),
+            s3FileObjectPath.getPathToObjectMetadataFolder(),
+            pathToUpload,
+            s3FileObjectPath.getPathToObjectUploadPart(uploadId, partNumber),
+            () -> entityDriver.putUploadPart(s3FileObjectPath, uploadId, partNumber, bytes)
+        );
     }
 
     @Override
-    public String completeMultipartUpload(S3ObjectPath s3ObjectPath, String uploadId, List<Part> parts, S3User s3User)
-            throws S3Exception {
+    public String completeMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId, List<Part> parts,
+                                          S3User s3User) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
         if (parts == null || parts.size() == 0) {
             throw S3Exception.build("No parts to complete multipart upload")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
@@ -308,14 +437,17 @@ public class S3FileDriverImpl implements S3Driver {
                     .setResource("1")
                     .setRequestId("1");
         }
-        String eTag = entityDriver.completeMultipartUpload(s3ObjectPath, uploadId, parts);
-        metadataDriver.putObjectMetadata(s3ObjectPath, Map.of());
-        aclDriver.putObjectAcl(s3ObjectPath, createDefaultAccessControlPolicy(s3User));
-        return eTag;
-    }
-
-    private void createUploadDirectory() {
-
+        return entityLocker.completeUpload(
+                s3FileObjectPath.getPathToBucket(),
+                s3FileObjectPath.getPathToObjectMetadataFolder(),
+                s3FileObjectPath.getPathToObjectUploadFolder(uploadId),
+                () -> {
+                    String eTag = entityDriver.completeMultipartUpload(s3FileObjectPath, uploadId, parts);
+                    metadataDriver.putObjectMetadata(s3FileObjectPath, Map.of(), eTag);
+                    aclDriver.putObjectAcl(s3FileObjectPath, createDefaultAccessControlPolicy(s3User));
+                    return eTag;
+                }
+        );
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

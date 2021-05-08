@@ -28,7 +28,7 @@ public class GetBucketPolicyProcessor extends BucketPolicyProcessor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, true);
+        checkRequestPermissions(parsedRequest, true);
         Optional<byte[]> bucketPolicy = S3_DRIVER.getBucketPolicyBytes(parsedRequest.getS3BucketPath());
         if (bucketPolicy.isEmpty()) {
             throw S3Exception.build("The bucket policy does not exist")

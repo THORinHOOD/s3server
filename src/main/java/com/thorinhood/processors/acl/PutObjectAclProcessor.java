@@ -24,7 +24,7 @@ public class PutObjectAclProcessor extends Processor {
     @Override
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
-        checkRequest(parsedRequest, false);
+        checkRequestPermissions(parsedRequest, false);
         String lastModified = S3_DRIVER.putObjectAcl(parsedRequest.getS3ObjectPath(), parsedRequest.getBytes());
         sendResponseWithoutContent(context, OK, request, Map.of(
                 "Last-Modified", lastModified,

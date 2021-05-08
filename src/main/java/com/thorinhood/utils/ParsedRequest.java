@@ -1,7 +1,7 @@
 package com.thorinhood.utils;
 
-import com.thorinhood.data.S3BucketPath;
-import com.thorinhood.data.S3ObjectPath;
+import com.thorinhood.data.S3FileBucketPath;
+import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
 import com.thorinhood.exceptions.S3Exception;
@@ -17,7 +17,7 @@ import java.util.function.Function;
 public class ParsedRequest {
 
     private byte[] bytes;
-    private S3ObjectPath s3ObjectPath;
+    private S3FileObjectPath s3FileObjectPath;
     private String signature;
     private Credential credential;
     private Integer decodedContentLength;
@@ -38,31 +38,31 @@ public class ParsedRequest {
     }
 
     public boolean isPathToObject() {
-        return !s3ObjectPath.isBucket();
+        return !s3FileObjectPath.isBucket();
     }
 
     public byte[] getBytes() {
         return bytes;
     }
 
-    public S3BucketPath getS3BucketPath() {
-        return s3ObjectPath;
+    public S3FileBucketPath getS3BucketPath() {
+        return s3FileObjectPath;
     }
 
-    public S3ObjectPath getS3ObjectPath() {
-        if (s3ObjectPath.isBucket()) {
-            throw S3Exception.build("Incorrect path to object : " + s3ObjectPath)
+    public S3FileObjectPath getS3ObjectPath() {
+        if (s3FileObjectPath.isBucket()) {
+            throw S3Exception.build("Incorrect path to object : " + s3FileObjectPath)
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
-                    .setMessage("Incorrect path to object : " + s3ObjectPath)
+                    .setMessage("Incorrect path to object : " + s3FileObjectPath)
                     .setResource("1")
                     .setRequestId("1");
         }
-        return s3ObjectPath;
+        return s3FileObjectPath;
     }
 
-    public S3ObjectPath getS3ObjectPathUnsafe() {
-        return s3ObjectPath;
+    public S3FileObjectPath getS3ObjectPathUnsafe() {
+        return s3FileObjectPath;
     }
 
     public String getSignature() {
@@ -153,8 +153,8 @@ public class ParsedRequest {
             return this;
         }
 
-        public Builder setS3ObjectPath(S3ObjectPath s3ObjectPath) {
-            parsedRequest.s3ObjectPath = s3ObjectPath;
+        public Builder setS3ObjectPath(S3FileObjectPath s3FileObjectPath) {
+            parsedRequest.s3FileObjectPath = s3FileObjectPath;
             return this;
         }
 

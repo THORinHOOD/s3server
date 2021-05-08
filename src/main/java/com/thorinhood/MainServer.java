@@ -1,5 +1,6 @@
 package com.thorinhood;
 
+import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
@@ -10,6 +11,7 @@ import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.utils.ArgumentParser;
+import com.thorinhood.utils.RequestUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,7 +42,7 @@ public class MainServer {
         }
 
         EntityLocker entityLocker = new EntityLocker();
-        FileDriversFactory fileFactory = new FileDriversFactory(parsedArgs.get(BASE_PATH), entityLocker);
+        FileDriversFactory fileFactory = new FileDriversFactory(parsedArgs.get(BASE_PATH));
         try {
             fileFactory.init();
         } catch (Exception exception) {
@@ -52,12 +54,13 @@ public class MainServer {
         MetadataDriver metadataDriver = fileFactory.createMetadataDriver();
         PolicyDriver policyDriver = fileFactory.createPolicyDriver();
         EntityDriver entityDriver = fileFactory.createEntityDriver();
-        S3Driver s3Driver = new S3FileDriverImpl(metadataDriver, aclDriver, policyDriver, entityDriver, entityLocker,
-                parsedArgs.get(BASE_PATH));
+        FileDriver fileDriver = fileFactory.createFileDriver();
+        S3Driver s3Driver = new S3FileDriverImpl(metadataDriver, aclDriver, policyDriver, entityDriver, fileDriver,
+                entityLocker);
         if (parsedArgs.containsKey(USERS)) {
             addAllRootUsers(userDriver, parsedArgs.get(USERS));
         }
-        Server server = new Server(port, s3Driver, userDriver);
+        Server server = new Server(port, s3Driver, new RequestUtil(userDriver, parsedArgs.get(BASE_PATH)));
         log.info("port : {}", port);
         log.info("base path : {}", parsedArgs.get(BASE_PATH));
         server.run();

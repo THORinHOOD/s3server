@@ -3,12 +3,10 @@ package com.thorinhood.drivers.principal;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.thorinhood.data.S3BucketPath;
-import com.thorinhood.data.requests.S3ResponseErrorCodes;
+import com.thorinhood.data.S3FileBucketPath;
 import com.thorinhood.data.policy.BucketPolicy;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.FileDriver;
-import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -20,19 +18,16 @@ import java.util.Optional;
 
 public class FilePolicyDriver extends FileDriver implements PolicyDriver {
 
-    private static final String POSTFIX_POLICY_FILE = "-policy.json";
-
     private final ObjectMapper objectMapper;
 
-    public FilePolicyDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
-                            EntityLocker entityLocker) {
-        super(baseFolderPath, configFolderPath, usersFolderPath, entityLocker);
+    public FilePolicyDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
+        super(baseFolderPath, configFolderPath, usersFolderPath);
         this.objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
     @Override
-    public void putBucketPolicy(S3BucketPath s3BucketPath, byte[] bytes) throws S3Exception {
+    public void putBucketPolicy(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception {
         try {
             objectMapper.readValue(bytes, BucketPolicy.class);
         } catch (IOException exception) {
@@ -43,22 +38,25 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
                     .setResource("1")
                     .setRequestId("1");
         }
-        String pathToBucketPolicyFile = getPathToBucketPolicyFile(s3BucketPath, true);
-        String pathToBucketMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, true);
-        Path target = new File(pathToBucketPolicyFile).toPath();
-        Path source = createPreparedTmpFile(new File(pathToBucketMetadataFolder).toPath(), target, bytes);
-        new PreparedOperationFileWrite(source, target, ENTITY_LOCKER).lockAndCommit();
+        Path target = new File(s3FileBucketPath.getPathToBucketPolicyFile()).toPath();
+        Path source = createPreparedTmpFile(new File(s3FileBucketPath.getPathToBucketMetadataFolder()).toPath(), target,
+                bytes);
+        commitFile(source, target);
     }
 
     @Override
-    public Optional<BucketPolicy> getBucketPolicy(S3BucketPath s3BucketPath) throws S3Exception {
-        String pathToBucketPolicy = getPathToBucketPolicyFile(s3BucketPath, false);
-        File file = new File(pathToBucketPolicy);
+    public Optional<BucketPolicy> getBucketPolicy(S3FileBucketPath s3FileBucketPath) throws S3Exception {
+        File file = new File(s3FileBucketPath.getPathToBucketPolicyFile());
         if (!file.exists() || !file.isFile()) {
             return Optional.empty();
         }
-        return Optional.of(ENTITY_LOCKER.read(file.getAbsolutePath(),
-                () -> objectMapper.readValue(file, BucketPolicy.class)));
+        try {
+            return Optional.of(objectMapper.readValue(file, BucketPolicy.class));
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR(exception)
+                    .setResource("1")
+                    .setRequestId("1");
+        }
     }
 
     @Override
@@ -71,11 +69,6 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
                     .setResource("1")
                     .setRequestId("1");
         }
-    }
-
-    private String getPathToBucketPolicyFile(S3BucketPath s3BucketPath, boolean safely) {
-        return getPathToBucketMetadataFolder(s3BucketPath, safely) + File.separatorChar + s3BucketPath.getBucket() +
-                POSTFIX_POLICY_FILE;
     }
 
 }
