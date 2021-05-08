@@ -3,8 +3,8 @@ package com.thorinhood.drivers.acl;
 import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.data.acl.AccessControlPolicy;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
-import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 
 public interface AclDriver {

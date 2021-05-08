@@ -2,7 +2,6 @@ package com.thorinhood.drivers.principal;
 
 import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.policy.BucketPolicy;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
 import com.thorinhood.exceptions.S3Exception;
 
 import java.util.Optional;

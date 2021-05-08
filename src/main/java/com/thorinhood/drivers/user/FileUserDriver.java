@@ -3,6 +3,7 @@ package com.thorinhood.drivers.user;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.FileDriver;
+import com.thorinhood.drivers.lock.EntityLocker;
 import com.thorinhood.exceptions.S3Exception;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,8 +19,9 @@ public class FileUserDriver extends FileDriver implements UserDriver {
 
     private final ObjectMapper objectMapper;
 
-    public FileUserDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
-        super(baseFolderPath, configFolderPath, usersFolderPath);
+    public FileUserDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
+                          EntityLocker entityLocker) {
+        super(baseFolderPath, configFolderPath, usersFolderPath, entityLocker);
         this.objectMapper = new ObjectMapper();
     }
 

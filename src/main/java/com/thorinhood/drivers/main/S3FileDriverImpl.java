@@ -10,8 +10,9 @@ import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
-import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -35,15 +36,19 @@ public class S3FileDriverImpl implements S3Driver {
     private final AclDriver aclDriver;
     private final PolicyDriver policyDriver;
     private final EntityDriver entityDriver;
+    private final EntityLocker entityLocker;
+    private final String baseFolder;
 
     private static final Logger log = LogManager.getLogger(S3FileDriverImpl.class);
 
     public S3FileDriverImpl(MetadataDriver metadataDriver, AclDriver aclDriver, PolicyDriver policyDriver,
-                            EntityDriver entityDriver) {
+                            EntityDriver entityDriver, EntityLocker entityLocker, String baseFolder) {
         this.metadataDriver = metadataDriver;
         this.aclDriver = aclDriver;
         this.policyDriver = policyDriver;
         this.entityDriver = entityDriver;
+        this.entityLocker = entityLocker;
+        this.baseFolder = baseFolder;
     }
 
     @Override
@@ -204,9 +209,11 @@ public class S3FileDriverImpl implements S3Driver {
 
     @Override
     public S3Object getObject(S3ObjectPath s3ObjectPath, HttpHeaders httpHeaders) throws S3Exception {
-        HasMetaData rawS3Object = entityDriver.getObject(s3ObjectPath, httpHeaders);
-        Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3ObjectPath);
-        return rawS3Object.setMetaData(objectMetadata);
+        return entityLocker.read(s3ObjectPath.getFullPathToObject(baseFolder), () -> {
+            HasMetaData rawS3Object = entityDriver.getObject(s3ObjectPath, httpHeaders);
+            Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3ObjectPath);
+            return rawS3Object.setMetaData(objectMetadata);
+        });
     }
 
     @Override

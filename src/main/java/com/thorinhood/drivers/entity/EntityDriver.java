@@ -7,7 +7,7 @@ import com.thorinhood.data.S3User;
 import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
-import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.Pair;
 import io.netty.handler.codec.http.HttpHeaders;

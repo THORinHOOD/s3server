@@ -5,7 +5,7 @@
     <option name="PROGRAM_PARAMETERS" value="--port=9090 --basePath=$USER_HOME$/testBucket --users=$USER_HOME$/users/root.json,$USER_HOME$/users/iam.json" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="com.thorinhood.*" />
+        <option name="PATTERN" value="com.thorinhood.drivers.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>

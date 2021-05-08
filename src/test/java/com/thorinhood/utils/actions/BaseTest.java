@@ -5,6 +5,7 @@ import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
+import com.thorinhood.drivers.lock.EntityLocker;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.main.S3FileDriverImpl;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -61,13 +62,15 @@ public class BaseTest {
         this.BASE_PATH = basePath;
         this.port = port;
         createUsers();
-        FILE_DRIVERS_FACTORY = new FileDriversFactory(basePath);
+        EntityLocker entityLocker = new EntityLocker();
+        FILE_DRIVERS_FACTORY = new FileDriversFactory(basePath, entityLocker);
         USER_DRIVER = FILE_DRIVERS_FACTORY.createUserDriver();
         ACL_DRIVER = FILE_DRIVERS_FACTORY.createAclDriver();
         METADATA_DRIVER = FILE_DRIVERS_FACTORY.createMetadataDriver();
         POLICY_DRIVER = FILE_DRIVERS_FACTORY.createPolicyDriver();
         ENTITY_DRIVER = FILE_DRIVERS_FACTORY.createEntityDriver();
-        S3_DRIVER = new S3FileDriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER);
+        S3_DRIVER = new S3FileDriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER, entityLocker,
+                basePath);
         SERVER = new Server(port, S3_DRIVER, USER_DRIVER);
     }
 
@@ -241,22 +244,30 @@ public class BaseTest {
     protected void checkGetObjectAsync(List<CompletableFuture<ResponseBytes<GetObjectResponse>>> futureList,
            List<String> content, List<Map<String, String>> metadata) throws ExecutionException, InterruptedException {
         for (int i = 0; i < futureList.size(); i++) {
-            ResponseBytes<GetObjectResponse> response = futureList.get(i).get();
+            ResponseBytes<GetObjectResponse> resp;
+            try {
+                resp = futureList.get(i).get();
+            } catch (Exception exception) {
+                Assertions.fail("FAIL : " + i);
+                throw exception;
+            }
             boolean ok = false;
             for (int j = 0; (j < content.size()) && !ok; j++) {
                 String expectedContent = content.get(j);
                 Map<String, String> expectedMetadata = metadata.get(j);
-                boolean eq = response.response().contentLength().equals((long) expectedContent.getBytes().length) &&
-                        calcETag(expectedContent).equals(response.response().eTag()) &&
-                        (expectedMetadata != null ? equalsMaps(expectedMetadata, response.response().metadata()) :
-                            (response.response().metadata() == null || response.response().metadata().isEmpty())) &&
-                        expectedContent.equals(new String(response.asByteArray()));
-                if (eq) {
+                boolean contentLength = resp.response().contentLength()
+                        .equals((long) expectedContent.getBytes().length);
+                boolean eTag = calcETag(expectedContent).equals(resp.response().eTag());
+                boolean meta = expectedMetadata != null ? equalsMaps(expectedMetadata, resp.response().metadata()) :
+                        (resp.response().metadata() == null || resp.response().metadata().isEmpty());
+                boolean contentEq = expectedContent.equals(new String(resp.asByteArray()));
+                if (contentEq && eTag && meta && contentLength) {
                     ok = true;
                 }
             }
             if (!ok) {
-                Assertions.fail("Request got wrong content : length = " + response.response().contentLength());
+                Assertions.fail("Request got wrong content : length = " + resp.response().contentLength() + "(" +
+                        i + "/" + futureList.size() + ")");
             }
         }
     }
@@ -306,7 +317,7 @@ public class BaseTest {
         for (int i = 0; i < futureList.size(); i++) {
             try {
                 PutObjectResponse response = futureList.get(i).get();
-                Assertions.assertEquals(response.eTag(), calcETag(contents.get(i)));
+                Assertions.assertEquals(response.eTag(), calcETag(contents.get(i % 2)));
             } catch (InterruptedException | ExecutionException e) {
                 Assertions.fail(e);
             }

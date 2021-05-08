@@ -1,7 +1,7 @@
 package com.thorinhood.drivers.metadata;
 
 import com.thorinhood.data.S3ObjectPath;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
 import com.thorinhood.exceptions.S3Exception;
 
 import java.util.Map;

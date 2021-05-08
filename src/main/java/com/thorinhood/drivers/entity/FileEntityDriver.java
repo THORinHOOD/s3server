@@ -10,8 +10,9 @@ import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.drivers.FileDriver;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
-import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import com.thorinhood.utils.DateTimeUtil;
@@ -56,8 +57,9 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     private final Map<String, Selector<String>> strSelectors;
     private final Map<String, Selector<Date>> dateSelectors;
 
-    public FileEntityDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
-        super(baseFolderPath, configFolderPath, usersFolderPath);
+    public FileEntityDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
+                            EntityLocker entityLocker) {
+        super(baseFolderPath, configFolderPath, usersFolderPath, entityLocker);
         strSelectors = Map.of(
                 S3Headers.IF_MATCH, new IfMatch(),
                 S3Headers.IF_NONE_MATCH, new IfNoneMatch()
@@ -103,7 +105,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
 
         byte[] bytes;
         try {
-            bytes = Files.readAllBytes(file.toPath());
+            bytes = ENTITY_LOCKER.read(file.getAbsolutePath(), () -> Files.readAllBytes(file.toPath()));
             String eTag = calculateETag(bytes);
             if (httpHeaders != null) {
                 checkSelectors(httpHeaders, eTag, file);
@@ -115,7 +117,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setFile(file)
                     .setRawBytes(bytes)
                     .setLastModified(DateTimeUtil.parseDateTime(file));
-        } catch (IOException | ParseException exception) {
+        } catch (ParseException exception) {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
                     .setResource(File.separatorChar + s3ObjectPath.getKeyWithBucket())
@@ -145,7 +147,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 .setLastModified(DateTimeUtil.parseDateTime(file))
                 .setMetaData(metadata);
         Path source = createPreparedTmpFile(objectMetadataFolder, file.toPath(), bytes);
-        return new PreparedOperationFileCommitWithResult<>(source, file.toPath(), s3Object);
+        return new PreparedOperationFileCommitWithResult<>(source, file.toPath(), s3Object, ENTITY_LOCKER);
     }
 
     @Override
@@ -306,7 +308,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         String partPathStr = currentUploadFolder + File.separatorChar + partNumber;
         Path partPath = new File(partPathStr).toPath();
         Path source = createPreparedTmpFile(new File(currentUploadFolder).toPath(), partPath, bytes);
-        new PreparedOperationFileCommit(source, partPath).lockAndCommit();
+        new PreparedOperationFileCommit(source, partPath, ENTITY_LOCKER).lockAndCommit();
         return calculateETag(bytes);
     }
 
@@ -334,32 +336,34 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 }
             }
             MessageDigest md = MessageDigest.getInstance("MD5");
-            try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file, true))) {
-                for (Part part : parts) {
-                    File partFile = partsFiles.get(part.getPartNumber());
-                    long partSizeInBytes = Files.size(partFile.toPath());
-                    if (partSizeInBytes < MIN_PART_SIZE) {
-                        if (file.exists()) {
-                            file.delete();
+            ENTITY_LOCKER.write(file.getAbsolutePath(), () -> {
+                try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(file, true))) {
+                    for (Part part : parts) {
+                        File partFile = partsFiles.get(part.getPartNumber());
+                        long partSizeInBytes = Files.size(partFile.toPath());
+                        if (partSizeInBytes < MIN_PART_SIZE) {
+                            if (file.exists()) {
+                                file.delete();
+                            }
+                            throw S3Exception.build(ENTITY_TOO_SMALL)
+                                    .setStatus(HttpResponseStatus.BAD_REQUEST)
+                                    .setCode(S3ResponseErrorCodes.ENTITY_TOO_SMALL)
+                                    .setMessage(ENTITY_TOO_SMALL)
+                                    .setResource("1")
+                                    .setRequestId("1");
                         }
-                        throw S3Exception.build(ENTITY_TOO_SMALL)
-                                .setStatus(HttpResponseStatus.BAD_REQUEST)
-                                .setCode(S3ResponseErrorCodes.ENTITY_TOO_SMALL)
-                                .setMessage(ENTITY_TOO_SMALL)
-                                .setResource("1")
-                                .setRequestId("1");
-                    }
-                    try (InputStream input = new BufferedInputStream(new FileInputStream(partFile))) {
-                        byte[] buffer = input.readAllBytes();
-                        String calculatedEtag = DigestUtils.md5Hex(buffer);
-                        if (!part.getETag().equals(calculatedEtag)) {
-                            throw INVALID_PART_EXCEPTION();
+                        try (InputStream input = new BufferedInputStream(new FileInputStream(partFile))) {
+                            byte[] buffer = input.readAllBytes();
+                            String calculatedEtag = DigestUtils.md5Hex(buffer);
+                            if (!part.getETag().equals(calculatedEtag)) {
+                                throw INVALID_PART_EXCEPTION();
+                            }
+                            outputStream.write(buffer);
+                            md.update(buffer);
                         }
-                        outputStream.write(buffer);
-                        md.update(buffer);
                     }
                 }
-            }
+            });
             deleteFolder(currentUploadFolder);
             return DatatypeConverter.printHexBinary(md.digest()).toLowerCase();
         } catch (Exception e) {

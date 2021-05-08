@@ -1,4 +1,4 @@
-package com.thorinhood.drivers;
+package com.thorinhood.drivers.lock;
 
 import java.nio.file.Path;
 
@@ -6,8 +6,8 @@ public class PreparedOperationFileCommitWithResult<T> extends PreparedOperationF
 
     protected T result;
 
-    public PreparedOperationFileCommitWithResult(Path source, Path target, T result) {
-        super(source, target);
+    public PreparedOperationFileCommitWithResult(Path source, Path target, T result, EntityLocker entityLocker) {
+        super(source, target, entityLocker);
         this.result = result;
     }
 

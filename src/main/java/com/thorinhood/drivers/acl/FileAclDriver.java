@@ -6,8 +6,9 @@ import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.acl.Grant;
 import com.thorinhood.drivers.FileDriver;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
-import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
@@ -22,8 +23,9 @@ import java.util.List;
 
 public class FileAclDriver extends FileDriver implements AclDriver {
 
-    public FileAclDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
-        super(baseFolderPath, configFolderPath, usersFolderPath);
+    public FileAclDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
+                         EntityLocker entityLocker) {
+        super(baseFolderPath, configFolderPath, usersFolderPath, entityLocker);
     }
 
     @Override
@@ -61,7 +63,8 @@ public class FileAclDriver extends FileDriver implements AclDriver {
         String lastModified = metaFile.exists() ? DateTimeUtil.parseDateTime(metaFile) : null;
         Path source = createPreparedTmpFile(new File(pathToMetadataFolder).toPath(), metaFile.toPath(), xml.getBytes());
         return new PreparedOperationFileCommitWithResult<>(source, metaFile.toPath(),
-                lastModified != null ? lastModified : DateTimeUtil.parseDateTime(new File(pathToMetafile)));
+                lastModified != null ? lastModified : DateTimeUtil.parseDateTime(new File(pathToMetafile)),
+                ENTITY_LOCKER);
     }
 
     private AccessControlPolicy getAcl(String pathToMetaFile) throws S3Exception {
@@ -72,16 +75,9 @@ public class FileAclDriver extends FileDriver implements AclDriver {
                     .setResource("1")
                     .setRequestId("1");
         }
-        try {
-            byte[] bytes = new FileInputStream(file).readAllBytes();
-            Document document = XmlUtil.parseXmlFromBytes(bytes);
-            return AccessControlPolicy.buildFromNode(document.getDocumentElement());
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
-                    .setMessage(exception.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
-        }
+        byte[] bytes = ENTITY_LOCKER.read(file.getAbsolutePath(), () -> new FileInputStream(file).readAllBytes());
+        Document document = XmlUtil.parseXmlFromBytes(bytes);
+        return AccessControlPolicy.buildFromNode(document.getDocumentElement());
     }
 
     private String getPathToBucketAclFile(S3BucketPath s3BucketPath, boolean safely) {
@@ -109,8 +105,7 @@ public class FileAclDriver extends FileDriver implements AclDriver {
             grantList.add(grant);
         }
         aclBuilder.setAccessControlList(grantList);
-        AccessControlPolicy acl = aclBuilder.build();
-        return acl;
+        return aclBuilder.build();
     }
 
     private String inputStreamToString(InputStream is) throws IOException {

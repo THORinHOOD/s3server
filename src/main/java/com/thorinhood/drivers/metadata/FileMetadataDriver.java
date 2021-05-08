@@ -2,12 +2,12 @@ package com.thorinhood.drivers.metadata;
 
 import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.drivers.FileDriver;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
 import com.thorinhood.exceptions.S3Exception;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -15,8 +15,9 @@ import java.util.Map;
 
 public class FileMetadataDriver extends FileDriver implements MetadataDriver {
 
-    public FileMetadataDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
-        super(baseFolderPath, configFolderPath, usersFolderPath);
+    public FileMetadataDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
+                              EntityLocker entityLocker) {
+        super(baseFolderPath, configFolderPath, usersFolderPath, entityLocker);
     }
 
     @Override
@@ -30,16 +31,16 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
         }
         Path source = createPreparedTmpFile(new File(pathToMetadataFolder).toPath(), file.toPath(),
                 content.toString().getBytes());
-        return new PreparedOperationFileCommit(source, file.toPath());
+        return new PreparedOperationFileCommit(source, file.toPath(), ENTITY_LOCKER);
     }
 
     @Override
     public Map<String, String> getObjectMetadata(S3ObjectPath s3ObjectPath) throws S3Exception {
         File file = new File(getObjectMetaFile(s3ObjectPath, false));
-        try {
-            if (!file.exists()) {
-                return Map.of();
-            }
+        if (!file.exists()) {
+            return Map.of();
+        }
+        return ENTITY_LOCKER.read(file.getAbsolutePath(), () -> {
             Map<String, String> metadata = new HashMap<>();
             StringBuilder currentLine = new StringBuilder();
             String keyMeta = null;
@@ -59,12 +60,7 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
                 }
             }
             return metadata;
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
-                    .setMessage(exception.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
-        }
+        });
     }
 
     private String getBucketMetaFile(S3ObjectPath s3ObjectPath, boolean safely) {

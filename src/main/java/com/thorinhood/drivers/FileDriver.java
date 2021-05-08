@@ -2,6 +2,7 @@ package com.thorinhood.drivers;
 
 import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.S3ObjectPath;
+import com.thorinhood.drivers.lock.EntityLocker;
 import com.thorinhood.exceptions.S3Exception;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,11 +27,14 @@ public class FileDriver {
     protected final String BASE_FOLDER_PATH;
     protected final String CONFIG_FOLDER_PATH;
     protected final String USERS_FOLDER_PATH;
+    protected final EntityLocker ENTITY_LOCKER;
 
-    protected FileDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
+    protected FileDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
+                         EntityLocker entityLocker) {
         this.BASE_FOLDER_PATH = baseFolderPath;
         this.CONFIG_FOLDER_PATH = configFolderPath;
         this.USERS_FOLDER_PATH = usersFolderPath;
+        this.ENTITY_LOCKER = entityLocker;
     }
 
     protected String getPathToBucketMetadataFolder(S3BucketPath s3BucketPath, boolean safely) throws S3Exception {

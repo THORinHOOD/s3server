@@ -7,8 +7,8 @@ import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.drivers.FileDriver;
-import com.thorinhood.drivers.PreparedOperationFileCommit;
-import com.thorinhood.drivers.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -24,8 +24,9 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
 
     private final ObjectMapper objectMapper;
 
-    public FilePolicyDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
-        super(baseFolderPath, configFolderPath, usersFolderPath);
+    public FilePolicyDriver(String baseFolderPath, String configFolderPath, String usersFolderPath,
+                            EntityLocker entityLocker) {
+        super(baseFolderPath, configFolderPath, usersFolderPath, entityLocker);
         this.objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
@@ -46,26 +47,18 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
         String pathToBucketMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, true);
         Path target = new File(pathToBucketPolicyFile).toPath();
         Path source = createPreparedTmpFile(new File(pathToBucketMetadataFolder).toPath(), target, bytes);
-        new PreparedOperationFileCommit(source, target).lockAndCommit();
+        new PreparedOperationFileCommit(source, target, ENTITY_LOCKER).lockAndCommit();
     }
 
     @Override
     public Optional<BucketPolicy> getBucketPolicy(S3BucketPath s3BucketPath) throws S3Exception {
         String pathToBucketPolicy = getPathToBucketPolicyFile(s3BucketPath, false);
-        BucketPolicy bucketPolicy = null;
         File file = new File(pathToBucketPolicy);
         if (!file.exists() || !file.isFile()) {
             return Optional.empty();
         }
-        try {
-            bucketPolicy = objectMapper.readValue(file, BucketPolicy.class);
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't find bucket policy")
-                    .setMessage("Can't find bucket policy")
-                    .setResource("1")
-                    .setRequestId("1");
-        }
-        return Optional.of(bucketPolicy);
+        return Optional.of(ENTITY_LOCKER.read(file.getAbsolutePath(),
+                () -> objectMapper.readValue(file, BucketPolicy.class)));
     }
 
     @Override
