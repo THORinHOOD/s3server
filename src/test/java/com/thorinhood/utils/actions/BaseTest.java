@@ -270,13 +270,7 @@ public class BaseTest {
     protected void checkGetObjectAsync(List<CompletableFuture<ResponseBytes<GetObjectResponse>>> futureList,
            List<String> content, List<Map<String, String>> metadata) throws ExecutionException, InterruptedException {
         for (int i = 0; i < futureList.size(); i++) {
-            ResponseBytes<GetObjectResponse> resp;
-            try {
-                resp = futureList.get(i).get();
-            } catch (Exception exception) {
-                Assertions.fail("FAIL : " + i);
-                throw exception;
-            }
+            ResponseBytes<GetObjectResponse> resp = futureList.get(i).get();
             boolean ok = false;
             for (int j = 0; (j < content.size()) && !ok; j++) {
                 String expectedContent = content.get(j);

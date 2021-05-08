@@ -3,6 +3,7 @@ package com.thorinhood.drivers;
 import com.thorinhood.data.S3BucketPath;
 import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.PreparedOperationFileDelete;
 import com.thorinhood.exceptions.S3Exception;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -64,6 +65,26 @@ public class FileDriver {
             createFolder(result);
         }
         return result;
+    }
+
+    protected String getPathToBucketMetaFile(S3ObjectPath s3ObjectPath, boolean safely) {
+        String pathToMetaFolder = getPathToBucketMetadataFolder(s3ObjectPath, safely);
+        return pathToMetaFolder + File.separatorChar + s3ObjectPath.getBucket() + ".meta";
+    }
+
+    protected String getPathToObjectMetaFile(S3ObjectPath s3ObjectPath, boolean safely) {
+        String pathToMetaFolder = getPathToObjectMetadataFolder(s3ObjectPath, safely);
+        return pathToMetaFolder + File.separatorChar + s3ObjectPath.getName() + ".meta";
+    }
+
+    protected String getPathToBucketAclFile(S3BucketPath s3BucketPath, boolean safely) {
+        return getPathToBucketMetadataFolder(s3BucketPath, safely) + File.separatorChar + s3BucketPath.getBucket() +
+                ".acl";
+    }
+
+    protected String getPathToObjectAclFile(S3ObjectPath s3ObjectPath, boolean safely) {
+        return getPathToObjectMetadataFolder(s3ObjectPath, safely) + File.separatorChar + s3ObjectPath.getName() +
+                ".acl";
     }
 
     protected boolean isConfigFolder(Path path) {
@@ -131,7 +152,7 @@ public class FileDriver {
                 Files.walkFileTree(folder.toPath(), new SimpleFileVisitor<Path>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        Files.delete(file);
+                        new PreparedOperationFileDelete(file, ENTITY_LOCKER).lockAndCommit();
                         return FileVisitResult.CONTINUE;
                     }
                     @Override

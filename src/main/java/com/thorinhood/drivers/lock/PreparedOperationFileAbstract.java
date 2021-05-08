@@ -3,23 +3,18 @@ package com.thorinhood.drivers.lock;
 import com.thorinhood.drivers.S3Runnable;
 import com.thorinhood.exceptions.S3Exception;
 
-import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 
-public class PreparedOperationFileCommit {
+public abstract class PreparedOperationFileAbstract {
 
     protected Path target;
-    protected Path source;
     protected EntityLocker entityLocker;
 
-    public PreparedOperationFileCommit(Path source, Path target, EntityLocker entityLocker) {
+    public PreparedOperationFileAbstract(Path target, EntityLocker entityLocker) {
         this.target = target;
-        this.source = source;
         this.entityLocker = entityLocker;
     }
 
@@ -52,14 +47,5 @@ public class PreparedOperationFileCommit {
         });
     }
 
-    private void commit() throws S3Exception {
-        try {
-            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1"); // TODO
-        }
-    }
-
+    protected abstract void commit() throws S3Exception;
 }

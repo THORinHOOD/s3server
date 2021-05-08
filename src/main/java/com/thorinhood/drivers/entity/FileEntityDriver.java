@@ -11,8 +11,9 @@ import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.PreparedOperationFileDelete;
+import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
+import com.thorinhood.drivers.lock.PreparedOperationFileWriteWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
 import com.thorinhood.utils.DateTimeUtil;
@@ -126,8 +127,8 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
-    public PreparedOperationFileCommitWithResult<S3Object> putObject(S3ObjectPath s3ObjectPath, byte[] bytes,
-                                                                     Map<String, String> metadata) throws S3Exception {
+    public PreparedOperationFileWriteWithResult<S3Object> putObject(S3ObjectPath s3ObjectPath, byte[] bytes,
+                                                                    Map<String, String> metadata) throws S3Exception {
         String absolutePath = s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH);
         File file = new File(absolutePath);
         if (!processFolders(file, s3ObjectPath.getBucket())) {
@@ -147,15 +148,21 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 .setLastModified(DateTimeUtil.parseDateTime(file))
                 .setMetaData(metadata);
         Path source = createPreparedTmpFile(objectMetadataFolder, file.toPath(), bytes);
-        return new PreparedOperationFileCommitWithResult<>(source, file.toPath(), s3Object, ENTITY_LOCKER);
+        return new PreparedOperationFileWriteWithResult<>(source, file.toPath(), s3Object, ENTITY_LOCKER);
     }
 
     @Override
     public void deleteObject(S3ObjectPath s3ObjectPath) throws S3Exception {
         String pathToObject = s3ObjectPath.getFullPathToObject(BASE_FOLDER_PATH);
         String pathToObjectMetadataFolder = getPathToObjectMetadataFolder(s3ObjectPath, false);
+        String pathToMetadata = getPathToObjectMetaFile(s3ObjectPath, false);
+        String pathToAcl = getPathToObjectAclFile(s3ObjectPath, false);
+        new PreparedOperationFileDelete(new File(pathToObject).toPath(), ENTITY_LOCKER).lockAndCommitAfter(() ->
+            new PreparedOperationFileDelete(new File(pathToMetadata).toPath(), ENTITY_LOCKER).lockAndCommitAfter(
+                () -> new PreparedOperationFileDelete(new File(pathToAcl).toPath(), ENTITY_LOCKER).lockAndCommit()
+            )
+        );
         deleteFolder(pathToObjectMetadataFolder);
-        deleteFile(pathToObject);
         deleteEmptyKeys(new File(pathToObject));
     }
 
@@ -298,7 +305,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         if (!existsFolder(uploadFolder)) {
             return;
         }
-        deleteFolder(uploadFolder); // TODO Clear empty
+        deleteFolder(uploadFolder);
     }
 
     @Override
@@ -308,7 +315,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         String partPathStr = currentUploadFolder + File.separatorChar + partNumber;
         Path partPath = new File(partPathStr).toPath();
         Path source = createPreparedTmpFile(new File(currentUploadFolder).toPath(), partPath, bytes);
-        new PreparedOperationFileCommit(source, partPath, ENTITY_LOCKER).lockAndCommit();
+        new PreparedOperationFileWrite(source, partPath, ENTITY_LOCKER).lockAndCommit();
         return calculateETag(bytes);
     }
 

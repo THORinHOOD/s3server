@@ -7,8 +7,8 @@ import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.acl.Grant;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
+import com.thorinhood.drivers.lock.PreparedOperationFileWriteWithResult;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.DateTimeUtil;
 import com.thorinhood.utils.XmlUtil;
@@ -29,7 +29,7 @@ public class FileAclDriver extends FileDriver implements AclDriver {
     }
 
     @Override
-    public PreparedOperationFileCommitWithResult<String> putObjectAcl(S3ObjectPath s3ObjectPath, AccessControlPolicy acl)
+    public PreparedOperationFileWriteWithResult<String> putObjectAcl(S3ObjectPath s3ObjectPath, AccessControlPolicy acl)
             throws S3Exception {
         String pathToMetafile = getPathToObjectAclFile(s3ObjectPath, true);
         String pathToMetadataFolder = getPathToObjectMetadataFolder(s3ObjectPath, true);
@@ -43,7 +43,7 @@ public class FileAclDriver extends FileDriver implements AclDriver {
     }
 
     @Override
-    public PreparedOperationFileCommit putBucketAcl(S3BucketPath s3BucketPath, AccessControlPolicy acl)
+    public PreparedOperationFileWrite putBucketAcl(S3BucketPath s3BucketPath, AccessControlPolicy acl)
             throws S3Exception {
         String pathToMetafile = getPathToBucketAclFile(s3BucketPath, true);
         String pathToMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, true);
@@ -56,13 +56,13 @@ public class FileAclDriver extends FileDriver implements AclDriver {
         return getAcl(pathToMetafile);
     }
 
-    private PreparedOperationFileCommitWithResult<String> putAcl(String pathToMetadataFolder, String pathToMetafile,
-                                                                 AccessControlPolicy acl) throws S3Exception {
+    private PreparedOperationFileWriteWithResult<String> putAcl(String pathToMetadataFolder, String pathToMetafile,
+                                                                AccessControlPolicy acl) throws S3Exception {
         String xml = acl.buildXmlText();
         File metaFile = new File(pathToMetafile);
         String lastModified = metaFile.exists() ? DateTimeUtil.parseDateTime(metaFile) : null;
         Path source = createPreparedTmpFile(new File(pathToMetadataFolder).toPath(), metaFile.toPath(), xml.getBytes());
-        return new PreparedOperationFileCommitWithResult<>(source, metaFile.toPath(),
+        return new PreparedOperationFileWriteWithResult<>(source, metaFile.toPath(),
                 lastModified != null ? lastModified : DateTimeUtil.parseDateTime(new File(pathToMetafile)),
                 ENTITY_LOCKER);
     }
@@ -78,15 +78,6 @@ public class FileAclDriver extends FileDriver implements AclDriver {
         byte[] bytes = ENTITY_LOCKER.read(file.getAbsolutePath(), () -> new FileInputStream(file).readAllBytes());
         Document document = XmlUtil.parseXmlFromBytes(bytes);
         return AccessControlPolicy.buildFromNode(document.getDocumentElement());
-    }
-
-    private String getPathToBucketAclFile(S3BucketPath s3BucketPath, boolean safely) {
-        return getPathToBucketMetadataFolder(s3BucketPath, safely) + File.separatorChar + s3BucketPath.getBucket() +
-                ".acl";
-    }
-
-    private String getPathToObjectAclFile(S3ObjectPath s3ObjectPath, boolean safely) {
-        return getPathToObjectMetadataFolder(s3ObjectPath, safely) + File.separatorChar + s3ObjectPath.getName() + ".acl";
     }
 
     public AccessControlPolicy parseFromBytes(byte[] bytes) throws S3Exception {
@@ -106,17 +97,6 @@ public class FileAclDriver extends FileDriver implements AclDriver {
         }
         aclBuilder.setAccessControlList(grantList);
         return aclBuilder.build();
-    }
-
-    private String inputStreamToString(InputStream is) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        String line;
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-        }
-        return sb.toString();
     }
 
 }

@@ -11,8 +11,8 @@ import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommitWithResult;
+import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
+import com.thorinhood.drivers.lock.PreparedOperationFileWriteWithResult;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -195,7 +194,7 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public String putObjectAcl(S3ObjectPath s3ObjectPath, byte[] bytes) throws S3Exception {
         AccessControlPolicy acl = aclDriver.parseFromBytes(bytes);
-        PreparedOperationFileCommitWithResult<String> putAcl = aclDriver.putObjectAcl(s3ObjectPath, acl);
+        PreparedOperationFileWriteWithResult<String> putAcl = aclDriver.putObjectAcl(s3ObjectPath, acl);
         putAcl.lockAndCommit();
         return putAcl.getResult();
     }
@@ -219,9 +218,9 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public S3Object putObject(S3ObjectPath s3ObjectPath, byte[] bytes, Map<String, String> metadata, S3User s3User)
             throws S3Exception {
-        PreparedOperationFileCommitWithResult<S3Object> putObject = entityDriver.putObject(s3ObjectPath, bytes, metadata);
-        PreparedOperationFileCommit putObjectMetadata = metadataDriver.putObjectMetadata(s3ObjectPath, metadata);
-        PreparedOperationFileCommit putObjectAcl = aclDriver.putObjectAcl(s3ObjectPath,
+        PreparedOperationFileWriteWithResult<S3Object> putObject = entityDriver.putObject(s3ObjectPath, bytes, metadata);
+        PreparedOperationFileWrite putObjectMetadata = metadataDriver.putObjectMetadata(s3ObjectPath, metadata);
+        PreparedOperationFileWrite putObjectAcl = aclDriver.putObjectAcl(s3ObjectPath,
                 createDefaultAccessControlPolicy(s3User));
         putObject.lockAndCommitAfter(() -> putObjectMetadata.lockAndCommitAfter(putObjectAcl::lockAndCommit));
         return putObject.getResult();

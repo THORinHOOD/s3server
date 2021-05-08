@@ -8,7 +8,7 @@ import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -47,7 +47,7 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
         String pathToBucketMetadataFolder = getPathToBucketMetadataFolder(s3BucketPath, true);
         Path target = new File(pathToBucketPolicyFile).toPath();
         Path source = createPreparedTmpFile(new File(pathToBucketMetadataFolder).toPath(), target, bytes);
-        new PreparedOperationFileCommit(source, target, ENTITY_LOCKER).lockAndCommit();
+        new PreparedOperationFileWrite(source, target, ENTITY_LOCKER).lockAndCommit();
     }
 
     @Override

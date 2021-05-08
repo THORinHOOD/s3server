@@ -3,12 +3,11 @@ package com.thorinhood.drivers.metadata;
 import com.thorinhood.data.S3ObjectPath;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.lock.EntityLocker;
-import com.thorinhood.drivers.lock.PreparedOperationFileCommit;
+import com.thorinhood.drivers.lock.PreparedOperationFileWrite;
 import com.thorinhood.exceptions.S3Exception;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,9 +20,9 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
     }
 
     @Override
-    public PreparedOperationFileCommit putObjectMetadata(S3ObjectPath s3ObjectPath,
-                                                         Map<String, String> metadata) throws S3Exception {
-        File file = new File(getObjectMetaFile(s3ObjectPath, true));
+    public PreparedOperationFileWrite putObjectMetadata(S3ObjectPath s3ObjectPath,
+                                                        Map<String, String> metadata) throws S3Exception {
+        File file = new File(getPathToObjectMetaFile(s3ObjectPath, true));
         String pathToMetadataFolder = getPathToObjectMetadataFolder(s3ObjectPath, true);
         StringBuilder content = new StringBuilder();
         for (Map.Entry<String, String> entry : metadata.entrySet()) {
@@ -31,12 +30,12 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
         }
         Path source = createPreparedTmpFile(new File(pathToMetadataFolder).toPath(), file.toPath(),
                 content.toString().getBytes());
-        return new PreparedOperationFileCommit(source, file.toPath(), ENTITY_LOCKER);
+        return new PreparedOperationFileWrite(source, file.toPath(), ENTITY_LOCKER);
     }
 
     @Override
     public Map<String, String> getObjectMetadata(S3ObjectPath s3ObjectPath) throws S3Exception {
-        File file = new File(getObjectMetaFile(s3ObjectPath, false));
+        File file = new File(getPathToObjectMetaFile(s3ObjectPath, false));
         if (!file.exists()) {
             return Map.of();
         }
@@ -61,16 +60,6 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
             }
             return metadata;
         });
-    }
-
-    private String getBucketMetaFile(S3ObjectPath s3ObjectPath, boolean safely) {
-        String pathToMetaFolder = getPathToBucketMetadataFolder(s3ObjectPath, safely);
-        return pathToMetaFolder + File.separatorChar + s3ObjectPath.getBucket() + ".meta";
-    }
-
-    private String getObjectMetaFile(S3ObjectPath s3ObjectPath, boolean safely) {
-        String pathToMetaFolder = getPathToObjectMetadataFolder(s3ObjectPath, safely);
-        return pathToMetaFolder + File.separatorChar + s3ObjectPath.getName() + ".meta";
     }
 
 }

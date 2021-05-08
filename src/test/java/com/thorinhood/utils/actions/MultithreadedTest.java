@@ -24,8 +24,8 @@ public class MultithreadedTest extends BaseTest {
         S3AsyncClient s3Async = getS3AsyncClient(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
 
         createBucketRaw(s3, "bucket");
-        String firstContent = createContent(100);
-        String secondContent = createContent(200);
+        String firstContent = createContent(500);
+        String secondContent = createContent(1000);
         Map<String, String> metadataFirst = Map.of("key1", "value1");
         Map<String, String> metadataSecond = Map.of("key2", "value2");
         List<String> contents = new ArrayList<>();
