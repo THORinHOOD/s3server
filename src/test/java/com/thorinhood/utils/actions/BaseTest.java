@@ -22,6 +22,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.utils.SdkAutoCloseable;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +57,9 @@ public class BaseTest {
 
     private Thread serverThread;
 
+    private List<S3Client> s3ClientsCash;
+    private List<S3AsyncClient> s3AsyncClientsCash;
+
     public BaseTest(String baseFolderName, int port) {
         String home = System.getenv("HOME");
         String basePath = home + File.separatorChar + baseFolderName;
@@ -78,6 +82,18 @@ public class BaseTest {
     @BeforeEach
     void beforeEach() throws Exception {
         reloadFs();
+    }
+
+    @AfterEach
+    void afterEach() {
+        if (s3ClientsCash != null && !s3ClientsCash.isEmpty()) {
+            s3ClientsCash.forEach(SdkAutoCloseable::close);
+            s3ClientsCash.clear();
+        }
+        if (s3AsyncClientsCash != null && !s3AsyncClientsCash.isEmpty()) {
+            s3AsyncClientsCash.forEach(SdkAutoCloseable::close);
+            s3AsyncClientsCash.clear();
+        }
     }
 
     @BeforeAll
@@ -109,11 +125,21 @@ public class BaseTest {
     }
 
     protected S3Client getS3Client(boolean chunked, String accessKey, String secretKey) {
-        return SdkUtil.build(port, Region.US_WEST_2, chunked, accessKey, secretKey);
+        S3Client s3Client = SdkUtil.build(port, Region.US_WEST_2, chunked, accessKey, secretKey);
+        if (s3ClientsCash == null) {
+            s3ClientsCash = new ArrayList<>();
+        }
+        s3ClientsCash.add(s3Client);
+        return s3Client;
     }
 
     protected S3AsyncClient getS3AsyncClient(boolean chunked, String accessKey, String secretKey) {
-        return SdkUtil.buildAsync(port, Region.US_WEST_2, chunked, accessKey, secretKey);
+        S3AsyncClient s3AsyncClient = SdkUtil.buildAsync(port, Region.US_WEST_2, chunked, accessKey, secretKey);
+        if (s3AsyncClientsCash == null) {
+            s3AsyncClientsCash = new ArrayList<>();
+        }
+        s3AsyncClientsCash.add(s3AsyncClient);
+        return s3AsyncClient;
     }
 
     protected void initUsers() {
@@ -267,7 +293,7 @@ public class BaseTest {
             }
             if (!ok) {
                 Assertions.fail("Request got wrong content : length = " + resp.response().contentLength() + "(" +
-                        i + "/" + futureList.size() + ")");
+                        i + "/" + futureList.size() + ")\n" + resp);
             }
         }
     }

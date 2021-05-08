@@ -53,28 +53,11 @@ public class GetObjectProcessor extends Processor {
                 response.headers().set("x-amz-meta-" + metaKey, metaValue));
 
         context.write(response);
-        ChannelFuture sendFileFuture;
         ChannelFuture lastContentFuture;
 
-        sendFileFuture = context.write(new DefaultFileRegion(raf.getChannel(), 0, s3Object.getFile().length()),
+        context.write(new DefaultFileRegion(raf.getChannel(), 0, s3Object.getFile().length()),
                 context.newProgressivePromise());
         lastContentFuture = context.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-
-        sendFileFuture.addListener(new ChannelProgressiveFutureListener() {
-            @Override
-            public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) {
-                if (total < 0) {
-                    log.info(future.channel() + " Transfer progress: " + progress);
-                } else {
-                    log.info(future.channel() + " Transfer progress: " + progress + " / " + total);
-                }
-            }
-
-            @Override
-            public void operationComplete(ChannelProgressiveFuture future) {
-                log.info(future.channel() + " Transfer complete.");
-            }
-        });
 
         if (!keepAlive) {
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
