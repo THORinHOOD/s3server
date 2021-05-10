@@ -8,4 +8,5 @@ public interface HasMetaData {
     S3Object setMetaData(Map<String, String> metadata);
     Map<String, String> getMetaData();
     S3FileObjectPath getS3Path();
+    byte[] getRawBytes();
 }

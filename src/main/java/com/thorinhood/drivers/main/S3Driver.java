@@ -4,6 +4,7 @@ import com.thorinhood.data.*;
 import com.thorinhood.data.acl.AccessControlPolicy;
 import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.policy.BucketPolicy;
+import com.thorinhood.data.results.CopyObjectResult;
 import com.thorinhood.data.results.GetBucketsResult;
 import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.data.s3object.S3Object;
@@ -35,6 +36,7 @@ public interface S3Driver extends AclPermissionChecker {
             throws S3Exception;
     void deleteObject(S3FileObjectPath s3FileObjectPath) throws S3Exception;
     void deleteBucket(S3FileBucketPath s3FileBucketPath) throws S3Exception;
+    CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, S3User s3User) throws S3Exception;
 
     // Lists
     ListBucketResult getBucketObjects(GetBucketObjects request) throws S3Exception;
@@ -46,4 +48,7 @@ public interface S3Driver extends AclPermissionChecker {
     String putUploadPart(S3FileObjectPath s3FileObjectPath, String uploadId, int partNumber, byte[] bytes) throws S3Exception;
     String completeMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId, List<Part> parts, S3User s3User)
             throws S3Exception;
+
+    //Additional
+    S3FileObjectPath buildPathToObject(String bucketKeyToObject);
 }

@@ -29,5 +29,6 @@ public interface EntityDriver {
     String putUploadPart(S3FileObjectPath s3FileObjectPath, String uploadId, int partNumber, byte[] bytes)
             throws S3Exception;
     String completeMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId, List<Part> parts)
-            throws S3Exception; // TODO
+            throws S3Exception;
+    S3ObjectETag copyObject(S3FileObjectPath source, S3FileObjectPath target) throws S3Exception;
 }

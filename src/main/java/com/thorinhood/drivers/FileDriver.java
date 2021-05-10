@@ -222,4 +222,8 @@ public class FileDriver {
     public boolean isFileExists(Path path) {
         return isFileExists(path.toFile());
     }
+
+    public S3FileObjectPath buildPathToObject(String bucketKey) {
+        return S3FileObjectPath.relative(BASE_FOLDER_PATH, bucketKey.substring(1));
+    }
 }

@@ -9,6 +9,7 @@ import com.thorinhood.data.requests.S3Headers;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
+import com.thorinhood.data.s3object.S3ObjectETag;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
@@ -342,6 +343,14 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setResource("1")
                     .setRequestId("1");
         }
+    }
+
+    @Override
+    public S3ObjectETag copyObject(S3FileObjectPath source, S3FileObjectPath target) throws S3Exception {
+        HasMetaData object = getObject(source, null, null);
+        S3Object s3Object = putObject(target, object.getRawBytes(), null);
+        deleteObject(source);
+        return new S3ObjectETag(s3Object.getETag(), target);
     }
 
     private String calculateETag(byte[] bytes) {

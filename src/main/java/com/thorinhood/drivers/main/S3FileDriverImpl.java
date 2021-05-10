@@ -5,6 +5,7 @@ import com.thorinhood.data.acl.*;
 import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.policy.Statement;
+import com.thorinhood.data.results.CopyObjectResult;
 import com.thorinhood.data.results.GetBucketsResult;
 import com.thorinhood.data.results.ListBucketResult;
 import com.thorinhood.data.s3object.HasMetaData;
@@ -236,7 +237,7 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public void createBucket(S3FileBucketPath s3FileBucketPath, S3User s3User) throws S3Exception {
         entityLocker.writeBucket(
-            s3FileBucketPath.getPathToBucket(),
+            s3FileBucketPath,
             () -> {
                 entityDriver.createBucket(s3FileBucketPath, s3User);
                 fileDriver.createFolder(s3FileBucketPath.getPathToBucketMetadataFolder());
@@ -249,10 +250,7 @@ public class S3FileDriverImpl implements S3Driver {
     public S3Object getObject(S3FileObjectPath s3FileObjectPath, HttpHeaders httpHeaders) throws S3Exception {
         fileDriver.checkObject(s3FileObjectPath);
         return entityLocker.readObject(
-            s3FileObjectPath.getPathToBucket(),
-            s3FileObjectPath.getPathToObjectMetadataFolder(),
-            s3FileObjectPath.getPathToObjectMetaFile(),
-            s3FileObjectPath.getPathToObject(),
+            s3FileObjectPath,
             () -> {
                 Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3FileObjectPath);
                 HasMetaData rawS3Object = entityDriver.getObject(s3FileObjectPath,
@@ -264,14 +262,21 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
+    public CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, S3User s3User)
+            throws S3Exception {
+        S3Object sourceObject = getObject(source, null);
+        S3Object targetObject = putObject(target, sourceObject.getRawBytes(), sourceObject.getMetaData(), s3User);
+        return CopyObjectResult.builder()
+                .setETag(targetObject.getETag())
+                .setLastModified(DateTimeUtil.parseDateTimeISO(targetObject.getFile()))
+                .build();
+    }
+
+    @Override
     public S3Object putObject(S3FileObjectPath s3FileObjectPath, byte[] bytes, Map<String, String> metadata,
                               S3User s3User) throws S3Exception {
         return entityLocker.writeObject(
-            s3FileObjectPath.getPathToBucket(),
-            s3FileObjectPath.getPathToObjectMetadataFolder(),
-            s3FileObjectPath.getPathToObjectMetaFile(),
-            s3FileObjectPath.getPathToObjectAclFile(),
-            s3FileObjectPath.getPathToObject(),
+            s3FileObjectPath,
             () -> {
                 fileDriver.createFolder(s3FileObjectPath.getPathToObjectMetadataFolder());
                 S3Object s3Object = entityDriver.putObject(s3FileObjectPath, bytes, metadata);
@@ -285,22 +290,12 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public void deleteObject(S3FileObjectPath s3FileObjectPath) throws S3Exception {
         fileDriver.checkObject(s3FileObjectPath);
-        entityLocker.deleteObject(
-            s3FileObjectPath.getPathToBucket(),
-            s3FileObjectPath.getPathToObjectMetadataFolder(),
-            s3FileObjectPath.getPathToObjectMetaFile(),
-            s3FileObjectPath.getPathToObjectAclFile(),
-            s3FileObjectPath.getPathToObject(),
-            () -> entityDriver.deleteObject(s3FileObjectPath)
-        );
+        entityLocker.deleteObject(s3FileObjectPath, () -> entityDriver.deleteObject(s3FileObjectPath));
     }
 
     @Override
     public void deleteBucket(S3FileBucketPath s3FileBucketPath) throws S3Exception {
-        entityLocker.writeBucket(
-            s3FileBucketPath.getPathToBucket(),
-            () -> entityDriver.deleteBucket(s3FileBucketPath)
-        );
+        entityLocker.writeBucket(s3FileBucketPath, () -> entityDriver.deleteBucket(s3FileBucketPath));
     }
 
     @Override
@@ -448,6 +443,11 @@ public class S3FileDriverImpl implements S3Driver {
                     return eTag;
                 }
         );
+    }
+
+    @Override
+    public S3FileObjectPath buildPathToObject(String bucketKeyToObject) {
+        return fileDriver.buildPathToObject(bucketKeyToObject);
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

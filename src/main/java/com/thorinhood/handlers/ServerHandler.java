@@ -55,6 +55,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final AbortMultipartUploadProcessor abortMultipartUploadProcessor;
     private final UploadPartProcessor uploadPartProcessor;
     private final CompleteMultipartUploadProcessor completeMultipartUploadProcessor;
+    private final CopyObjectProcessor copyObjectProcessor;
 
     public ServerHandler(S3Driver s3Driver, RequestUtil requestUtil) {
         this.requestUtil = requestUtil;
@@ -75,6 +76,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         abortMultipartUploadProcessor = new AbortMultipartUploadProcessor(s3Driver);
         uploadPartProcessor = new UploadPartProcessor(s3Driver);
         completeMultipartUploadProcessor = new CompleteMultipartUploadProcessor(s3Driver);
+        copyObjectProcessor = new CopyObjectProcessor(s3Driver);
     }
 
     @Override
@@ -157,6 +159,9 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             } else if (parsedRequest.isPathToObject() && checkRequestS3Type(request, "partNumber") &&
                        checkRequestS3Type(request, "uploadId")) {
                 uploadPartProcessor.process(context, request, parsedRequest);
+            } else if (parsedRequest.isPathToObject() &&
+                       checkRequestS3TypeByHeader(request, "x-amz-copy-source")) {
+                copyObjectProcessor.process(context, request, parsedRequest);
             } else if (parsedRequest.isPathToObject()) {
                 putObjectProcessor.process(context, request, parsedRequest);
             } else {
@@ -185,6 +190,10 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
     private boolean isAclRequest(FullHttpRequest request) {
         return checkRequestS3Type(request, "acl");
+    }
+
+    private boolean checkRequestS3TypeByHeader(FullHttpRequest request, String key) {
+        return request.headers().contains(key);
     }
 
     private boolean checkRequestS3Type(FullHttpRequest request, String key, String value) {

@@ -1,5 +1,7 @@
 package com.thorinhood.drivers.lock;
 
+import com.thorinhood.data.S3FileBucketPath;
+import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.drivers.S3Runnable;
 import com.thorinhood.drivers.S3Supplier;
 import com.thorinhood.exceptions.S3Exception;
@@ -27,8 +29,8 @@ public class EntityLocker {
         fileLocks = Collections.newSetFromMap(new ConcurrentHashMap<>());
     }
 
-    public void writeBucket(String bucket, S3Runnable s3Runnable) throws S3Exception {
-        write(bucket, s3Runnable);
+    public void writeBucket(S3FileBucketPath s3FileBucketPath, S3Runnable s3Runnable) throws S3Exception {
+        write(s3FileBucketPath.getPathToBucket(), s3Runnable);
     }
 
     public <T> T completeUpload(String bucket, String metaFolder, String uploadId, S3Supplier<T> s3Supplier)
@@ -86,30 +88,27 @@ public class EntityLocker {
                  read(file, s3Supplier)));
     }
 
-    public <T> T readObject(String bucket, String metaFolder, String metaFile, String object, S3Supplier<T> s3Supplier)
-            throws S3Exception {
-        return read(bucket, () ->
-                read(object, () ->
-                read(metaFolder, () ->
-                read(metaFile, s3Supplier))));
+    public <T> T readObject(S3FileObjectPath s3FileObjectPath, S3Supplier<T> s3Supplier) throws S3Exception {
+        return read(s3FileObjectPath.getPathToBucket(), () ->
+                read(s3FileObjectPath.getPathToObject(), () ->
+                read(s3FileObjectPath.getPathToObjectMetadataFolder(), () ->
+                read(s3FileObjectPath.getPathToObjectMetaFile(), s3Supplier))));
     }
 
-    public void deleteObject(String bucket, String metaFolder, String metaFile, String aclFile, String object,
-                            S3Runnable s3Runnable) throws S3Exception {
-        read(bucket, () ->
-            write(object, () ->
-            write(metaFolder, () ->
-            write(metaFile, () ->
-            write(aclFile, s3Runnable)))));
+    public void deleteObject(S3FileObjectPath s3FileObjectPath, S3Runnable s3Runnable) throws S3Exception {
+        read(s3FileObjectPath.getPathToBucket(), () ->
+            write(s3FileObjectPath.getPathToObject(), () ->
+            write(s3FileObjectPath.getPathToObjectMetadataFolder(), () ->
+            write(s3FileObjectPath.getPathToObjectMetaFile(), () ->
+            write(s3FileObjectPath.getPathToObjectAclFile(), s3Runnable)))));
     }
 
-    public <T> T writeObject(String bucket, String metaFolder, String metaFile, String aclFile, String object,
-                            S3Supplier<T> s3Supplier) throws S3Exception {
-        return read(bucket, () ->
-                write(object, () ->
-                write(metaFolder, () ->
-                write(metaFile, () ->
-                write(aclFile, s3Supplier)))));
+    public <T> T writeObject(S3FileObjectPath s3FileObjectPath, S3Supplier<T> s3Supplier) throws S3Exception {
+        return read(s3FileObjectPath.getPathToBucket(), () ->
+                write(s3FileObjectPath.getPathToObject(), () ->
+                write(s3FileObjectPath.getPathToObjectMetadataFolder(), () ->
+                write(s3FileObjectPath.getPathToObjectMetaFile(), () ->
+                write(s3FileObjectPath.getPathToObjectAclFile(), s3Supplier)))));
     }
 
     private <T> T write(String key, S3Supplier<T> s3Supplier) throws S3Exception {

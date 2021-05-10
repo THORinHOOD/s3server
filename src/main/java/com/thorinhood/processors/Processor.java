@@ -1,6 +1,9 @@
 package com.thorinhood.processors;
 
 import com.thorinhood.chunks.ChunkReader;
+import com.thorinhood.data.S3FileBucketPath;
+import com.thorinhood.data.S3FileObjectPath;
+import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.ParsedRequest;
@@ -44,13 +47,17 @@ public abstract class Processor {
 
     protected void checkRequestPermissions(ParsedRequest request, String methodName, boolean isBucketAcl)
             throws S3Exception {
+        checkRequestPermissions(request.getS3ObjectPathUnsafe(), request.getS3User(), methodName, isBucketAcl);
+    }
+
+    protected void checkRequestPermissions(S3FileObjectPath s3FileObjectPath, S3User s3User, String methodName,
+                                           boolean isBucketAcl) throws S3Exception {
         if (!methodName.equals("s3:CreateBucket")) {
-            S3_DRIVER.isBucketExists(request.getS3BucketPath());
+            S3_DRIVER.isBucketExists(s3FileObjectPath);
         }
-        boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, request.getS3ObjectPathUnsafe(),
-                methodName, request.getS3User());
-        boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),
-                request.getS3ObjectPathUnsafe().getKeyUnsafe(), methodName, request.getS3User());
+        boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, s3FileObjectPath, methodName, s3User);
+        boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(s3FileObjectPath, s3FileObjectPath.getKeyUnsafe(),
+                methodName, s3User);
         if (!(aclCheckResult && policyCheckResult)) {
             throw S3Exception.ACCESS_DENIED()
                     .setResource("1")
