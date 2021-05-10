@@ -5,7 +5,6 @@ import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 public class IfMatch implements Selector<String> {
-
     @Override
     public void check(String actual, String expected) throws S3Exception {
         if (!actual.equals(expected)) {
@@ -17,5 +16,4 @@ public class IfMatch implements Selector<String> {
                     .setRequestId("1");
         }
     }
-
 }

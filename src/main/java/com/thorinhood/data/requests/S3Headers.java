@@ -9,5 +9,9 @@ public class S3Headers {
     public static final String IF_MODIFIED_SINCE = "If-Modified-Since";
     public static final String IF_NONE_MATCH = "If-None-Match";
     public static final String IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
+    public static final String IF_MATCH_SOURCE = "x-amz-copy-source-if-match";
+    public static final String IF_NONE_MATCH_SOURCE = "x-amz-copy-source-if-none-match";
+    public static final String IF_MODIFIED_SINCE_SOURCE = "x-amz-copy-source-if-modified-since";
+    public static final String IF_UNMODIFIED_SINCE_SOURCE = "x-amz-copy-source-if-unmodified-since";
 
 }

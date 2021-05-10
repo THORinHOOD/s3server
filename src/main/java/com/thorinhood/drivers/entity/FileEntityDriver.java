@@ -55,19 +55,17 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 .setRequestId("1");
     }
 
-    private final Map<String, Selector<String>> strSelectors;
-    private final Map<String, Selector<Date>> dateSelectors;
+    private final Selector<String> ifMatch;
+    private final Selector<String> ifNoneMatch;
+    private final Selector<Date> ifModifiedSince;
+    private final Selector<Date> ifUnmodifiedSince;
 
     public FileEntityDriver(String baseFolderPath, String configFolderPath, String usersFolderPath) {
         super(baseFolderPath, configFolderPath, usersFolderPath);
-        strSelectors = Map.of(
-                S3Headers.IF_MATCH, new IfMatch(),
-                S3Headers.IF_NONE_MATCH, new IfNoneMatch()
-        );
-        dateSelectors = Map.of(
-                S3Headers.IF_MODIFIED_SINCE, new IfModifiedSince(),
-                S3Headers.IF_UNMODIFIED_SINCE, new IfUnmodifiedSince()
-        );
+        ifMatch = new IfMatch();
+        ifNoneMatch = new IfNoneMatch();
+        ifModifiedSince = new IfModifiedSince();
+        ifUnmodifiedSince = new IfUnmodifiedSince();
     }
 
     @Override
@@ -91,8 +89,8 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
-    public HasMetaData getObject(S3FileObjectPath s3FileObjectPath, String eTag, HttpHeaders httpHeaders)
-            throws S3Exception {
+    public HasMetaData getObject(S3FileObjectPath s3FileObjectPath, String eTag, HttpHeaders httpHeaders,
+                                 boolean isCopyRead) throws S3Exception {
         String absolutePath = s3FileObjectPath.getPathToObject();
         File file = new File(absolutePath);
         if (file.isHidden() || !file.exists() || !file.isFile()) {
@@ -106,8 +104,12 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         byte[] bytes;
         try {
             bytes = Files.readAllBytes(file.toPath());
-            if (httpHeaders != null) {
-                checkSelectors(httpHeaders, eTag, file);
+            if (httpHeaders != null && eTag != null) {
+                if (isCopyRead) {
+                    checkSelectorsCopy(httpHeaders, eTag, file);
+                } else {
+                    checkSelectors(httpHeaders, eTag, file);
+                }
             }
             return S3Object.build()
                     .setAbsolutePath(absolutePath)
@@ -345,33 +347,41 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         }
     }
 
-    @Override
-    public S3ObjectETag copyObject(S3FileObjectPath source, S3FileObjectPath target) throws S3Exception {
-        HasMetaData object = getObject(source, null, null);
-        S3Object s3Object = putObject(target, object.getRawBytes(), null);
-        deleteObject(source);
-        return new S3ObjectETag(s3Object.getETag(), target);
-    }
-
     private String calculateETag(byte[] bytes) {
         return DigestUtils.md5Hex(bytes);
     }
 
     private void checkSelectors(HttpHeaders headers, String eTag, File file) throws ParseException {
-        //TODO
         if (headers.contains(S3Headers.IF_MATCH)) {
-            strSelectors.get(S3Headers.IF_MATCH).check(eTag, headers.get(S3Headers.IF_MATCH));
+            ifMatch.check(eTag, headers.get(S3Headers.IF_MATCH));
         }
         if (headers.contains(S3Headers.IF_MODIFIED_SINCE)) {
-            dateSelectors.get(S3Headers.IF_MODIFIED_SINCE).check(new Date(file.lastModified()),
-                    DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_MODIFIED_SINCE))); //TODO
+            ifModifiedSince.check(new Date(file.lastModified()),
+                    DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_MODIFIED_SINCE)));
         }
         if (headers.contains(S3Headers.IF_NONE_MATCH)) {
-            strSelectors.get(S3Headers.IF_NONE_MATCH).check(eTag, headers.get(S3Headers.IF_NONE_MATCH));
+            ifNoneMatch.check(eTag, headers.get(S3Headers.IF_NONE_MATCH));
         }
         if (headers.contains(S3Headers.IF_UNMODIFIED_SINCE)) {
-            dateSelectors.get(S3Headers.IF_UNMODIFIED_SINCE).check(new Date(file.lastModified()),
-                    DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_UNMODIFIED_SINCE))); // TODO
+            ifUnmodifiedSince.check(new Date(file.lastModified()),
+                    DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_UNMODIFIED_SINCE)));
+        }
+    }
+
+    private void checkSelectorsCopy(HttpHeaders headers, String eTag, File file) throws ParseException {
+        if (headers.contains(S3Headers.IF_MATCH_SOURCE)) {
+            ifMatch.check(eTag, headers.get(S3Headers.IF_MATCH_SOURCE));
+        }
+        if (headers.contains(S3Headers.IF_MODIFIED_SINCE_SOURCE)) {
+            ifModifiedSince.check(new Date(file.lastModified()),
+                    DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_MODIFIED_SINCE_SOURCE)));
+        }
+        if (headers.contains(S3Headers.IF_NONE_MATCH_SOURCE)) {
+            ifNoneMatch.check(eTag, headers.get(S3Headers.IF_NONE_MATCH_SOURCE));
+        }
+        if (headers.contains(S3Headers.IF_UNMODIFIED_SINCE_SOURCE)) {
+            ifUnmodifiedSince.check(new Date(file.lastModified()),
+                    DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_UNMODIFIED_SINCE_SOURCE)));
         }
     }
 

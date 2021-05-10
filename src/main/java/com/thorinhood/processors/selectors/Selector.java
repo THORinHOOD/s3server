@@ -1,6 +1,6 @@
 package com.thorinhood.processors.selectors;
 
-import software.amazon.awssdk.services.s3.model.S3Exception;
+import com.thorinhood.exceptions.S3Exception;
 
 public interface Selector<T> {
 

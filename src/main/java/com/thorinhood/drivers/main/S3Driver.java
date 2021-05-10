@@ -36,7 +36,8 @@ public interface S3Driver extends AclPermissionChecker {
             throws S3Exception;
     void deleteObject(S3FileObjectPath s3FileObjectPath) throws S3Exception;
     void deleteBucket(S3FileBucketPath s3FileBucketPath) throws S3Exception;
-    CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, S3User s3User) throws S3Exception;
+    CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, HttpHeaders httpHeaders,
+                                S3User s3User) throws S3Exception;
 
     // Lists
     ListBucketResult getBucketObjects(GetBucketObjects request) throws S3Exception;

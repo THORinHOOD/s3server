@@ -30,6 +30,7 @@ public class CopyObjectProcessor extends Processor {
         CopyObjectResult copyObjectResult = S3_DRIVER.copyObject(
                 sourcePath,
                 parsedRequest.getS3ObjectPath(),
+                parsedRequest.getHeaders(),
                 parsedRequest.getS3User());
         String xml = copyObjectResult.buildXmlText();
         sendResponse(context, request, HttpResponseStatus.OK, response -> {

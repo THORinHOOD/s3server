@@ -254,7 +254,7 @@ public class S3FileDriverImpl implements S3Driver {
             () -> {
                 Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3FileObjectPath);
                 HasMetaData rawS3Object = entityDriver.getObject(s3FileObjectPath,
-                        objectMetadata.get(FileMetadataDriver.ETAG), httpHeaders);
+                        objectMetadata.get(FileMetadataDriver.ETAG), httpHeaders, false);
                 objectMetadata.remove(FileMetadataDriver.ETAG);
                 return rawS3Object.setMetaData(objectMetadata);
             }
@@ -262,9 +262,16 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, S3User s3User)
-            throws S3Exception {
-        S3Object sourceObject = getObject(source, null);
+    public CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, HttpHeaders httpHeaders,
+                                       S3User s3User) throws S3Exception {
+        HasMetaData sourceObject = entityLocker.readObject(
+            source,
+            () -> {
+                Map<String, String> metadata = metadataDriver.getObjectMetadata(source);
+                String sourceETag = metadata.get(FileMetadataDriver.ETAG);
+                return entityDriver.getObject(source, sourceETag, httpHeaders, true);
+            }
+        );
         S3Object targetObject = putObject(target, sourceObject.getRawBytes(), sourceObject.getMetaData(), s3User);
         return CopyObjectResult.builder()
                 .setETag(targetObject.getETag())

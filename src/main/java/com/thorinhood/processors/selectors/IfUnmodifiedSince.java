@@ -8,12 +8,12 @@ import java.util.Date;
 
 public class IfUnmodifiedSince implements Selector<Date> {
     @Override
-    public void check(Date actual, Date expected) {
+    public void check(Date actual, Date expected) throws S3Exception {
         if (actual.after(expected)) {
-            throw S3Exception.build("Not found IfUnmodifiedSince")
+            throw S3Exception.build("IfUnmodifiedSince failed")
                     .setStatus(HttpResponseStatus.NOT_MODIFIED)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
-                    .setMessage("null")
+                    .setMessage("At least one of the pre-conditions you specified did not hold")
                     .setResource("1")
                     .setRequestId("1");
         }
