@@ -1,5 +1,6 @@
 package com.thorinhood.utils;
 
+import com.thorinhood.data.S3FileBucketPath;
 import com.thorinhood.data.requests.S3Headers;
 import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
@@ -170,14 +171,27 @@ public class RequestUtil {
         if (paramsStart != -1) {
             uri = uri.substring(0, paramsStart);
         }
+        if (uri.endsWith("/")) {
+            uri = uri.substring(0, uri.length() - 1);
+        }
+
         int secondSlash = uri.indexOf("/", 1);
         if (secondSlash != -1) {
             String key = uri.substring(secondSlash);
             int lastSlash = key.lastIndexOf("/");
+            String subKey = key.substring(1, lastSlash + 1);
+            String name = key.substring(lastSlash + 1);
+            if (subKey.equals("") && name.equals("")) {
+                return S3FileObjectPath.raw(BASE_FOLDER_PATH, uri.substring(1, secondSlash), null, null);
+            }
             return S3FileObjectPath.raw(BASE_FOLDER_PATH, uri.substring(1, secondSlash),
-                    key.substring(1, lastSlash + 1), key.substring(lastSlash + 1));
+                    subKey, name);
         }
-        return S3FileObjectPath.raw(BASE_FOLDER_PATH, uri.substring(1), null, null);
+        if (uri.isEmpty() || uri.isBlank()) {
+            return null;
+        } else {
+            return S3FileObjectPath.raw(BASE_FOLDER_PATH, uri.substring(1), null, null);
+        }
     }
 
     private byte[] convert(ByteBuf byteBuf) {

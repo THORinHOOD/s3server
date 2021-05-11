@@ -20,7 +20,7 @@ public class CopyObjectResult implements XmlObject {
     public Element buildXmlRootNode(Document doc) {
         return createElement(doc, "CopyObjectResult",
                 createTextElement(doc, "LastModified", lastModified),
-                createTextElement(doc, "ETag", eTag));
+                createTextElement(doc, "ETag", "\"" + eTag + "\""));
     }
 
     public static class Builder {

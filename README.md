@@ -35,6 +35,7 @@
 > * GetObject
 > * PutObject
 > * ListBuckets
+> * ListObjects
 > * ListObjectsV2
 > * AbortMultipartUpload
 > * CompleteMultipartUpload
@@ -42,6 +43,7 @@
 > * UploadPart
 > * GetBucketPolicy
 > * PutBucketPolicy
+> * HeadObject
 
 
 > ### **PutObject**

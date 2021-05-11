@@ -2,12 +2,17 @@ package com.thorinhood.drivers.main;
 
 import com.thorinhood.data.*;
 import com.thorinhood.data.acl.*;
+import com.thorinhood.data.list.eventual.ListBucketResult;
+import com.thorinhood.data.list.raw.ListBucketResultRaw;
+import com.thorinhood.data.list.request.GetBucketObjects;
+import com.thorinhood.data.list.request.GetBucketObjectsV2;
 import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.policy.Statement;
 import com.thorinhood.data.results.CopyObjectResult;
 import com.thorinhood.data.results.GetBucketsResult;
-import com.thorinhood.data.results.ListBucketResult;
+import com.thorinhood.data.list.eventual.ListBucketV2Result;
+import com.thorinhood.data.list.raw.ListBucketV2ResultRaw;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
@@ -280,6 +285,21 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
+    public S3Object headObject(S3FileObjectPath s3FileObjectPath, HttpHeaders httpHeaders) throws S3Exception {
+        fileDriver.checkObject(s3FileObjectPath);
+        return entityLocker.readObject(
+                s3FileObjectPath,
+                () -> {
+                    Map<String, String> objectMetadata = metadataDriver.getObjectMetadata(s3FileObjectPath);
+                    HasMetaData rawS3Object = entityDriver.headObject(s3FileObjectPath,
+                            objectMetadata.get(FileMetadataDriver.ETAG), httpHeaders);
+                    objectMetadata.remove(FileMetadataDriver.ETAG);
+                    return rawS3Object.setMetaData(objectMetadata);
+                }
+        );
+    }
+
+    @Override
     public S3Object putObject(S3FileObjectPath s3FileObjectPath, byte[] bytes, Map<String, String> metadata,
                               S3User s3User) throws S3Exception {
         return entityLocker.writeObject(
@@ -306,72 +326,75 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
+    public ListBucketV2Result getBucketObjectsV2(GetBucketObjectsV2 getBucketObjectsV2) throws S3Exception {
+        ListBucketV2ResultRaw rawResult = entityDriver.getBucketObjectsV2(getBucketObjectsV2);
+        List<S3Content> s3Contents = makeContents(rawResult.getS3FileObjectsPaths());
+        return ListBucketV2Result.builder()
+                .setMaxKeys(getBucketObjectsV2.getMaxKeys())
+                .setName(getBucketObjectsV2.getBucket())
+                .setContents(s3Contents)
+                .setPrefix(getBucketObjectsV2.getPrefix())
+                .setStartAfter(getBucketObjectsV2.getStartAfter())
+                .setIsTruncated(rawResult.isTruncated())
+                .setKeyCount(rawResult.getKeyCount())
+                .setContinuationToken(getBucketObjectsV2.getContinuationToken())
+                .setNextContinuationToken(rawResult.getNextContinuationToken())
+                .setDelimiter(getBucketObjectsV2.getDelimiter())
+                .setCommonPrefixes(rawResult.getCommonPrefixes())
+                .build();
+    }
+
+    @Override
     public ListBucketResult getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception {
-        Pair<Pair<List<S3FileObjectPath>, Boolean>, String> result = entityDriver.getBucketObjects(getBucketObjects);
-        ExecutorService executorService = Executors.newFixedThreadPool(3);
-        List<Future<S3ObjectETag>> s3objectETagFutures = result.getFirst().getFirst().stream()
-                .map(s3FileObjectPath -> executorService.submit(() -> {
-                    Map<String, String> metaData = entityLocker.readMeta(
-                        s3FileObjectPath.getPathToBucket(),
-                        s3FileObjectPath.getPathToObjectMetadataFolder(),
-                        s3FileObjectPath.getPathToObjectMetaFile(),
-                        () -> metadataDriver.getObjectMetadata(s3FileObjectPath)
-                    );
-                    return new S3ObjectETag(metaData.get(FileMetadataDriver.ETAG), s3FileObjectPath);
-                }))
-                .collect(Collectors.toList());
-        List<S3ObjectETag> s3ObjectETags = new ArrayList<>();
-        for (Future<S3ObjectETag> s3ObjectETagFuture : s3objectETagFutures) {
-            try {
-                s3ObjectETags.add(s3ObjectETagFuture.get());
-            } catch (InterruptedException | ExecutionException e) {
-                throw S3Exception.INTERNAL_ERROR(e)
-                        .setResource("1")
-                        .setRequestId("1");
-            }
-        }
-        List<Future<S3Content>> s3ContentFutures = s3ObjectETags.stream()
-                .map(s3ObjectETag -> executorService.submit(() -> S3Content.builder()
-                        .setETag(s3ObjectETag.getETag())
-                        .setKey(s3ObjectETag.getS3FileObjectPath().getKey())
-                        .setLastModified(DateTimeUtil.parseDateTimeISO(s3ObjectETag.getFile()))
-                        .setOwner(entityLocker.readMeta(
-                                s3ObjectETag.getS3FileObjectPath().getPathToBucket(),
-                                s3ObjectETag.getS3FileObjectPath().getPathToObjectMetadataFolder(),
-                                s3ObjectETag.getS3FileObjectPath().getPathToObjectAclFile(),
-                                () -> aclDriver.getObjectAcl(s3ObjectETag.getS3FileObjectPath()).getOwner()))
-                        .setSize(s3ObjectETag.getFile().length())
-                        .setStorageClass("STANDART")
-                        .build()))
-                .collect(Collectors.toList());
-        List<S3Content> s3Contents = new ArrayList<>();
-        for (Future<S3Content> s3ContentFuture : s3ContentFutures) {
-            try {
-                s3Contents.add(s3ContentFuture.get());
-            } catch (InterruptedException | ExecutionException e) {
-                throw S3Exception.INTERNAL_ERROR(e)
-                        .setResource("1")
-                        .setRequestId("1");
-            }
-        }
+        ListBucketResultRaw rawResult = entityDriver.getBucketObjects(getBucketObjects);
+        List<S3Content> s3Contents = makeContents(rawResult.getS3FileObjectsPaths());
         return ListBucketResult.builder()
                 .setMaxKeys(getBucketObjects.getMaxKeys())
                 .setName(getBucketObjects.getBucket())
                 .setContents(s3Contents)
                 .setPrefix(getBucketObjects.getPrefix())
-                .setStartAfter(getBucketObjects.getStartAfter())
-                .setIsTruncated(result.getFirst().getSecond())
-                .setKeyCount(s3Contents.size())
-                .setContinuationToken(getBucketObjects.getContinuationToken())
-                .setNextContinuationToken(result.getSecond())
+                .setIsTruncated(rawResult.isTruncated())
+                .setDelimiter(getBucketObjects.getDelimiter())
+                .setCommonPrefixes(rawResult.getCommonPrefixes())
+                .setMarker(getBucketObjects.getMarker())
+                .setNextMarker(rawResult.getNextMarker())
                 .build();
     }
 
     @Override
     public GetBucketsResult getBuckets(S3User s3User) throws S3Exception {
-        List<Pair<String, String>> buckets = entityDriver.getBuckets(s3User);
+        List<Pair<S3FileBucketPath, String>> buckets = entityDriver.getBuckets(s3User);
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        List<Future<Pair<S3FileBucketPath, Pair<AccessControlPolicy, String>>>> bucketsWithAclFutures = buckets.stream()
+                .map(pair -> executorService.submit(() -> {
+                    AccessControlPolicy acl = entityLocker.readMeta(
+                        pair.getFirst().getPathToBucket(),
+                        pair.getFirst().getPathToBucketMetadataFolder(),
+                        pair.getFirst().getPathToBucketAclFile(),
+                        () -> aclDriver.getBucketAcl(pair.getFirst())
+                    );
+                    return Pair.of(pair.getFirst(), Pair.of(acl, pair.getSecond()));
+                }))
+                .collect(Collectors.toList());
+        List<Pair<String, String>> bucketsFiltered = new ArrayList<>();
+        for (Future<Pair<S3FileBucketPath, Pair<AccessControlPolicy, String>>> bucketWithAclFuture :
+                bucketsWithAclFutures) {
+            try {
+                Pair<S3FileBucketPath, Pair<AccessControlPolicy, String>> bucketWithAcl = bucketWithAclFuture.get();
+                AccessControlPolicy acl = bucketWithAcl.getSecond().getFirst();
+                if (s3User.getCanonicalUserId().equals(acl.getOwner().getId()) &&
+                    s3User.getAccountName().equals(acl.getOwner().getDisplayName())) {
+                    bucketsFiltered.add(Pair.of(bucketWithAcl.getFirst().getBucket(),
+                            bucketWithAcl.getSecond().getSecond()));
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                throw S3Exception.INTERNAL_ERROR(e)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+        }
         return GetBucketsResult.builder()
-                .setBuckets(buckets)
+                .setBuckets(bucketsFiltered)
                 .setOwner(Owner.builder()
                         .setDisplayName(s3User.getAccountName())
                         .setId(s3User.getCanonicalUserId())
@@ -455,6 +478,57 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public S3FileObjectPath buildPathToObject(String bucketKeyToObject) {
         return fileDriver.buildPathToObject(bucketKeyToObject);
+    }
+
+    private List<S3Content> makeContents(List<S3FileObjectPath> s3FileObjectPaths) {
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        List<Future<S3ObjectETag>> s3objectETagFutures = s3FileObjectPaths.stream()
+                .map(s3FileObjectPath -> executorService.submit(() -> {
+                    Map<String, String> metaData = entityLocker.readMeta(
+                            s3FileObjectPath.getPathToBucket(),
+                            s3FileObjectPath.getPathToObjectMetadataFolder(),
+                            s3FileObjectPath.getPathToObjectMetaFile(),
+                            () -> metadataDriver.getObjectMetadata(s3FileObjectPath)
+                    );
+                    return new S3ObjectETag(metaData.get(FileMetadataDriver.ETAG), s3FileObjectPath);
+                }))
+                .collect(Collectors.toList());
+        List<S3ObjectETag> s3ObjectETags = new ArrayList<>();
+        for (Future<S3ObjectETag> s3ObjectETagFuture : s3objectETagFutures) {
+            try {
+                s3ObjectETags.add(s3ObjectETagFuture.get());
+            } catch (InterruptedException | ExecutionException e) {
+                throw S3Exception.INTERNAL_ERROR(e)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+        }
+        List<Future<S3Content>> s3ContentFutures = s3ObjectETags.stream()
+                .map(s3ObjectETag -> executorService.submit(() -> S3Content.builder()
+                        .setETag(s3ObjectETag.getETag())
+                        .setKey(s3ObjectETag.getS3FileObjectPath().getKey())
+                        .setLastModified(DateTimeUtil.parseDateTimeISO(s3ObjectETag.getFile()))
+                        .setOwner(entityLocker.readMeta(
+                                s3ObjectETag.getS3FileObjectPath().getPathToBucket(),
+                                s3ObjectETag.getS3FileObjectPath().getPathToObjectMetadataFolder(),
+                                s3ObjectETag.getS3FileObjectPath().getPathToObjectAclFile(),
+                                () -> aclDriver.getObjectAcl(s3ObjectETag.getS3FileObjectPath()).getOwner()))
+                        .setSize(s3ObjectETag.getFile().length())
+                        .setStorageClass("STANDART")
+                        .build()))
+                .collect(Collectors.toList());
+        List<S3Content> s3Contents = new ArrayList<>();
+        for (Future<S3Content> s3ContentFuture : s3ContentFutures) {
+            try {
+                s3Contents.add(s3ContentFuture.get());
+            } catch (InterruptedException | ExecutionException e) {
+                throw S3Exception.INTERNAL_ERROR(e)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+        }
+        executorService.shutdown();
+        return s3Contents;
     }
 
     private AccessControlPolicy createDefaultAccessControlPolicy(S3User s3User) {

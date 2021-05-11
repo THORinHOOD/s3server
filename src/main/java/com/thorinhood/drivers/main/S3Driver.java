@@ -2,11 +2,14 @@ package com.thorinhood.drivers.main;
 
 import com.thorinhood.data.*;
 import com.thorinhood.data.acl.AccessControlPolicy;
+import com.thorinhood.data.list.eventual.ListBucketResult;
+import com.thorinhood.data.list.request.GetBucketObjects;
+import com.thorinhood.data.list.request.GetBucketObjectsV2;
 import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.policy.BucketPolicy;
 import com.thorinhood.data.results.CopyObjectResult;
 import com.thorinhood.data.results.GetBucketsResult;
-import com.thorinhood.data.results.ListBucketResult;
+import com.thorinhood.data.list.eventual.ListBucketV2Result;
 import com.thorinhood.data.s3object.S3Object;
 import com.thorinhood.exceptions.S3Exception;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -38,9 +41,11 @@ public interface S3Driver extends AclPermissionChecker {
     void deleteBucket(S3FileBucketPath s3FileBucketPath) throws S3Exception;
     CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, HttpHeaders httpHeaders,
                                 S3User s3User) throws S3Exception;
+    S3Object headObject(S3FileObjectPath s3FileObjectPath, HttpHeaders httpHeaders) throws S3Exception;
 
     // Lists
-    ListBucketResult getBucketObjects(GetBucketObjects request) throws S3Exception;
+    ListBucketV2Result getBucketObjectsV2(GetBucketObjectsV2 getBucketObjectsV2) throws S3Exception;
+    ListBucketResult getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception;
     GetBucketsResult getBuckets(S3User s3User) throws S3Exception;
 
     //Multipart

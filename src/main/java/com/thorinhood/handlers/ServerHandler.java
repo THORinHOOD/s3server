@@ -10,6 +10,7 @@ import com.thorinhood.processors.acl.PutBucketAclProcessor;
 import com.thorinhood.processors.acl.PutObjectAclProcessor;
 import com.thorinhood.processors.actions.*;
 import com.thorinhood.processors.lists.ListBucketsProcessor;
+import com.thorinhood.processors.lists.ListObjectsProcessor;
 import com.thorinhood.processors.lists.ListObjectsV2Processor;
 import com.thorinhood.processors.multipart.AbortMultipartUploadProcessor;
 import com.thorinhood.processors.multipart.CompleteMultipartUploadProcessor;
@@ -49,6 +50,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final GetBucketPolicyProcessor getBucketPolicyProcessor;
     private final DeleteObjectProcessor deleteObjectProcessor;
     private final ListObjectsV2Processor listObjectsV2Processor;
+    private final ListObjectsProcessor listObjectsProcessor;
     private final DeleteBucketProcessor deleteBucketProcessor;
     private final ListBucketsProcessor listBucketsProcessor;
     private final CreateMultipartUploadProcessor createMultipartUploadProcessor;
@@ -56,6 +58,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final UploadPartProcessor uploadPartProcessor;
     private final CompleteMultipartUploadProcessor completeMultipartUploadProcessor;
     private final CopyObjectProcessor copyObjectProcessor;
+    private final HeadObjectProcessor headObjectProcessor;
 
     public ServerHandler(S3Driver s3Driver, RequestUtil requestUtil) {
         this.requestUtil = requestUtil;
@@ -70,6 +73,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         getBucketPolicyProcessor = new GetBucketPolicyProcessor(s3Driver);
         deleteObjectProcessor = new DeleteObjectProcessor(s3Driver);
         listObjectsV2Processor = new ListObjectsV2Processor(s3Driver);
+        listObjectsProcessor = new ListObjectsProcessor(s3Driver);
         deleteBucketProcessor = new DeleteBucketProcessor(s3Driver);
         listBucketsProcessor = new ListBucketsProcessor(s3Driver);
         createMultipartUploadProcessor = new CreateMultipartUploadProcessor(s3Driver);
@@ -77,6 +81,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         uploadPartProcessor = new UploadPartProcessor(s3Driver);
         completeMultipartUploadProcessor = new CompleteMultipartUploadProcessor(s3Driver);
         copyObjectProcessor = new CopyObjectProcessor(s3Driver);
+        headObjectProcessor = new HeadObjectProcessor(s3Driver);
     }
 
     @Override
@@ -85,7 +90,8 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             long start = System.currentTimeMillis();
             boolean processed = process(context, request);
             if (!processed) {
-                log.error("Not found any processor for request or error occurred");
+                log.error(String.format("Not found any processor for request or error occurred : %s %s", request.method(),
+                        QueryStringDecoder.decodeComponent(request.uri())));
                 Processor.sendError(context, request, S3Exception.build("Can't find method")
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
@@ -127,8 +133,17 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             }
         }
 
+        if (request.method().equals(HttpMethod.HEAD)) {
+            if (parsedRequest.isPathToObject()) {
+                getObjectProcessor.process(context, request, parsedRequest);
+                return true;
+            }
+        }
+
         if (request.method().equals(HttpMethod.GET)) {
-            if (isAclRequest(request)) {
+            if (!parsedRequest.hasPathToObjectOrBucket()) {
+                listBucketsProcessor.process(context, request, parsedRequest);
+            } else if (isAclRequest(request)) {
                 if (parsedRequest.isPathToObject()) {
                     getObjectAclProcessor.process(context, request, parsedRequest);
                 } else {
@@ -138,10 +153,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 getBucketPolicyProcessor.process(context, request, parsedRequest);
             } else if (!parsedRequest.isPathToObject() && checkRequestS3Type(request, "list-type", "2")) {
                 listObjectsV2Processor.process(context, request, parsedRequest);
+            } else if (!parsedRequest.isPathToObject()) {
+                listObjectsProcessor.process(context, request, parsedRequest);
             } else if (parsedRequest.isPathToObject()) {
                 getObjectProcessor.process(context, request, parsedRequest);
             } else {
-                listBucketsProcessor.process(context, request, parsedRequest);
+                return false;
             }
             return true;
         }

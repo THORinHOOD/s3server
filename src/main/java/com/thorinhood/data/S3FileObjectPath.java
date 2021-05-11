@@ -9,6 +9,8 @@ public class S3FileObjectPath extends S3FileBucketPath {
     private String name;
     private String subKey;
 
+
+
     public static S3FileObjectPath raw(String baseFolderPath, String bucket, String subKey, String name) {
         return new S3FileObjectPath(baseFolderPath, bucket, subKey, name);
     }

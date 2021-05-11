@@ -24,8 +24,10 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
             throws S3Exception {
         File file = new File(s3FileObjectPath.getPathToObjectMetaFile());
         StringBuilder content = new StringBuilder();
-        for (Map.Entry<String, String> entry : metadata.entrySet()) {
-            content.append(entry.getKey()).append("=").append(entry.getValue()).append("\n");
+        if (metadata != null) {
+            for (Map.Entry<String, String> entry : metadata.entrySet()) {
+                content.append(entry.getKey()).append("=").append(entry.getValue()).append("\n");
+            }
         }
         content.append(ETAG).append("=").append(eTag).append("\n");
         Path source = createPreparedTmpFile(new File(s3FileObjectPath.getPathToObjectMetadataFolder()).toPath(),

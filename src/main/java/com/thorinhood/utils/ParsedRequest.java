@@ -37,8 +37,12 @@ public class ParsedRequest {
     private ParsedRequest() {
     }
 
+    public boolean hasPathToObjectOrBucket() {
+        return s3FileObjectPath != null;
+    }
+
     public boolean isPathToObject() {
-        return !s3FileObjectPath.isBucket();
+        return s3FileObjectPath != null && !s3FileObjectPath.isBucket();
     }
 
     public byte[] getBytes() {
@@ -46,11 +50,19 @@ public class ParsedRequest {
     }
 
     public S3FileBucketPath getS3BucketPath() {
+        if (s3FileObjectPath == null) {
+            throw S3Exception.build("Not found bucket name")
+                    .setStatus(HttpResponseStatus.BAD_REQUEST)
+                    .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
+                    .setMessage("Not found bucket name")
+                    .setResource("1")
+                    .setRequestId("1");
+        }
         return s3FileObjectPath;
     }
 
     public S3FileObjectPath getS3ObjectPath() {
-        if (s3FileObjectPath.isBucket()) {
+        if (s3FileObjectPath == null || s3FileObjectPath.isBucket()) {
             throw S3Exception.build("Incorrect path to object : " + s3FileObjectPath)
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)

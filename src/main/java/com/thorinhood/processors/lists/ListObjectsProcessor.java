@@ -1,7 +1,7 @@
 package com.thorinhood.processors.lists;
 
-import com.thorinhood.data.list.request.GetBucketObjectsV2;
-import com.thorinhood.data.list.eventual.ListBucketV2Result;
+import com.thorinhood.data.list.eventual.ListBucketResult;
+import com.thorinhood.data.list.request.GetBucketObjects;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.DateTimeUtil;
@@ -18,11 +18,11 @@ import java.util.function.Function;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
-public class ListObjectsV2Processor extends Processor {
+public class ListObjectsProcessor extends Processor {
 
-    private static final Logger log = LogManager.getLogger(ListObjectsV2Processor.class);
+    private static final Logger log = LogManager.getLogger(ListObjectsProcessor.class);
 
-    public ListObjectsV2Processor(S3Driver s3Driver) {
+    public ListObjectsProcessor(S3Driver s3Driver) {
         super(s3Driver);
     }
 
@@ -30,18 +30,15 @@ public class ListObjectsV2Processor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object... arguments) throws Exception {
         checkRequestPermissions(parsedRequest, "s3:ListBucket", true);
-        GetBucketObjectsV2 getBucketObjectsV2 = GetBucketObjectsV2.builder()
+        GetBucketObjects getBucketObjects = GetBucketObjects.builder()
                 .setBucket(parsedRequest.getS3BucketPath().getBucket())
                 .setPrefix(parsedRequest.getQueryParam("prefix", "", Function.identity()))
-                .setMaxKeys(parsedRequest.getQueryParam("max-keys", 1000, Integer::valueOf))
-                .setStartAfter(parsedRequest.getQueryParam("start-after", null, Function.identity()))
-                .setContinuationToken(parsedRequest.getQueryParam("continuation-token", null,
-                        Function.identity()))
                 .setDelimiter(parsedRequest.getQueryParam("delimiter", null, delimiter ->
                         delimiter.equals("") ? null : delimiter))
+                .setMarker(parsedRequest.getQueryParam("marker", null, Function.identity()))
                 .build();
-        ListBucketV2Result listBucketV2Result = S3_DRIVER.getBucketObjectsV2(getBucketObjectsV2);
-        String xml = listBucketV2Result.buildXmlText();
+        ListBucketResult listBucketResult = S3_DRIVER.getBucketObjects(getBucketObjects);
+        String xml = listBucketResult.buildXmlText();
         sendResponse(context, request, OK, response -> {
             HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");

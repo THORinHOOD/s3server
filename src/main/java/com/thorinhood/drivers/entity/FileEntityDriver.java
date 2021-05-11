@@ -1,15 +1,17 @@
 package com.thorinhood.drivers.entity;
 
-import com.thorinhood.data.GetBucketObjects;
+import com.thorinhood.data.list.raw.ListBucketResultRaw;
+import com.thorinhood.data.list.request.GetBucketObjects;
+import com.thorinhood.data.list.request.GetBucketObjectsV2;
 import com.thorinhood.data.S3FileBucketPath;
 import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.S3User;
 import com.thorinhood.data.multipart.Part;
 import com.thorinhood.data.requests.S3Headers;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
+import com.thorinhood.data.list.raw.ListBucketV2ResultRaw;
 import com.thorinhood.data.s3object.HasMetaData;
 import com.thorinhood.data.s3object.S3Object;
-import com.thorinhood.data.s3object.S3ObjectETag;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.selectors.*;
@@ -28,10 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -127,6 +126,38 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     }
 
     @Override
+    public HasMetaData headObject(S3FileObjectPath s3FileObjectPath, String eTag, HttpHeaders httpHeaders)
+            throws S3Exception {
+        String absolutePath = s3FileObjectPath.getPathToObject();
+        File file = new File(absolutePath);
+        if (file.isHidden() || !file.exists() || !file.isFile()) {
+            throw S3Exception.build("File not found: " + absolutePath)
+                    .setStatus(HttpResponseStatus.NOT_FOUND)
+                    .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
+                    .setMessage("The resource you requested does not exist")
+                    .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
+                    .setRequestId("1"); // TODO
+        }
+        try {
+            if (httpHeaders != null && eTag != null) {
+                checkSelectors(httpHeaders, eTag, file);
+            }
+            return S3Object.build()
+                    .setAbsolutePath(absolutePath)
+                    .setS3Path(s3FileObjectPath)
+                    .setETag(eTag)
+                    .setFile(file)
+                    .setRawBytes(null)
+                    .setLastModified(DateTimeUtil.parseDateTime(file));
+        } catch (ParseException exception) {
+            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
+                    .setMessage("Internal error : can't create object")
+                    .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
+                    .setRequestId("1"); // TODO
+        }
+    }
+
+    @Override
     public S3Object putObject(S3FileObjectPath s3FileObjectPath, byte[] bytes, Map<String, String> metadata)
             throws S3Exception {
         String absolutePath = s3FileObjectPath.getPathToObject();
@@ -160,68 +191,130 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         deleteFolder(pathToBucketMetadataFolder);
     }
 
+    private String commonPrefix(String key, String prefix, String delimiter) {
+        if (delimiter == null || delimiter.equals("")) {
+            return null;
+        }
+        int index = key.indexOf(delimiter, prefix.length());
+        if (index == -1) {
+            return null;
+        }
+        return key.substring(0, index + delimiter.length());
+    }
+
     @Override
-    public Pair<Pair<List<S3FileObjectPath>, Boolean>, String> getBucketObjects(GetBucketObjects getBucketObjects)
-            throws S3Exception {
-        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + getBucketObjects.getBucket());
+    public ListBucketV2ResultRaw getBucketObjectsV2(GetBucketObjectsV2 getBucketObjectsV2) throws S3Exception {
+        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + getBucketObjectsV2.getBucket());
         List<S3FileObjectPath> objects = new ArrayList<>();
+        Set<String> commonPrefixes = new TreeSet<>();
+        int keyCount = 0;
         boolean truncated = false;
         boolean start = false;
         String nextContinuationToken = null;
-        try {
-            try (Stream<Path> tree = Files.walk(path)) {
-                int from = path.toString().length() + 1;
-                List<String> allObjects = tree.filter(current -> !isMetadataFolder(current) &&
-                        !isMetadataFile(current) && !Files.isDirectory(current))
-                        .map(objectPath -> objectPath.toString().substring(from))
-                        .sorted(String::compareTo)
-                        .collect(Collectors.toList());
-                for (int i = 0; (i < allObjects.size()) && !truncated; i++) {
-                    String currentPath = allObjects.get(i);
-                    String objectMd5 = DigestUtils.md5Hex(currentPath);
-                    if (objects.size() == getBucketObjects.getMaxKeys()) {
-                        truncated = true;
-                        nextContinuationToken = objectMd5;
-                    } else {
-                        if (getBucketObjects.getContinuationToken() != null) {
-                            if (objectMd5.equals(getBucketObjects.getContinuationToken())) {
-                                start = true;
-                            }
-                        } else {
+        try (Stream<Path> tree = Files.walk(path)) {
+            List<String> allObjects = getObjectsKeys(tree, path.toString().length() + 1);
+            for (int i = 0; (i < allObjects.size()) && !truncated; i++) {
+                String currentPath = allObjects.get(i);
+                String objectMd5 = DigestUtils.md5Hex(currentPath);
+                if (objects.size() == getBucketObjectsV2.getMaxKeys()) {
+                    truncated = true;
+                    nextContinuationToken = objectMd5;
+                } else {
+                    if (getBucketObjectsV2.getContinuationToken() != null) {
+                        if (objectMd5.equals(getBucketObjectsV2.getContinuationToken())) {
                             start = true;
                         }
-                        if (start) {
-                            if (getBucketObjects.getStartAfter() == null || getBucketObjects.getStartAfter()
-                                    .compareTo(currentPath) <= 0) {
-                                if (checkPrefix(getBucketObjects.getPrefix(), currentPath)) {
-                                    objects.add(S3FileObjectPath.raw(BASE_FOLDER_PATH, getBucketObjects.getBucket(),
+                    } else {
+                        start = true;
+                    }
+                    if (start) {
+                        if (getBucketObjectsV2.getStartAfter() == null || getBucketObjectsV2.getStartAfter()
+                                .compareTo(currentPath) <= 0) {
+                            if (checkPrefix(getBucketObjectsV2.getPrefix(), currentPath)) {
+                                String commonPrefix = commonPrefix(currentPath, getBucketObjectsV2.getPrefix(),
+                                        getBucketObjectsV2.getDelimiter());
+                                if (commonPrefix != null) {
+                                    commonPrefixes.add(commonPrefix);
+                                } else {
+                                    objects.add(S3FileObjectPath.raw(BASE_FOLDER_PATH, getBucketObjectsV2.getBucket(),
                                             currentPath));
                                 }
+                                keyCount++;
                             }
                         }
                     }
                 }
             }
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't list bucket objects")
-                    .setMessage("Can't list bucket objects")
+            throw S3Exception.INTERNAL_ERROR(exception)
                     .setResource("1")
                     .setRequestId("1");
         }
-        return Pair.of(Pair.of(objects, truncated), nextContinuationToken);
+        return ListBucketV2ResultRaw.builder()
+                .setIsTruncated(truncated)
+                .setNextContinuationToken(nextContinuationToken)
+                .setS3FileObjectsPaths(objects)
+                .setCommonPrefixes(commonPrefixes)
+                .setKeyCount(keyCount)
+                .build();
     }
 
-    private boolean checkPrefix(String prefix, String path) {
-        if (prefix == null) {
-            return true;
-        }
-        return path.startsWith(prefix);
+    private List<String> getObjectsKeys(Stream<Path> tree, int getKeyFrom) {
+        return tree.filter(current -> !isMetadataFolder(current) &&
+                !isMetadataFile(current) && !Files.isDirectory(current))
+                .map(objectPath -> objectPath.toString().substring(getKeyFrom))
+                .sorted(String::compareTo)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<Pair<String, String>> getBuckets(S3User s3User) throws S3Exception {
+    public ListBucketResultRaw getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception {
+        Path path = Path.of(BASE_FOLDER_PATH + File.separatorChar + getBucketObjects.getBucket());
+        List<S3FileObjectPath> objects = new ArrayList<>();
+        Set<String> commonPrefixes = new TreeSet<>();
+        boolean truncated = false;
+        String nextMarker = null;
+        try (Stream<Path> tree = Files.walk(path)) {
+            List<String> allObjects = getObjectsKeys(tree, path.toString().length() + 1);
+            for (int i = 0; (i < allObjects.size()) && !truncated; i++) {
+                String currentPath = allObjects.get(i);
+                if (objects.size() == getBucketObjects.getMaxKeys()) {
+                    truncated = true;
+                } else {
+                    if (getBucketObjects.getMarker() == null || getBucketObjects.getMarker()
+                            .compareTo(currentPath) <= 0) {
+                        if (checkPrefix(getBucketObjects.getPrefix(), currentPath)) {
+                            String commonPrefix = commonPrefix(currentPath, getBucketObjects.getPrefix(),
+                                    getBucketObjects.getDelimiter());
+                            if (commonPrefix != null) {
+                                commonPrefixes.add(commonPrefix);
+                                nextMarker = commonPrefix;
+                            } else {
+                                objects.add(S3FileObjectPath.raw(BASE_FOLDER_PATH, getBucketObjects.getBucket(),
+                                        currentPath));
+                                nextMarker = currentPath;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR(exception)
+                    .setResource("1")
+                    .setRequestId("1");
+        }
+        return ListBucketResultRaw.builder()
+                .setIsTruncated(truncated)
+                .setS3FileObjectsPaths(objects)
+                .setCommonPrefixes(commonPrefixes)
+                .setNextMarker(nextMarker)
+                .build();
+    }
+
+    @Override
+    public List<Pair<S3FileBucketPath, String>> getBuckets(S3User s3User) throws S3Exception {
         Path path = Path.of(BASE_FOLDER_PATH);
-        List<Pair<String, String>> buckets;
+        List<Pair<S3FileBucketPath, String>> buckets;
         try {
             try (Stream<Path> tree = Files.walk(path, 1)) {
                 buckets = tree.filter(entity -> isFolderExists(entity) && !isMetadataFolder(entity) &&
@@ -230,7 +323,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                         File bucket = entity.toFile();
                         try {
                             BasicFileAttributes attr = Files.readAttributes(entity, BasicFileAttributes.class);
-                            return Pair.of(bucket.getName(),
+                            return Pair.of(new S3FileBucketPath(BASE_FOLDER_PATH, bucket.getName()),
                                     DateTimeUtil.parseDateTimeISO(attr.creationTime().toMillis()));
                         } catch (IOException e) {
                             throw S3Exception.INTERNAL_ERROR("Can't get bucket attributes :" + entity.getFileName())
@@ -345,6 +438,13 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setResource("1")
                     .setRequestId("1");
         }
+    }
+
+    private boolean checkPrefix(String prefix, String path) {
+        if (prefix == null) {
+            return true;
+        }
+        return path.startsWith(prefix);
     }
 
     private String calculateETag(byte[] bytes) {

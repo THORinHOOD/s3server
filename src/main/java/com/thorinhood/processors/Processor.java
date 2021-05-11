@@ -15,6 +15,7 @@ import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
 import org.apache.logging.log4j.Logger;
 
+import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -112,6 +113,13 @@ public abstract class Processor {
     }
 
     protected void sendResponseWithoutContent(ChannelHandlerContext ctx, HttpResponseStatus status,
+                                              FullHttpRequest request, Consumer<FullHttpResponse> headersSet) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status);
+        headersSet.accept(response);
+        sendAndCleanupConnection(ctx, response, request);
+    }
+
+    protected void sendResponseWithoutContent(ChannelHandlerContext ctx, HttpResponseStatus status,
                                               FullHttpRequest request, Map<String, Object> headers) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status);
         headers.forEach((header, value) -> response.headers().set(header, value));
@@ -136,6 +144,13 @@ public abstract class Processor {
     protected void setContentTypeHeader(HttpResponse response, File file) throws IOException {
         Path path = file.toPath();
         String mimeType = Files.probeContentType(path);
+        if (mimeType == null) {
+            MimetypesFileTypeMap fileTypeMap = new MimetypesFileTypeMap();
+            mimeType = fileTypeMap.getContentType(file.getName());
+            if (mimeType == null) {
+                mimeType = "text/plain";
+            }
+        }
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, mimeType);
     }
 
