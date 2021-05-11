@@ -146,7 +146,7 @@ public class ListObjectsV2Test extends BaseTest {
         putObjectRaw(s3, "bucket", "file/dfile.txt", content, null);
 
         s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        String nextContinuousToken = null;
+        String nextContinuousToken;
 
         List<S3Object> expected = List.of(
                 buildS3Object("afile.txt", ROOT_USER, content),
@@ -197,7 +197,7 @@ public class ListObjectsV2Test extends BaseTest {
         ListObjectsV2Response response = s3.listObjectsV2(request.build());
         Assertions.assertEquals(maxKeys != null ? maxKeys : 1000, response.maxKeys());
         Assertions.assertEquals(continuousToken, response.continuationToken());
-        Assertions.assertEquals(prefix, response.prefix());
+        Assertions.assertEquals(prefix == null ? "" : prefix, response.prefix());
         Assertions.assertEquals(bucket, response.name());
         Assertions.assertEquals(expected.size(), response.contents().size());
 
@@ -211,7 +211,7 @@ public class ListObjectsV2Test extends BaseTest {
     private boolean equalsS3Objects(S3Object expected, S3Object actual) {
         return expected.key().equals(actual.key()) &&
                 expected.size().equals(actual.size()) &&
-                expected.eTag().equals(actual.eTag()) &&
+                ("\"" + expected.eTag() + "\"").equals(actual.eTag()) &&
                 expected.owner().displayName().equals(actual.owner().displayName()) &&
                 expected.owner().id().equals(actual.owner().id());
     }
