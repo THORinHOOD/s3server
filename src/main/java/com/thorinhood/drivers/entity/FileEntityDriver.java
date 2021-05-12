@@ -453,14 +453,14 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
 
     private void checkSelectors(HttpHeaders headers, String eTag, File file) throws ParseException {
         if (headers.contains(S3Headers.IF_MATCH)) {
-            ifMatch.check(eTag, headers.get(S3Headers.IF_MATCH));
+            ifMatch.check(eTag, headers.get(S3Headers.IF_MATCH).replaceAll("\"", ""));
         }
         if (headers.contains(S3Headers.IF_MODIFIED_SINCE)) {
             ifModifiedSince.check(new Date(file.lastModified()),
                     DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_MODIFIED_SINCE)));
         }
         if (headers.contains(S3Headers.IF_NONE_MATCH)) {
-            ifNoneMatch.check(eTag, headers.get(S3Headers.IF_NONE_MATCH));
+            ifNoneMatch.check(eTag, headers.get(S3Headers.IF_NONE_MATCH).replaceAll("\"", ""));
         }
         if (headers.contains(S3Headers.IF_UNMODIFIED_SINCE)) {
             ifUnmodifiedSince.check(new Date(file.lastModified()),
@@ -470,14 +470,14 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
 
     private void checkSelectorsCopy(HttpHeaders headers, String eTag, File file) throws ParseException {
         if (headers.contains(S3Headers.IF_MATCH_SOURCE)) {
-            ifMatch.check(eTag, headers.get(S3Headers.IF_MATCH_SOURCE));
+            ifMatch.check(eTag, headers.get(S3Headers.IF_MATCH_SOURCE).replaceAll("\"", ""));
         }
         if (headers.contains(S3Headers.IF_MODIFIED_SINCE_SOURCE)) {
             ifModifiedSince.check(new Date(file.lastModified()),
                     DateTimeUtil.parseStrTime(headers.get(S3Headers.IF_MODIFIED_SINCE_SOURCE)));
         }
         if (headers.contains(S3Headers.IF_NONE_MATCH_SOURCE)) {
-            ifNoneMatch.check(eTag, headers.get(S3Headers.IF_NONE_MATCH_SOURCE));
+            ifNoneMatch.check(eTag, headers.get(S3Headers.IF_NONE_MATCH_SOURCE).replaceAll("\"", ""));
         }
         if (headers.contains(S3Headers.IF_UNMODIFIED_SINCE_SOURCE)) {
             ifUnmodifiedSince.check(new Date(file.lastModified()),
