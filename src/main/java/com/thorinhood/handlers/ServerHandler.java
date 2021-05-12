@@ -135,7 +135,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         if (request.method().equals(HttpMethod.HEAD)) {
             if (parsedRequest.isPathToObject()) {
-                getObjectProcessor.process(context, request, parsedRequest);
+                headObjectProcessor.process(context, request, parsedRequest);
                 return true;
             }
         }
