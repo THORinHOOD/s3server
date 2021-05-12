@@ -46,7 +46,7 @@ public class GetObjectProcessor extends Processor {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
         HttpUtil.setContentLength(response, fileLength);
         setContentTypeHeader(response, s3Object.getFile());
-        response.headers().set("ETag", s3Object.getETag());
+        response.headers().set("ETag", "\"" + s3Object.getETag() + "\"");
         response.headers().set("Last-Modified", s3Object.getLastModified());
         response.headers().set("Date", DateTimeUtil.currentDateTime());
         s3Object.getMetaData().forEach((metaKey, metaValue) ->

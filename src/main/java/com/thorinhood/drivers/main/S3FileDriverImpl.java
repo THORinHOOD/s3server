@@ -279,7 +279,7 @@ public class S3FileDriverImpl implements S3Driver {
         );
         S3Object targetObject = putObject(target, sourceObject.getRawBytes(), sourceObject.getMetaData(), s3User);
         return CopyObjectResult.builder()
-                .setETag(targetObject.getETag())
+                .setETag("\"" + targetObject.getETag() + "\"")
                 .setLastModified(DateTimeUtil.parseDateTimeISO(targetObject.getFile()))
                 .build();
     }
@@ -505,7 +505,7 @@ public class S3FileDriverImpl implements S3Driver {
         }
         List<Future<S3Content>> s3ContentFutures = s3ObjectETags.stream()
                 .map(s3ObjectETag -> executorService.submit(() -> S3Content.builder()
-                        .setETag(s3ObjectETag.getETag())
+                        .setETag("\"" + s3ObjectETag.getETag() + "\"")
                         .setKey(s3ObjectETag.getS3FileObjectPath().getKey())
                         .setLastModified(DateTimeUtil.parseDateTimeISO(s3ObjectETag.getFile()))
                         .setOwner(entityLocker.readMeta(

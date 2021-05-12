@@ -39,7 +39,7 @@ public class HeadObjectProcessor extends Processor {
                     .setResource("1")
                     .setRequestId("1"));
             }
-            response.headers().set("ETag", s3Object.getETag());
+            response.headers().set("ETag", "\"" + s3Object.getETag() + "\"");
             response.headers().set("Last-Modified", s3Object.getLastModified());
             response.headers().set("Date", DateTimeUtil.currentDateTime());
             s3Object.getMetaData().forEach((metaKey, metaValue) ->

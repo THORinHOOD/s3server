@@ -307,7 +307,7 @@ public class BaseTest {
     protected void checkGetObject(String expectedContent, Map<String, String> expectedMetadata,
                                   ResponseBytes<GetObjectResponse> response) {
         Assertions.assertEquals(expectedContent.getBytes().length, response.response().contentLength());
-        Assertions.assertEquals(calcETag(expectedContent), response.response().eTag());
+        Assertions.assertEquals("\"" + calcETag(expectedContent) + "\"", response.response().eTag());
         if (expectedMetadata != null) {
             assertMaps(expectedMetadata, response.response().metadata());
         } else {
@@ -349,7 +349,7 @@ public class BaseTest {
         for (int i = 0; i < futureList.size(); i++) {
             try {
                 PutObjectResponse response = futureList.get(i).get();
-                Assertions.assertEquals(response.eTag(), calcETag(contents.get(i % 2)));
+                Assertions.assertEquals(response.eTag(), "\"" + calcETag(contents.get(i % 2)) + "\"");
             } catch (InterruptedException | ExecutionException e) {
                 Assertions.fail(e);
             }

@@ -27,7 +27,7 @@ public class CompleteMultipartUploadResult implements XmlObject {
                 createTextElement(doc, "Location", location),
                 createTextElement(doc, "Bucket", bucket),
                 createTextElement(doc, "Key", key),
-                createTextElement(doc, "ETag", "\"" + eTag + "\""));
+                createTextElement(doc, "ETag", eTag));
         return appendAttributes(root, Map.of(
                 "xmlns", xmlns
         ));

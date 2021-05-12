@@ -50,7 +50,7 @@ public class UploadPartProcessor extends Processor {
                 partNumber,
                 parsedRequest.getBytes());
         sendResponseWithoutContent(context, OK, request, Map.of(
-        "ETag", eTag,
+        "ETag", "\"" + eTag + "\"",
         "Date", DateTimeUtil.currentDateTime()
         ));
     }

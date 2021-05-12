@@ -39,7 +39,7 @@ public class CompleteMultipartUploadProcessor extends Processor {
                 completeMultipartUpload.getParts(),
                 parsedRequest.getS3User());
         CompleteMultipartUploadResult completeMultipartUploadResult = CompleteMultipartUploadResult.builder()
-                .setETag(eTag)
+                .setETag("\"" + eTag + "\"")
                 .setKey(parsedRequest.getS3ObjectPath().getKey())
                 .setLocation(parsedRequest.getS3ObjectPath().getKeyWithBucket())
                 .setBucket(parsedRequest.getS3ObjectPath().getBucket())

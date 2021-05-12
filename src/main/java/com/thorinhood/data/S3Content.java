@@ -25,7 +25,7 @@ public class S3Content implements XmlObject {
         return createElement(doc, "Contents",
                     createTextElement(doc, "Key", key),
                     createTextElement(doc, "LastModified", lastModified),
-                    createTextElement(doc, "ETag", "\"" + eTag + "\""),
+                    createTextElement(doc, "ETag", eTag),
                     createTextElement(doc, "Size", String.valueOf(size)),
                     createTextElement(doc, "StorageClass", storageClass),
                     owner != null ? owner.buildXmlRootNode(doc) : null);

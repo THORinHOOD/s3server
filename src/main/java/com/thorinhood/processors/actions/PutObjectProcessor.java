@@ -37,7 +37,7 @@ public class PutObjectProcessor extends Processor {
                 parsedRequest.getMetadata(),
                 parsedRequest.getS3User());
         sendResponseWithoutContent(context, OK, request, Map.of(
-                "ETag", s3Object.getETag(),
+                "ETag", "\"" + s3Object.getETag() + "\"",
                 "Last-Modified", s3Object.getLastModified(),
                 "Date", DateTimeUtil.currentDateTime()
         ));

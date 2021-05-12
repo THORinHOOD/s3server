@@ -238,7 +238,7 @@ public class PutObjectTest extends BaseTest {
             request.metadata(metadata);
         }
         PutObjectResponse response = s3Client.putObject(request.build(), RequestBody.fromString(content));
-        Assertions.assertEquals(response.eTag(), calcETag(content));
+        Assertions.assertEquals(response.eTag(), "\"" + calcETag(content) + "\"");
         checkObject(bucket, keyWithoutName, fileName, content, metadata, true);
     }
 
