@@ -47,7 +47,6 @@ public class CompleteMultipartUploadProcessor extends Processor {
         String xml = completeMultipartUploadResult.buildXmlText();
         sendResponse(context, request, HttpResponseStatus.OK, response -> {
             response.headers().set("Date", DateTimeUtil.currentDateTime());
-            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, xml.getBytes().length);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
         }, xml);
     }

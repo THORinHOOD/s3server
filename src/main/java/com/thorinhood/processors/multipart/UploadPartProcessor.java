@@ -51,7 +51,6 @@ public class UploadPartProcessor extends Processor {
                 parsedRequest.getBytes());
         sendResponseWithoutContent(context, OK, request, Map.of(
         "ETag", eTag,
-            HttpHeaderNames.CONTENT_LENGTH.toString(), 0,
         "Date", DateTimeUtil.currentDateTime()
         ));
     }

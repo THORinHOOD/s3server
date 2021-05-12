@@ -40,7 +40,6 @@ public class ListObjectsProcessor extends Processor {
         ListBucketResult listBucketResult = S3_DRIVER.getBucketObjects(getBucketObjects);
         String xml = listBucketResult.buildXmlText();
         sendResponse(context, request, OK, response -> {
-            HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
             response.headers().set("Date", DateTimeUtil.currentDateTime());
         }, xml);

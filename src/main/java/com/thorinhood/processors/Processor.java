@@ -1,7 +1,6 @@
 package com.thorinhood.processors;
 
 import com.thorinhood.chunks.ChunkReader;
-import com.thorinhood.data.S3FileBucketPath;
 import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.main.S3Driver;
@@ -82,40 +81,43 @@ public abstract class Processor {
     }
 
     public void sendResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus httpResponseStatus,
-                             Consumer<FullHttpResponse> headersSetter, String content) {
-        FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, httpResponseStatus, Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
+                             Consumer<FullHttpResponse> headersSetter) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, httpResponseStatus);
         headersSetter.accept(response);
         sendAndCleanupConnection(ctx, response, request);
     }
 
     public void sendResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus httpResponseStatus,
-                             Consumer<FullHttpResponse> headersSetter, byte[] content) {
-        FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, httpResponseStatus, Unpooled.copiedBuffer(content));
+                             Consumer<FullHttpResponse> headersSetter, String content) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, httpResponseStatus,
+                Unpooled.copiedBuffer(content, CharsetUtil.UTF_8));
         headersSetter.accept(response);
+        HttpUtil.setContentLength(response, response.content().readableBytes());
+        sendAndCleanupConnection(ctx, response, request);
+    }
+
+    public void sendResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus httpResponseStatus,
+                             Consumer<FullHttpResponse> headersSetter, byte[] content) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, httpResponseStatus,
+                Unpooled.copiedBuffer(content));
+        headersSetter.accept(response);
+        HttpUtil.setContentLength(response, response.content().readableBytes());
         sendAndCleanupConnection(ctx, response, request);
     }
 
     public static void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
-        FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, s3Exception.getStatus(), Unpooled.copiedBuffer(s3Exception.buildXmlText(), CharsetUtil.UTF_8));
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, s3Exception.getStatus(),
+                Unpooled.copiedBuffer(s3Exception.buildXmlText(), CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
+        HttpUtil.setContentLength(response, response.content().readableBytes());
         sendAndCleanupConnection(ctx, response, request);
     }
 
     protected void sendError(ChannelHandlerContext ctx, HttpResponseStatus status, FullHttpRequest request) {
-        FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status,
+                Unpooled.copiedBuffer("Failure: " + status + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
-
-        sendAndCleanupConnection(ctx, response, request);
-    }
-
-    protected void sendResponseWithoutContent(ChannelHandlerContext ctx, HttpResponseStatus status,
-                                              FullHttpRequest request, Consumer<FullHttpResponse> headersSet) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status);
-        headersSet.accept(response);
+        HttpUtil.setContentLength(response, response.content().readableBytes());
         sendAndCleanupConnection(ctx, response, request);
     }
 
@@ -123,13 +125,13 @@ public abstract class Processor {
                                               FullHttpRequest request, Map<String, Object> headers) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status);
         headers.forEach((header, value) -> response.headers().set(header, value));
+        HttpUtil.setContentLength(response, 0);
         sendAndCleanupConnection(ctx, response, request);
     }
 
     protected static void sendAndCleanupConnection(ChannelHandlerContext ctx, FullHttpResponse response,
                                             FullHttpRequest request) {
         final boolean keepAlive = HttpUtil.isKeepAlive(request);
-        HttpUtil.setContentLength(response, response.content().readableBytes());
         if (!keepAlive) {
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         } else if (request.protocolVersion().equals(HTTP_1_0)) {

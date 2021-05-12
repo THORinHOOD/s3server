@@ -31,9 +31,7 @@ public class GetBucketAclProcessor extends Processor {
         AccessControlPolicy accessControlPolicy = S3_DRIVER.getBucketAcl(parsedRequest.getS3BucketPath());
         String xml = accessControlPolicy.buildXmlText();
         sendResponse(context, request, OK, response -> {
-            HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
-            //        response.headers().set("Last-Modified", s3Object.getLastModified()); // TODO
             response.headers().set("Date", DateTimeUtil.currentDateTime());
         }, xml);
     }

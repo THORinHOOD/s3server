@@ -39,7 +39,6 @@ public class GetBucketPolicyProcessor extends BucketPolicyProcessor {
                     .setRequestId("1"); // TODO
         }
         sendResponse(context, request, OK, response -> {
-            HttpUtil.setContentLength(response, bucketPolicy.get().length);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
             response.headers().set("Date", DateTimeUtil.currentDateTime());
         }, bucketPolicy.get());

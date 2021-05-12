@@ -27,8 +27,7 @@ public class PutBucketAclProcessor extends Processor {
         checkRequestPermissions(parsedRequest, true);
         S3_DRIVER.putBucketAcl(parsedRequest.getS3BucketPath(), parsedRequest.getBytes());
         sendResponseWithoutContent(context, OK, request, Map.of(
-                "Date", DateTimeUtil.currentDateTime(),
-                "Content-Length", 0
+                "Date", DateTimeUtil.currentDateTime()
         ));
     }
 

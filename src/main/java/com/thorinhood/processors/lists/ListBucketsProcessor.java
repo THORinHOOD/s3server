@@ -32,7 +32,6 @@ public class ListBucketsProcessor extends Processor {
         GetBucketsResult result = S3_DRIVER.getBuckets(parsedRequest.getS3User());
         String xml = result.buildXmlText();
         sendResponse(context, request, HttpResponseStatus.OK, response -> {
-            HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
             response.headers().set("Date", DateTimeUtil.currentDateTime());
         }, xml);

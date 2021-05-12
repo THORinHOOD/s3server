@@ -28,8 +28,7 @@ public class PutObjectAclProcessor extends Processor {
         String lastModified = S3_DRIVER.putObjectAcl(parsedRequest.getS3ObjectPath(), parsedRequest.getBytes());
         sendResponseWithoutContent(context, OK, request, Map.of(
                 "Last-Modified", lastModified,
-                "Date", DateTimeUtil.currentDateTime(),
-                "Content-Length", 0
+                "Date", DateTimeUtil.currentDateTime()
         ));
     }
 

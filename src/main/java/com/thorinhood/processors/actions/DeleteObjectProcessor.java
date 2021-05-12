@@ -27,7 +27,6 @@ public class DeleteObjectProcessor extends Processor {
         checkRequestPermissions(parsedRequest, true);
         S3_DRIVER.deleteObject(parsedRequest.getS3ObjectPath());
         sendResponseWithoutContent(context, OK, request, Map.of(
-                "Content-Length", 0,
                 "Date", DateTimeUtil.currentDateTime()
         ));
     }

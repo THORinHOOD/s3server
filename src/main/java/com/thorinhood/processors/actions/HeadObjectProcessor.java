@@ -30,7 +30,7 @@ public class HeadObjectProcessor extends Processor {
                                 Object... arguments) throws Exception {
         checkRequestPermissions(parsedRequest, "s3:GetObject", false);
         S3Object s3Object = S3_DRIVER.headObject(parsedRequest.getS3ObjectPath(), parsedRequest.getHeaders());
-        sendResponseWithoutContent(context, HttpResponseStatus.OK, request, response -> {
+        sendResponse(context, request, HttpResponseStatus.OK, response -> {
             HttpUtil.setContentLength(response, s3Object.getFile().length());
             try {
                 setContentTypeHeader(response, s3Object.getFile());

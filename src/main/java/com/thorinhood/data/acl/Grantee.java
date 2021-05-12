@@ -10,10 +10,6 @@ import java.util.Map;
 
 public class Grantee implements Serializable, XmlObject {
 
-    enum Type {
-        CanonicalUser, AmazonCustomerByEmail, Group;
-    }
-
     private String displayName;
     private String emailAddress;
     private String id;

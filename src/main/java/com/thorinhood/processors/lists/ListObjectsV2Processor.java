@@ -43,7 +43,6 @@ public class ListObjectsV2Processor extends Processor {
         ListBucketV2Result listBucketV2Result = S3_DRIVER.getBucketObjectsV2(getBucketObjectsV2);
         String xml = listBucketV2Result.buildXmlText();
         sendResponse(context, request, OK, response -> {
-            HttpUtil.setContentLength(response, xml.getBytes(StandardCharsets.UTF_8).length);
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
             response.headers().set("Date", DateTimeUtil.currentDateTime());
         }, xml);
