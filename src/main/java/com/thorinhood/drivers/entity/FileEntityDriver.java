@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -387,11 +388,11 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         Path currentUploadFolderPath = Path.of(currentUploadFolder);
         try (Stream<Path> tree = Files.walk(currentUploadFolderPath, 1)) {
             Map<Integer, File> partsFiles = tree
-                .filter(current -> !current.toString().equals(currentUploadFolder) && Files.isRegularFile(current) &&
-                    current.getFileName().toString().matches("[0-9]+") &&
-                    Integer.parseInt(current.getFileName().toString()) >= 1 &&
-                    Integer.parseInt(current.getFileName().toString()) <= 10000)
-                .collect(Collectors.toMap(p -> Integer.parseInt(p.getFileName().toString()), Path::toFile));
+                    .filter(current -> !current.toString().equals(currentUploadFolder) && Files.isRegularFile(current) &&
+                            current.getFileName().toString().matches("[0-9]+") &&
+                            Integer.parseInt(current.getFileName().toString()) >= 1 &&
+                            Integer.parseInt(current.getFileName().toString()) <= 10000)
+                    .collect(Collectors.toMap(p -> Integer.parseInt(p.getFileName().toString()), Path::toFile));
 
             if (!parts.stream().allMatch(partInfo -> partsFiles.containsKey(partInfo.getPartNumber()))) {
                 throw INVALID_PART_EXCEPTION();
@@ -400,7 +401,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             File file = new File(s3FileObjectPath.getPathToObject());
             if (!file.exists() || (file.exists() && file.isDirectory())) {
                 if (!file.createNewFile()) {
-                    throw new Exception("Can't create file");
+                    throw new IOException("Can't create file");
                 }
             }
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -422,7 +423,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     try (InputStream input = new BufferedInputStream(new FileInputStream(partFile))) {
                         byte[] buffer = input.readAllBytes();
                         String calculatedEtag = DigestUtils.md5Hex(buffer);
-                        if (!part.getETag().equals(calculatedEtag)) {
+                        if (!part.getETag().replaceAll("\"", "").equals(calculatedEtag)) {
                             throw INVALID_PART_EXCEPTION();
                         }
                         outputStream.write(buffer);
@@ -432,9 +433,8 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             }
             deleteFolder(currentUploadFolder);
             return DatatypeConverter.printHexBinary(md.digest()).toLowerCase();
-        } catch (Exception e) {
-            throw S3Exception.INTERNAL_ERROR("Can't process multipart upload : " + currentUploadFolder)
-                    .setMessage("Can't process multipart upload : " + currentUploadFolder)
+        } catch (IOException | NoSuchAlgorithmException exception) {
+            throw S3Exception.INTERNAL_ERROR(exception)
                     .setResource("1")
                     .setRequestId("1");
         }
