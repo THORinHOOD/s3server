@@ -26,7 +26,8 @@ public interface S3Driver extends AclPermissionChecker {
     void putBucketAcl(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception;
     String putObjectAcl(S3FileObjectPath s3FileObjectPath, byte[] bytes) throws S3Exception;
 
-    boolean checkBucketPolicy(S3FileBucketPath s3FileBucketPath, String key, String methodName, S3User s3User) throws S3Exception;
+    Optional<Boolean> checkBucketPolicy(S3FileBucketPath s3FileBucketPath, String key, String methodName, S3User s3User)
+            throws S3Exception;
     Optional<BucketPolicy> getBucketPolicy(S3FileBucketPath s3FileBucketPath) throws S3Exception;
     Optional<byte[]> getBucketPolicyBytes(S3FileBucketPath s3FileBucketPath) throws S3Exception;
     void putBucketPolicy(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception;

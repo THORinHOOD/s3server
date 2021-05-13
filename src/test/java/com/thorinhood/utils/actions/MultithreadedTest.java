@@ -1,5 +1,6 @@
 package com.thorinhood.utils.actions;
 
+import com.thorinhood.utils.BaseTest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.ResponseBytes;

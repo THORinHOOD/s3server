@@ -64,12 +64,12 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public boolean checkBucketPolicy(S3FileBucketPath s3FileBucketPath, String key, String methodName, S3User s3User)
-            throws S3Exception {
+    public Optional<Boolean> checkBucketPolicy(S3FileBucketPath s3FileBucketPath, String key, String methodName,
+                                               S3User s3User) throws S3Exception {
         fileDriver.checkBucket(s3FileBucketPath);
         String policyFilePath = s3FileBucketPath.getPathToBucketPolicyFile();
         if (!fileDriver.isFileExists(policyFilePath)) {
-            return s3User.isRootUser();
+            return Optional.empty();
         }
         Optional<BucketPolicy> bucketPolicy = entityLocker.readMeta(
                 s3FileBucketPath.getPathToBucket(),
@@ -78,28 +78,34 @@ public class S3FileDriverImpl implements S3Driver {
                 () -> getBucketPolicy(s3FileBucketPath)
         );
         if (bucketPolicy.isEmpty()) {
-            return s3User.isRootUser();
+            return Optional.empty();
         }
-        boolean result = s3User.isRootUser();
         for (Statement statement : bucketPolicy.get().getStatements()) {
-            if (checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn())) {
-                if (checkStatement(statement, s3FileBucketPath.getBucket(), key, methodName, s3User,
-                        !s3User.isRootUser())) {
-                    result = !s3User.isRootUser();
-                }
+            Optional<Boolean> checkResult = checkStatement(statement, s3FileBucketPath.getBucket(), key,
+                    methodName, s3User);
+            if (checkResult.isPresent()) {
+                return checkResult;
             }
         }
-        return result;
+        return Optional.empty();
     }
 
-    private boolean checkStatement(Statement statement, String bucket, String key, String methodName, S3User s3User,
-                                   boolean isAllow) {
+    private Optional<Boolean> checkStatement(Statement statement, String bucket, String key, String methodName,
+                                             S3User s3User) {
+        boolean isThisPrincipal = checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn());
+        if (!isThisPrincipal) {
+            return Optional.empty();
+        }
         boolean hasAction = statement.getAction().stream().anyMatch(action -> checkAction(action, methodName));
+        if (!hasAction) {
+            return Optional.empty();
+        }
         boolean isThisResource = statement.getResource().stream().anyMatch(resource ->
                 checkResource(resource, bucket, key));
-        boolean isThisPrincipal = checkPrincipal(statement.getPrinciple().getAWS(), s3User.getArn());
-        boolean isEffectAllow = checkEffect(statement.getEffect());
-        return hasAction && isThisResource && isThisPrincipal && (isEffectAllow == isAllow);
+        if (!isThisResource) {
+            return Optional.empty();
+        }
+        return Optional.of(checkEffect(statement.getEffect()));
     }
 
     private boolean checkEffect(Statement.EffectType effect) {
@@ -269,12 +275,14 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public CopyObjectResult copyObject(S3FileObjectPath source, S3FileObjectPath target, HttpHeaders httpHeaders,
                                        S3User s3User) throws S3Exception {
-        HasMetaData sourceObject = entityLocker.readObject(
+        S3Object sourceObject = entityLocker.readObject(
             source,
             () -> {
                 Map<String, String> metadata = metadataDriver.getObjectMetadata(source);
                 String sourceETag = metadata.get(FileMetadataDriver.ETAG);
-                return entityDriver.getObject(source, sourceETag, httpHeaders, true);
+                metadata.remove(FileMetadataDriver.ETAG);
+                return entityDriver.getObject(source, sourceETag, httpHeaders, true)
+                        .setMetaData(metadata);
             }
         );
         S3Object targetObject = putObject(target, sourceObject.getRawBytes(), sourceObject.getMetaData(), s3User);

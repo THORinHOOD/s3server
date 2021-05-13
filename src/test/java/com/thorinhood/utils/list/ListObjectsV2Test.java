@@ -1,7 +1,8 @@
-package com.thorinhood.utils.actions;
+package com.thorinhood.utils.list;
 
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.data.S3User;
+import com.thorinhood.utils.BaseTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;

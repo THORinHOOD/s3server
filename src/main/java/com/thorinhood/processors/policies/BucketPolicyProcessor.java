@@ -5,6 +5,8 @@ import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.utils.ParsedRequest;
 
+import java.util.Optional;
+
 public abstract class BucketPolicyProcessor extends Processor {
 
     public BucketPolicyProcessor(S3Driver s3Driver) {
@@ -21,9 +23,9 @@ public abstract class BucketPolicyProcessor extends Processor {
                     .setRequestId("1");
         }
         if (!request.getS3User().isRootUser()) {
-            boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),
+            Optional<Boolean> policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),
                     request.getS3ObjectPathUnsafe().getKeyUnsafe(), METHOD_NAME, request.getS3User());
-            if (!policyCheckResult) {
+            if (policyCheckResult.isEmpty() || !policyCheckResult.get()) {
                 throw S3Exception.ACCESS_DENIED()
                         .setResource("1")
                         .setRequestId("1");

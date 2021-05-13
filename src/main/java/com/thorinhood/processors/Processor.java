@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
@@ -56,9 +57,10 @@ public abstract class Processor {
             S3_DRIVER.isBucketExists(s3FileObjectPath);
         }
         boolean aclCheckResult = S3_DRIVER.checkAclPermission(isBucketAcl, s3FileObjectPath, methodName, s3User);
-        boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(s3FileObjectPath, s3FileObjectPath.getKeyUnsafe(),
-                methodName, s3User);
-        if (!(aclCheckResult && policyCheckResult)) {
+        Optional<Boolean> policyCheckResult = S3_DRIVER.checkBucketPolicy(s3FileObjectPath,
+                s3FileObjectPath.getKeyUnsafe(), methodName, s3User);
+        if ((policyCheckResult.isPresent() && !policyCheckResult.get()) ||
+            (policyCheckResult.isEmpty() && !aclCheckResult)) {
             throw S3Exception.ACCESS_DENIED()
                     .setResource("1")
                     .setRequestId("1");

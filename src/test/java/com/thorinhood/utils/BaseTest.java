@@ -1,4 +1,4 @@
-package com.thorinhood.utils.actions;
+package com.thorinhood.utils;
 
 import com.thorinhood.Server;
 import com.thorinhood.data.S3User;

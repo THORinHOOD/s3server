@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 public class AbortMultipartUploadProcessor extends Processor {
@@ -42,9 +43,9 @@ public class AbortMultipartUploadProcessor extends Processor {
     protected void checkRequestPermissions(ParsedRequest request, boolean isBucketAcl) throws S3Exception {
         S3_DRIVER.isBucketExists(request.getS3BucketPath());
         if (!request.getS3User().isRootUser()) {
-            boolean policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),
+            Optional<Boolean> policyCheckResult = S3_DRIVER.checkBucketPolicy(request.getS3BucketPath(),
                     request.getS3ObjectPathUnsafe().getKeyUnsafe(), METHOD_NAME, request.getS3User());
-            if (!policyCheckResult) {
+            if (policyCheckResult.isEmpty() || !policyCheckResult.get()) {
                 throw S3Exception.ACCESS_DENIED()
                         .setResource("1")
                         .setRequestId("1");
