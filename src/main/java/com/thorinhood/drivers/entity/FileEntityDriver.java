@@ -362,6 +362,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             return;
         }
         deleteFolder(uploadFolder);
+        deleteEmptyKeys(new File(uploadFolder));
     }
 
     @Override

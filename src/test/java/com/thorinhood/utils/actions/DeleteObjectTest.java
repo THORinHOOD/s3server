@@ -2,6 +2,7 @@ package com.thorinhood.utils.actions;
 
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.utils.BaseTest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -95,14 +96,11 @@ public class DeleteObjectTest extends BaseTest {
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
                 null);
-        s3 = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(), NOT_AUTH_ROOT_USER.getSecretKey());
-        try {
-            deleteObject(s3, "bucket", "folder1/file.txt");
-            Assertions.fail("Access denied exception not thrown");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
-            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(), "Access denied");
-        }
+        S3Client s3NotAuth = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(),
+                NOT_AUTH_ROOT_USER.getSecretKey());
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
+            deleteObject(s3NotAuth, "bucket", "folder1/file.txt");
+        });
     }
 
     @Test
@@ -112,14 +110,10 @@ public class DeleteObjectTest extends BaseTest {
         putObjectRaw(s3, "bucket", "folder1/file.txt", "hello, s3!!!", null);
         checkObject("bucket", "folder1", "file.txt", "hello, s3!!!",
                 null);
-        s3 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
-        try {
-            deleteObject(s3, "bucket", "folder1/file.txt");
-            Assertions.fail("Access denied exception not thrown");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
-            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(), "Access denied");
-        }
+        S3Client s3Client2 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
+            deleteObject(s3Client2, "bucket", "folder1/file.txt");
+        });
     }
 
     private void deleteObject(S3Client s3, String bucket, String key) {

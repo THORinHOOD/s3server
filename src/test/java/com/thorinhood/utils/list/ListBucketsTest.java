@@ -1,5 +1,6 @@
 package com.thorinhood.utils.list;
 
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.utils.BaseTest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
@@ -7,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Bucket;
 import software.amazon.awssdk.services.s3.model.ListBucketsResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 public class ListBucketsTest extends BaseTest {
     public ListBucketsTest() {
@@ -29,13 +29,9 @@ public class ListBucketsTest extends BaseTest {
         response = s3Client2.listBuckets();
         Assertions.assertEquals(1, response.buckets().size());
         Assertions.assertEquals("bucket3", response.buckets().get(0).name());
-        S3Client s3Client3 = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(),
+        S3Client s3NotAuth = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(),
                 NOT_AUTH_ROOT_USER.getSecretKey());
-        try {
-            s3Client3.listBuckets();
-            Assertions.fail("Must be exception");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(HttpResponseStatus.FORBIDDEN.code(), exception.statusCode());
-        }
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED,
+                s3NotAuth::listBuckets);
     }
 }

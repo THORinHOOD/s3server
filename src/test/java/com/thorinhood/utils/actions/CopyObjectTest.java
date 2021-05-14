@@ -1,5 +1,6 @@
 package com.thorinhood.utils.actions;
 
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.utils.BaseTest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
@@ -110,27 +111,20 @@ public class CopyObjectTest extends BaseTest {
         putObjectRaw(s3Client, bucket, sourceKeyWithoutBucket, content, null);
         S3Client s3Client2 = getS3Client(true, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
         createBucketRaw(s3Client2, bucket2);
-        try {
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
             s3Client.copyObject(CopyObjectRequest.builder()
                     .copySource("/" + bucket + File.separatorChar + sourceKeyWithoutBucket)
                     .destinationKey("key.txt")
                     .destinationBucket(bucket2)
                     .build());
-            Assertions.fail("Must be exception");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(HttpResponseStatus.FORBIDDEN.code(), exception.statusCode());
-        }
-        try {
+        });
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
             s3Client2.copyObject(CopyObjectRequest.builder()
                     .copySource("/" + bucket + File.separatorChar + sourceKeyWithoutBucket)
                     .destinationKey("key.txt")
                     .destinationBucket(bucket2)
                     .build());
-            Assertions.fail("Must be exception");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(HttpResponseStatus.FORBIDDEN.code(), exception.statusCode());
-        }
-
+        });
         s3Client.putBucketPolicy(PutBucketPolicyRequest.builder()
                 .bucket(bucket)
                 .policy("{\n" +

@@ -173,6 +173,20 @@ public class BaseTest {
         s3Client.putObject(request.build(), RequestBody.fromString(content));
     }
 
+    protected void assertException(int code, String s3ErrorCode, Runnable runnable) {
+        try {
+            runnable.run();
+            Assertions.fail("Must be exception");
+        } catch (S3Exception s3Exception) {
+            Assertions.assertEquals(code, s3Exception.statusCode());
+            if (s3ErrorCode == null) {
+                Assertions.assertNull(s3Exception.awsErrorDetails().errorCode());
+            } else {
+                Assertions.assertEquals(s3ErrorCode, s3Exception.awsErrorDetails().errorCode());
+            }
+        }
+    }
+
     protected void checkObjectNotExists(String bucket, String keyWithoutName, String fileName) throws IOException {
         File file = new File(BASE_PATH + File.separatorChar + bucket + File.separatorChar +
                 buildKey(keyWithoutName, fileName));
@@ -191,6 +205,10 @@ public class BaseTest {
         Assertions.assertTrue(!metadataFile.exists() || !metadataFile.isFile());
     }
 
+    protected boolean checkFolder(String relativePath) {
+        File folder = new File(BASE_PATH + File.separatorChar + relativePath);
+        return folder.exists() && folder.isDirectory();
+    }
 
     protected void checkObject(String bucket, String keyWithoutName, String fileName, String content,
                                Map<String, String> metadata) throws IOException {

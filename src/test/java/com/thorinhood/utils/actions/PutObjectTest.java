@@ -2,6 +2,7 @@ package com.thorinhood.utils.actions;
 
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.utils.BaseTest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -106,18 +107,20 @@ public class PutObjectTest extends BaseTest {
     }
 
     @Test
-    public void putObjectInWrongBucket() throws Exception {
+    public void putObjectInWrongBucket() {
         S3Client s3 = getS3Client(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw(s3, "bucket");
-        try {
-            putObject(s3,
-                    "bucket2",
-                    "folder1",
-                    "file.txt",
-                    "hello, s3!!!");
-            Assertions.fail("NoSuchBucketException not thrown");
-        } catch (NoSuchBucketException noSuchBucketException) {
-        }
+        assertException(HttpResponseStatus.NOT_FOUND.code(), S3ResponseErrorCodes.NO_SUCH_BUCKET, () -> {
+            try {
+                putObject(s3,
+                        "bucket2",
+                        "folder1",
+                        "file.txt",
+                        "hello, s3!!!");
+            } catch (IOException exception) {
+                Assertions.fail(exception);
+            }
+        });
     }
 
     @Test
@@ -167,45 +170,46 @@ public class PutObjectTest extends BaseTest {
     }
 
     @Test
-    public void putObjectUnregisterUser() throws Exception {
+    public void putObjectUnregisterUser() {
         S3Client s3 = getS3Client(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw(s3, "bucket");
-        s3 = getS3Client(true, NOT_AUTH_ROOT_USER.getAccessKey(), NOT_AUTH_ROOT_USER.getSecretKey());
-        try {
-            putObject(s3,
-                    "bucket",
-                    null,
-                    "файл.txt",
-                    "привет, s3!!!",
-                    Map.of(
-                            "key1", "value1",
-                            "key2", "value2"));
-            Assertions.fail("Access denied exception not thrown");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
-            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(), "Access denied");
-        }
+        S3Client s3NotAuth = getS3Client(true, NOT_AUTH_ROOT_USER.getAccessKey(),
+                NOT_AUTH_ROOT_USER.getSecretKey());
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
+            try {
+                putObject(s3NotAuth,
+                        "bucket",
+                        null,
+                        "файл.txt",
+                        "привет, s3!!!",
+                        Map.of(
+                                "key1", "value1",
+                                "key2", "value2"));
+            } catch (IOException exception) {
+                Assertions.fail(exception);
+            }
+        });
     }
 
     @Test
-    public void putObjectAnotherUser() throws Exception {
+    public void putObjectAnotherUser() {
         S3Client s3 = getS3Client(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         createBucketRaw(s3, "bucket");
-        s3 = getS3Client(true, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
-        try {
-            putObject(s3,
-                    "bucket",
-                    null,
-                    "файл.txt",
-                    "привет, s3!!!",
-                    Map.of(
-                            "key1", "value1",
-                            "key2", "value2"));
-            Assertions.fail("Access denied exception not thrown");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
-            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(), "Access denied");
-        }
+        S3Client s3Client2 = getS3Client(true, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
+            try {
+                putObject(s3Client2,
+                        "bucket",
+                        null,
+                        "файл.txt",
+                        "привет, s3!!!",
+                        Map.of(
+                                "key1", "value1",
+                                "key2", "value2"));
+            } catch (IOException exception) {
+                Assertions.fail(exception);
+            }
+        });
     }
 
     @Test

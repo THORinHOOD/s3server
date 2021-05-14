@@ -1,14 +1,12 @@
 package com.thorinhood.utils.actions;
 
 import com.thorinhood.utils.BaseTest;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.File;
 import java.util.stream.Collectors;
@@ -36,7 +34,7 @@ public class CreateBucketTest extends BaseTest {
         Assertions.assertTrue(aclBucketFile.exists() && aclBucketFile.isFile());
 
         try {
-            response = s3.createBucket(request);
+            s3.createBucket(request);
             Assertions.fail("BucketAlreadyOwnedByYouException not thrown");
         } catch (BucketAlreadyOwnedByYouException bucketAlreadyExistsException) {
         }

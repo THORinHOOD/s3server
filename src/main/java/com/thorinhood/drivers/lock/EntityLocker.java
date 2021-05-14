@@ -33,11 +33,12 @@ public class EntityLocker {
         write(s3FileBucketPath.getPathToBucket(), s3Runnable);
     }
 
-    public <T> T completeUpload(String bucket, String metaFolder, String uploadId, S3Supplier<T> s3Supplier)
+    public <T> T completeUpload(S3FileObjectPath s3FileObjectPath, String uploadId, S3Supplier<T> s3Supplier)
             throws S3Exception {
-        return read(bucket, () ->
-                read(metaFolder, () ->
-                write(uploadId, s3Supplier)));
+        return read(s3FileObjectPath.getPathToBucket(), () ->
+                read(s3FileObjectPath.getPathToBucketMetadataFolder(), () ->
+                write(uploadId, () ->
+                writeObject(s3FileObjectPath, s3Supplier))));
     }
 
     public <T> T readUpload(String bucket, String metaFolder, String uploadId, String part,
@@ -58,7 +59,7 @@ public class EntityLocker {
     public void deleteUpload(String bucket, String metaFolder, String upload, S3Runnable s3Runnable)
             throws S3Exception {
         read(bucket, () ->
-            read(metaFolder, () ->
+            write(metaFolder, () ->
             write(upload, s3Runnable)));
     }
 
@@ -106,7 +107,7 @@ public class EntityLocker {
     public <T> T writeObject(S3FileObjectPath s3FileObjectPath, S3Supplier<T> s3Supplier) throws S3Exception {
         return read(s3FileObjectPath.getPathToBucket(), () ->
                 write(s3FileObjectPath.getPathToObject(), () ->
-                write(s3FileObjectPath.getPathToObjectMetadataFolder(), () ->
+                read(s3FileObjectPath.getPathToObjectMetadataFolder(), () ->
                 write(s3FileObjectPath.getPathToObjectMetaFile(), () ->
                 write(s3FileObjectPath.getPathToObjectAclFile(), s3Supplier)))));
     }

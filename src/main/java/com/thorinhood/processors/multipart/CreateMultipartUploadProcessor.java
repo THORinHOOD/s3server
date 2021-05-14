@@ -30,7 +30,7 @@ public class CreateMultipartUploadProcessor extends Processor {
         String uploadId = S3_DRIVER.createMultipartUpload(parsedRequest.getS3ObjectPath());
         InitiateMultipartUploadResult result = InitiateMultipartUploadResult.builder()
                 .setBucket(parsedRequest.getS3ObjectPath().getBucket())
-                .setKey(parsedRequest.getS3ObjectPath().getKeyWithBucket())
+                .setKey(parsedRequest.getS3ObjectPath().getKey())
                 .setUploadId(uploadId)
                 .build();
         String xml = result.buildXmlText();

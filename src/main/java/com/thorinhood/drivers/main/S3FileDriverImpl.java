@@ -34,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -412,7 +413,6 @@ public class S3FileDriverImpl implements S3Driver {
 
     @Override
     public String createMultipartUpload(S3FileObjectPath s3FileObjectPath) throws S3Exception {
-        fileDriver.checkObject(s3FileObjectPath);
         String uploadId = DigestUtils.md5Hex(DateTimeUtil.currentDateTime() + new Random().nextLong() +
                 new File(s3FileObjectPath.getPathToObject()).getAbsolutePath());
         entityLocker.createUpload(
@@ -426,7 +426,6 @@ public class S3FileDriverImpl implements S3Driver {
 
     @Override
     public void abortMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId) throws S3Exception {
-        fileDriver.checkObject(s3FileObjectPath);
         if (uploadId == null) {
             return;
         }
@@ -444,7 +443,6 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public String putUploadPart(S3FileObjectPath s3FileObjectPath, String uploadId, int partNumber, byte[] bytes)
             throws S3Exception {
-        fileDriver.checkObject(s3FileObjectPath);
         String pathToUpload = s3FileObjectPath.getPathToObjectUploadFolder(uploadId);
         if (!fileDriver.isFolderExists(pathToUpload)) {
             throw S3Exception.NO_SUCH_UPLOAD(uploadId);
@@ -461,7 +459,6 @@ public class S3FileDriverImpl implements S3Driver {
     @Override
     public String completeMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId, List<Part> parts,
                                           S3User s3User) throws S3Exception {
-        fileDriver.checkObject(s3FileObjectPath);
         if (parts == null || parts.size() == 0) {
             throw S3Exception.build("No parts to complete multipart upload")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
@@ -470,9 +467,23 @@ public class S3FileDriverImpl implements S3Driver {
                     .setResource("1")
                     .setRequestId("1");
         }
+        File file = new File(s3FileObjectPath.getPathToObject());
+        if (!file.exists()) {
+            try {
+                if (!file.createNewFile()) {
+                    throw S3Exception.INTERNAL_ERROR("Can't create file : " + s3FileObjectPath.getPathToObject())
+                            .setMessage("Can't create file : " + s3FileObjectPath.getPathToObject())
+                            .setResource("1")
+                            .setRequestId("1");
+                }
+            } catch (IOException exception) {
+                throw S3Exception.INTERNAL_ERROR(exception)
+                        .setResource("1")
+                        .setRequestId("1");
+            }
+        }
         return entityLocker.completeUpload(
-                s3FileObjectPath.getPathToBucket(),
-                s3FileObjectPath.getPathToObjectMetadataFolder(),
+                s3FileObjectPath,
                 s3FileObjectPath.getPathToObjectUploadFolder(uploadId),
                 () -> {
                     String eTag = entityDriver.completeMultipartUpload(s3FileObjectPath, uploadId, parts);

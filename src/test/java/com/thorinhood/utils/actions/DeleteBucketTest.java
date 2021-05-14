@@ -1,14 +1,13 @@
 package com.thorinhood.utils.actions;
 
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.utils.BaseTest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
-import software.amazon.awssdk.services.s3.model.DeleteBucketResponse;
 import software.amazon.awssdk.services.s3.model.ListBucketsResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.File;
 
@@ -33,15 +32,12 @@ public class DeleteBucketTest extends BaseTest {
         Assertions.assertFalse(bucket.exists());
         File bucket2 = new File(BASE_PATH + File.separatorChar + "bucket2");
         Assertions.assertTrue(bucket2.exists() && bucket2.isDirectory());
-        try {
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
             getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey())
                     .deleteBucket(DeleteBucketRequest.builder()
                             .bucket("bucket2")
                             .build());
-            Assertions.fail("Must be exception");
-        } catch(S3Exception exception) {
-            Assertions.assertEquals(HttpResponseStatus.FORBIDDEN.code(), exception.statusCode());
-        }
+        });
     }
 
 }

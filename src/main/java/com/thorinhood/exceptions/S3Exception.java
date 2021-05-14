@@ -42,7 +42,7 @@ public class S3Exception extends RuntimeException implements HasStatus, HasCode,
                 .setMessage("The specified multipart upload does not exist. The upload ID might be invalid, " +
                         "or the multipart upload might have been aborted or completed.")
                 .setResource("1")
-                .setRequestId("1"); // TODO
+                .setRequestId("1");
     }
 
     public static HasStatus build(String internalMessage) {

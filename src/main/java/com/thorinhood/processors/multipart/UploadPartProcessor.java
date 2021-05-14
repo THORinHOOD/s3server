@@ -32,7 +32,7 @@ public class UploadPartProcessor extends Processor {
                                 Object... arguments) throws Exception {
         checkRequestPermissions(parsedRequest, "s3:PutObject", true);
         if (parsedRequest.getPayloadSignType() != PayloadSignType.SINGLE_CHUNK &&
-                parsedRequest.getPayloadSignType() != PayloadSignType.UNSIGNED_PAYLOAD) {
+            parsedRequest.getPayloadSignType() != PayloadSignType.UNSIGNED_PAYLOAD) {
             parsedRequest.setBytes(processChunkedContent(parsedRequest, request));
         }
         int partNumber = parsedRequest.getQueryParam("partNumber", null, Integer::valueOf);

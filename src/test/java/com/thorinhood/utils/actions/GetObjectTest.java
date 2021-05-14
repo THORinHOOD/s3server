@@ -2,6 +2,7 @@ package com.thorinhood.utils.actions;
 
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.utils.BaseTest;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -23,7 +24,7 @@ public class GetObjectTest extends BaseTest {
     }
 
     @Test
-    public void getObjectSimple() throws Exception {
+    public void getObjectSimple() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of(
@@ -35,7 +36,7 @@ public class GetObjectTest extends BaseTest {
     }
 
     @Test
-    public void getObjectCompositeKey() throws Exception {
+    public void getObjectCompositeKey() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
@@ -47,41 +48,34 @@ public class GetObjectTest extends BaseTest {
     }
 
     @Test
-    public void getObjectUnregisterUser() throws Exception {
+    public void getObjectUnregisterUser() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
         createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, metadata);
-        s3 = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(), NOT_AUTH_ROOT_USER.getSecretKey());
-        try {
-            getObject(s3, "bucket", "folder1/file.txt", content, metadata);
-            Assertions.fail("Access denied exception not thrown");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
-            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(), "Access denied");
-        }
+        S3Client s3ClientNotAuth = getS3Client(false, NOT_AUTH_ROOT_USER.getAccessKey(),
+                NOT_AUTH_ROOT_USER.getSecretKey());
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
+            getObject(s3ClientNotAuth, "bucket", "folder1/file.txt", content, metadata);
+        });
     }
 
     @Test
-    public void getObjectAnotherUser() throws Exception {
+    public void getObjectAnotherUser() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
         createBucketRaw(s3, "bucket");
         putObjectRaw(s3, "bucket", "folder1/file.txt", content, metadata);
-        s3 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
-        try {
-            getObject(s3, "bucket", "folder1/file.txt", content, metadata);
-            Assertions.fail("Access denied exception not thrown");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.ACCESS_DENIED);
-            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(), "Access denied");
-        }
+        S3Client s3Client2 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
+        assertException(HttpResponseStatus.FORBIDDEN.code(), S3ResponseErrorCodes.ACCESS_DENIED, () -> {
+            getObject(s3Client2, "bucket", "folder1/file.txt", content, metadata);
+        });
     }
 
     @Test
-    public void getObjectWithHeaders() throws Exception {
+    public void getObjectWithHeaders() {
         S3Client s3 = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         String content = "hello, s3!!!";
         Map<String, String> metadata = Map.of("key", "value");
@@ -91,20 +85,13 @@ public class GetObjectTest extends BaseTest {
         getObject(s3, "bucket", "folder1/file.txt", content, metadata, calcETag(content), null);
         getObject(s3, "bucket", "folder1/file.txt", content, metadata, null, "aaa");
 
-        try {
+        assertException(HttpResponseStatus.PRECONDITION_FAILED.code(), S3ResponseErrorCodes.PRECONDITION_FAILED, () -> {
             getObject(s3, "bucket", "folder1/file.txt", content, metadata, "aaa", null);
-            Assertions.fail("Precondition exception is not thrown");
-        } catch (S3Exception exception) {
-            Assertions.assertEquals(exception.awsErrorDetails().errorCode(), S3ResponseErrorCodes.PRECONDITION_FAILED);
-            Assertions.assertEquals(exception.awsErrorDetails().errorMessage(),
-                    "At least one of the pre-conditions you specified did not hold");
-        }
+        });
 
-        try {
+        assertException(HttpResponseStatus.NOT_MODIFIED.code(), null, () -> {
             getObject(s3, "bucket", "folder1/file.txt", content, metadata, null, calcETag(content));
-            Assertions.fail("Precondition exception is not thrown");
-        } catch (S3Exception exception) {
-        }
+        });
     }
 
     @Test
@@ -127,13 +114,12 @@ public class GetObjectTest extends BaseTest {
         }
     }
 
-    private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata)
-            throws Exception {
+    private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata) {
         getObject(s3, bucket, key, content, metadata, null, null);
     }
 
     private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata,
-                           String ifMatch, String ifNoneMatch) throws Exception {
+                           String ifMatch, String ifNoneMatch) {
         GetObjectRequest.Builder request = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(key);
