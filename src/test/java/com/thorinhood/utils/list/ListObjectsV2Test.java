@@ -169,18 +169,6 @@ public class ListObjectsV2Test extends BaseTest {
         Assertions.assertNull(nextContinuousToken);
     }
 
-    private S3Object buildS3Object(String key, S3User owner, String content) {
-        return S3Object.builder()
-                .eTag(calcETag(content))
-                .key(key)
-                .owner(Owner.builder()
-                        .id(owner.getCanonicalUserId())
-                        .displayName(owner.getAccountName())
-                        .build())
-                .size((long) content.getBytes().length)
-                .build();
-    }
-
     public String listObjects(S3Client s3, String bucket, Integer maxKeys, String prefix, String startAfter,
                             String continuousToken, List<S3Object> expected) {
         ListObjectsV2Request.Builder request = ListObjectsV2Request.builder()
@@ -203,14 +191,6 @@ public class ListObjectsV2Test extends BaseTest {
                 .anyMatch(actualS3Object -> equalsS3Objects(expectedS3Object, actualS3Object)));
         }
         return response.nextContinuationToken();
-    }
-
-    private boolean equalsS3Objects(S3Object expected, S3Object actual) {
-        return expected.key().equals(actual.key()) &&
-                expected.size().equals(actual.size()) &&
-                ("\"" + expected.eTag() + "\"").equals(actual.eTag()) &&
-                expected.owner().displayName().equals(actual.owner().displayName()) &&
-                expected.owner().id().equals(actual.owner().id());
     }
 
 }

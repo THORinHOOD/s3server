@@ -62,6 +62,11 @@ public class GetBucketObjects {
             return this;
         }
 
+        public Builder setMaxKeys(int maxKeys) {
+            getBucketObjects.maxKeys = maxKeys;
+            return this;
+        }
+
         public GetBucketObjects build() {
             return getBucketObjects;
         }

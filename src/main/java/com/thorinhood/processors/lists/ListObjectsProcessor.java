@@ -36,6 +36,7 @@ public class ListObjectsProcessor extends Processor {
                 .setDelimiter(parsedRequest.getQueryParam("delimiter", null, delimiter ->
                         delimiter.equals("") ? null : delimiter))
                 .setMarker(parsedRequest.getQueryParam("marker", null, Function.identity()))
+                .setMaxKeys(parsedRequest.getQueryParam("max-keys", 1000, Integer::valueOf))
                 .build();
         ListBucketResult listBucketResult = S3_DRIVER.getBucketObjects(getBucketObjects);
         String xml = listBucketResult.buildXmlText();
