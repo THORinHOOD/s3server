@@ -1,6 +1,5 @@
-package com.thorinhood.utils;
+package com.thorinhood;
 
-import com.thorinhood.Server;
 import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.FileDriversFactory;
@@ -14,13 +13,14 @@ import com.thorinhood.drivers.metadata.MetadataDriver;
 import com.thorinhood.drivers.principal.PolicyDriver;
 import com.thorinhood.drivers.user.UserDriver;
 import com.thorinhood.utils.RequestUtil;
-import com.thorinhood.utils.utils.SdkUtil;
+import com.thorinhood.utils.SdkUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.*;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
@@ -132,6 +131,27 @@ public class BaseTest {
         FILE_DRIVERS_FACTORY.init();
         initUsers();
     }
+
+    protected void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata) {
+        getObject(s3, bucket, key, content, metadata, null, null);
+    }
+
+    protected void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata,
+                           String ifMatch, String ifNoneMatch) {
+        GetObjectRequest.Builder request = GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(key);
+        if (ifMatch != null) {
+            request.ifMatch(ifMatch);
+        }
+        if (ifNoneMatch != null) {
+            request.ifNoneMatch(ifNoneMatch);
+        }
+
+        ResponseBytes<GetObjectResponse> response = s3.getObject(request.build(), ResponseTransformer.toBytes());
+        checkGetObject(content, metadata, response);
+    }
+
 
     protected S3Client getS3Client(boolean chunked, String accessKey, String secretKey) {
         S3Client s3Client = SdkUtil.build(port, Region.US_WEST_2, chunked, accessKey, secretKey);

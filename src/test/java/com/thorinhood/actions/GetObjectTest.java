@@ -1,9 +1,8 @@
-package com.thorinhood.utils.actions;
+package com.thorinhood.actions;
 
+import com.thorinhood.BaseTest;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
-import com.thorinhood.utils.BaseTest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
@@ -11,7 +10,6 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.util.List;
 import java.util.Map;
@@ -112,26 +110,6 @@ public class GetObjectTest extends BaseTest {
         for (CompletableFuture<ResponseBytes<GetObjectResponse>> responseBytesCompletableFuture : futureList) {
             checkGetObject(content, metadata, responseBytesCompletableFuture.get());
         }
-    }
-
-    private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata) {
-        getObject(s3, bucket, key, content, metadata, null, null);
-    }
-
-    private void getObject(S3Client s3, String bucket, String key, String content, Map<String, String> metadata,
-                           String ifMatch, String ifNoneMatch) {
-        GetObjectRequest.Builder request = GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(key);
-        if (ifMatch != null) {
-            request.ifMatch(ifMatch);
-        }
-        if (ifNoneMatch != null) {
-            request.ifNoneMatch(ifNoneMatch);
-        }
-
-        ResponseBytes<GetObjectResponse> response = s3.getObject(request.build(), ResponseTransformer.toBytes());
-        checkGetObject(content, metadata, response);
     }
 
 }

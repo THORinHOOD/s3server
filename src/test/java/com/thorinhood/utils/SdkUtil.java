@@ -1,4 +1,4 @@
-package com.thorinhood.utils.utils;
+package com.thorinhood.utils;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;

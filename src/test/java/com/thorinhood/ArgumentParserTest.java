@@ -1,5 +1,6 @@
-package com.thorinhood.utils;
+package com.thorinhood;
 
+import com.thorinhood.utils.ArgumentParser;
 import junit.framework.TestCase;
 import org.junit.Assert;
 

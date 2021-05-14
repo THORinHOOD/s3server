@@ -1,6 +1,6 @@
-package com.thorinhood.utils.list;
+package com.thorinhood.list;
 
-import com.thorinhood.utils.BaseTest;
+import com.thorinhood.BaseTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;

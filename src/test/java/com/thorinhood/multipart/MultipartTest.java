@@ -1,8 +1,7 @@
-package com.thorinhood.utils.multipart;
+package com.thorinhood.multipart;
 
+import com.thorinhood.BaseTest;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
-import com.thorinhood.processors.multipart.UploadPartProcessor;
-import com.thorinhood.utils.BaseTest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -10,7 +9,6 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

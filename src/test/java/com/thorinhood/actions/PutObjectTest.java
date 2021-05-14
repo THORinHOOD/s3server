@@ -1,17 +1,15 @@
-package com.thorinhood.utils.actions;
+package com.thorinhood.actions;
 
+import com.thorinhood.BaseTest;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
-import com.thorinhood.utils.BaseTest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.util.ArrayList;
