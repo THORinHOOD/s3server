@@ -250,14 +250,8 @@ public class S3FileDriverImpl implements S3Driver {
     public void createBucket(S3FileBucketPath s3FileBucketPath, S3User s3User) throws S3Exception {
         File bucketFile = new File(s3FileBucketPath.getPathToBucket());
         if (bucketFile.exists() && bucketFile.isDirectory()) {
-            AccessControlPolicy acl = entityLocker.readMeta(
-                    s3FileBucketPath.getPathToBucket(),
-                    s3FileBucketPath.getPathToBucketMetadataFolder(),
-                    s3FileBucketPath.getPathToBucketAclFile(),
-                    () -> aclDriver.getBucketAcl(s3FileBucketPath)
-            );
-            if (!acl.getOwner().getDisplayName().equals(s3User.getAccountName()) ||
-                !acl.getOwner().getId().equals(s3User.getCanonicalUserId())) {
+            boolean isOwner = isOwner(true, (S3FileObjectPath) s3FileBucketPath, s3User);
+            if (!isOwner) {
                 throw S3Exception.build("The specified location-constraint is not valid")
                         .setStatus(HttpResponseStatus.CONFLICT)
                         .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_EXISTS)
@@ -266,8 +260,7 @@ public class S3FileDriverImpl implements S3Driver {
                                 "Please select a different name and try again.")
                         .setResource("1")
                         .setRequestId("1");
-            } else if (acl.getOwner().getDisplayName().equals(s3User.getAccountName()) &&
-                       acl.getOwner().getId().equals(s3User.getCanonicalUserId())) {
+            } else {
                 throw S3Exception.build("Bucket already exists : " + bucketFile.getAbsolutePath())
                         .setStatus(HttpResponseStatus.CONFLICT)
                         .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
@@ -441,9 +434,9 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public String createMultipartUpload(S3FileObjectPath s3FileObjectPath) throws S3Exception {
+    public String createMultipartUpload(S3FileObjectPath s3FileObjectPath, S3User s3User) throws S3Exception {
         String uploadId = DigestUtils.md5Hex(DateTimeUtil.currentDateTime() + new Random().nextLong() +
-                new File(s3FileObjectPath.getPathToObject()).getAbsolutePath());
+                new File(s3FileObjectPath.getPathToObject()).getAbsolutePath()) + "_" + s3User.getAccessKey();
         entityLocker.createUpload(
             s3FileObjectPath.getPathToBucket(),
             s3FileObjectPath.getPathToObjectMetadataFolder(),

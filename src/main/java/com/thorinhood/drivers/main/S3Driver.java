@@ -50,7 +50,7 @@ public interface S3Driver extends AclPermissionChecker {
     GetBucketsResult getBuckets(S3User s3User) throws S3Exception;
 
     //Multipart
-    String createMultipartUpload(S3FileObjectPath s3FileObjectPath) throws S3Exception;
+    String createMultipartUpload(S3FileObjectPath s3FileObjectPath, S3User s3User) throws S3Exception;
     void abortMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId) throws S3Exception;
     String putUploadPart(S3FileObjectPath s3FileObjectPath, String uploadId, int partNumber, byte[] bytes) throws S3Exception;
     String completeMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId, List<Part> parts, S3User s3User)
