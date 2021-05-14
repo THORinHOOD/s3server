@@ -1,5 +1,6 @@
 package com.thorinhood.data.multipart;
 
+import com.thorinhood.data.S3FileObjectPath;
 import org.w3c.dom.Node;
 
 import java.util.ArrayList;

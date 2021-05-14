@@ -31,12 +31,11 @@ public class GetBucketPolicyProcessor extends BucketPolicyProcessor {
         checkRequestPermissions(parsedRequest, true);
         Optional<byte[]> bucketPolicy = S3_DRIVER.getBucketPolicyBytes(parsedRequest.getS3BucketPath());
         if (bucketPolicy.isEmpty()) {
-            throw S3Exception.build("The bucket policy does not exist")
+            throw S3Exception.builder("The bucket policy does not exist")
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("The bucket policy does not exist")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         sendResponse(context, request, OK, response -> {
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");

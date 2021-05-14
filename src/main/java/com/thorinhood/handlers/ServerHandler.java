@@ -3,6 +3,7 @@ package com.thorinhood.handlers;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.exceptions.S3ExceptionFull;
 import com.thorinhood.processors.Processor;
 import com.thorinhood.processors.acl.GetBucketAclProcessor;
 import com.thorinhood.processors.acl.GetObjectAclProcessor;
@@ -92,12 +93,14 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             if (!processed) {
                 log.error(String.format("Not found any processor for request or error occurred : %s %s", request.method(),
                         QueryStringDecoder.decodeComponent(request.uri())));
-                Processor.sendError(context, request, S3Exception.build("Can't find method")
-                    .setStatus(HttpResponseStatus.NOT_FOUND)
-                    .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
-                    .setMessage("Can't find method")
-                    .setResource("1")
-                    .setRequestId("1"));
+                Processor.sendError(context, request, S3ExceptionFull.build(
+                        S3Exception.builder("Can't find method")
+                            .setStatus(HttpResponseStatus.NOT_FOUND)
+                            .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
+                            .setMessage("Can't find method")
+                            .build(),
+                        null,
+                        "1"));
             }
 
             log.info(String.format("Request %s %s was processed in %d milliseconds", request.method(),
@@ -115,11 +118,26 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
     private boolean process(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
         ParsedRequest parsedRequest = null;
+
         try {
             parsedRequest = requestUtil.parseRequest(request);
+        } catch (S3Exception s3Exception) {
+            Processor.sendError(context, request, S3ExceptionFull.build(
+                    s3Exception,
+                    null,
+                    "1"
+            ));
+            return false;
+        }
+
+        try {
             requestUtil.checkRequest(parsedRequest);
-        } catch (S3Exception exception) {
-            Processor.sendError(context, request, exception);
+        } catch (S3Exception s3Exception) {
+            Processor.sendError(context, request, S3ExceptionFull.build(
+                    s3Exception,
+                    parsedRequest.getS3ObjectPathUnsafe(),
+                    "1"
+            ));
             return false;
         }
 

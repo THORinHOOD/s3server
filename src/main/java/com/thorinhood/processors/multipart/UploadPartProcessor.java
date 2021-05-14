@@ -37,12 +37,11 @@ public class UploadPartProcessor extends Processor {
         }
         int partNumber = parsedRequest.getQueryParam("partNumber", null, Integer::valueOf);
         if (partNumber < 1 || partNumber > 10000) {
-            throw S3Exception.build("Part number must be an integer between 1 and 10000, inclusive")
+            throw S3Exception.builder("Part number must be an integer between 1 and 10000, inclusive")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
                     .setMessage("Part number must be an integer between 1 and 10000, inclusive")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         String eTag = S3_DRIVER.putUploadPart(
                 parsedRequest.getS3ObjectPath(),

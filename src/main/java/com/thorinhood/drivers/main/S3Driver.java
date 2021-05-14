@@ -45,8 +45,10 @@ public interface S3Driver extends AclPermissionChecker {
     S3Object headObject(S3FileObjectPath s3FileObjectPath, HttpHeaders httpHeaders) throws S3Exception;
 
     // Lists
-    ListBucketV2Result getBucketObjectsV2(GetBucketObjectsV2 getBucketObjectsV2) throws S3Exception;
-    ListBucketResult getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception;
+    ListBucketV2Result getBucketObjectsV2(S3FileBucketPath s3FileBucketPath, GetBucketObjectsV2 getBucketObjectsV2)
+            throws S3Exception;
+    ListBucketResult getBucketObjects(S3FileBucketPath s3FileBucketPath, GetBucketObjects getBucketObjects)
+            throws S3Exception;
     GetBucketsResult getBuckets(S3User s3User) throws S3Exception;
 
     //Multipart

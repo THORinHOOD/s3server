@@ -59,9 +59,7 @@ public class FileMetadataDriver extends FileDriver implements MetadataDriver {
                 }
             }
         } catch (IOException e) {
-            throw S3Exception.INTERNAL_ERROR(e)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(e);
         }
         return metadata;
     }

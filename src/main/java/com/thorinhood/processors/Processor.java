@@ -5,6 +5,7 @@ import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.S3User;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.exceptions.S3Exception;
+import com.thorinhood.exceptions.S3ExceptionFull;
 import com.thorinhood.utils.ParsedRequest;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -61,23 +62,20 @@ public abstract class Processor {
                 s3FileObjectPath.getKeyUnsafe(), methodName, s3User);
         if ((policyCheckResult.isPresent() && !policyCheckResult.get()) ||
             (policyCheckResult.isEmpty() && !aclCheckResult)) {
-            throw S3Exception.ACCESS_DENIED()
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.ACCESS_DENIED();
         }
     }
 
-    private void wrapProcess(Logger log, ChannelHandlerContext ctx, FullHttpRequest request, Process process) {
+    private void wrapProcess(Logger log, ChannelHandlerContext ctx, FullHttpRequest request,
+                             ParsedRequest parsedRequest, Process process) {
         try {
             process.process();
         } catch (S3Exception s3Exception) {
-            sendError(ctx, request, s3Exception);
+            sendError(ctx, request, S3ExceptionFull.build(s3Exception, parsedRequest.getS3ObjectPathUnsafe(), "1"));
             log.error(s3Exception.getMessage(), s3Exception);
         } catch (Exception exception) {
-            S3Exception s3Exception = S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
-            sendError(ctx, request, s3Exception);
+            S3Exception s3Exception = S3Exception.INTERNAL_ERROR(exception);
+            sendError(ctx, request, S3ExceptionFull.build(s3Exception, parsedRequest.getS3ObjectPathUnsafe(), "1"));
             log.error(exception.getMessage(), exception);
         }
     }
@@ -107,7 +105,7 @@ public abstract class Processor {
         sendAndCleanupConnection(ctx, response, request);
     }
 
-    public static void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3Exception s3Exception) {
+    public static void sendError(ChannelHandlerContext ctx, FullHttpRequest request, S3ExceptionFull s3Exception) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, s3Exception.getStatus(),
                 Unpooled.copiedBuffer(s3Exception.buildXmlText(), CharsetUtil.UTF_8));
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");
@@ -159,12 +157,13 @@ public abstract class Processor {
     }
 
     public void process(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
-                        Object... arguments) throws Exception {
+                        Object... arguments) {
         if (!request.decoderResult().isSuccess()) {
             sendError(context, BAD_REQUEST, request);
             return;
         }
-        wrapProcess(getLogger(), context, request, () -> processInner(context, request, parsedRequest, arguments));
+        wrapProcess(getLogger(), context, request, parsedRequest,
+                () -> processInner(context, request, parsedRequest, arguments));
     }
 
     protected abstract void processInner(ChannelHandlerContext context, FullHttpRequest request,

@@ -41,14 +41,6 @@ public class EntityLocker {
                 writeObject(s3FileObjectPath, s3Supplier))));
     }
 
-    public <T> T readUpload(String bucket, String metaFolder, String uploadId, String part,
-                            S3Supplier<T> s3Supplier) throws S3Exception {
-        return read(bucket, () ->
-                read(metaFolder, () ->
-                read(uploadId, () ->
-                read(part, s3Supplier))));
-    }
-
     public void createUpload(String bucket, String metaFolder, String upload, S3Runnable s3Runnable)
             throws S3Exception {
         read(bucket, () ->
@@ -118,9 +110,7 @@ public class EntityLocker {
             lock.writeLock().lock();
             return supplier(key, s3Supplier);
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         } finally {
             lock.writeLock().unlock();
         }
@@ -132,9 +122,7 @@ public class EntityLocker {
             lock.writeLock().lock();
             runnable(key, s3Runnable);
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         } finally {
             lock.writeLock().unlock();
         }
@@ -146,9 +134,7 @@ public class EntityLocker {
             lock.readLock().lock();
             return supplier(key, s3Supplier);
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         } finally {
             lock.readLock().unlock();
         }
@@ -160,9 +146,7 @@ public class EntityLocker {
             lock.readLock().lock();
             runnable(key, s3Runnable);
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         } finally {
             lock.readLock().unlock();
         }

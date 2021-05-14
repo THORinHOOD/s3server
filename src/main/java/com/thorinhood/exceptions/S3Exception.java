@@ -1,78 +1,85 @@
 package com.thorinhood.exceptions;
 
+import com.thorinhood.data.S3FileBucketPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
-import com.thorinhood.utils.XmlObject;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
-public class S3Exception extends RuntimeException implements HasStatus, HasCode, HasMessage, HasResource, HasRequestId,
-        XmlObject {
+public class S3Exception extends RuntimeException {
 
-    private HttpResponseStatus status;
-    private String code;
-    private String message;
-    private String resource;
-    private String requestId;
+    private static final String INVALID_PART_MESSAGE = "One or more of the specified parts could not be found. " +
+            "The part might not have been uploaded, or the specified entity tag might not " +
+            "have matched the part's entity tag.";
 
-    public static HasResource ACCESS_DENIED() {
-        return build("Access denied")
+    protected HttpResponseStatus status;
+    protected String code;
+    protected String message;
+
+    public static S3Exception ACCESS_DENIED() {
+        return builder("Access denied")
                 .setStatus(HttpResponseStatus.FORBIDDEN)
                 .setCode(S3ResponseErrorCodes.ACCESS_DENIED)
-                .setMessage("Access denied");
+                .setMessage("Access denied")
+                .build();
     }
 
-    public static HasMessage INTERNAL_ERROR(String message) {
-        return build(message)
-                .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                .setCode(S3ResponseErrorCodes.INTERNAL_ERROR);
+    public static S3Exception INTERNAL_ERROR(Exception exception) {
+        return INTERNAL_ERROR(exception.getMessage() != null ? exception.getMessage() : exception.toString());
     }
 
-    public static HasResource INTERNAL_ERROR(Exception exception) {
-        return build(exception.getMessage() != null ? exception.getMessage() : exception.toString())
+    public static S3Exception INTERNAL_ERROR(String message) {
+        return builder(message)
                 .setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR)
                 .setCode(S3ResponseErrorCodes.INTERNAL_ERROR)
-                .setMessage(exception.getMessage() != null ? exception.getMessage() : exception.toString());
+                .setMessage(message)
+                .build();
+    }
+
+    public static S3Exception BUCKET_ALREADY_OWNED_BY_YOU(String bucketPath) {
+        return S3Exception.builder("Bucket already exists : " + bucketPath)
+                .setStatus(HttpResponseStatus.CONFLICT)
+                .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
+                .setMessage("Your previous request to create the named bucket succeeded and " +
+                        "you already own it.")
+                .build();
+    }
+
+    public static S3Exception BUCKET_ALREADY_EXISTS() {
+        return S3Exception.builder("The specified location-constraint is not valid")
+                .setStatus(HttpResponseStatus.CONFLICT)
+                .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_EXISTS)
+                .setMessage("The requested bucket name is not available. " +
+                        "The bucket namespace is shared by all users of the system. " +
+                        "Please select a different name and try again.")
+                .build();
+    }
+
+    public static S3Exception INVALID_PART_EXCEPTION() {
+        return S3Exception.builder(INVALID_PART_MESSAGE)
+                .setStatus(HttpResponseStatus.BAD_REQUEST)
+                .setCode(S3ResponseErrorCodes.INVALID_PART)
+                .setMessage(INVALID_PART_MESSAGE)
+                .build();
     }
 
     public static S3Exception NO_SUCH_UPLOAD(String uploadId) {
-        return S3Exception.build("No such upload : " + uploadId)
+        return builder("No such upload : " + uploadId)
                 .setStatus(HttpResponseStatus.NOT_FOUND)
                 .setCode(S3ResponseErrorCodes.NO_SUCH_UPLOAD)
                 .setMessage("The specified multipart upload does not exist. The upload ID might be invalid, " +
                         "or the multipart upload might have been aborted or completed.")
-                .setResource("1")
-                .setRequestId("1");
+                .build();
     }
 
-    public static HasStatus build(String internalMessage) {
-        return new S3Exception(internalMessage);
+    public static Builder builder(String internalMessage) {
+        return new Builder(internalMessage);
     }
 
-    private S3Exception(String message) {
+    protected S3Exception(String message) {
         super(message);
-    }
-
-    private Element createElement(Document doc, String key, String value) {
-        Element element = doc.createElement(key);
-        element.appendChild(doc.createTextNode(value));
-        return element;
-    }
-
-    @Override
-    public HasCode setStatus(HttpResponseStatus status) {
-        this.status = status;
-        return this;
     }
 
     public HttpResponseStatus getStatus() {
         return status;
-    }
-
-    @Override
-    public HasMessage setCode(String code) {
-        this.code = code;
-        return this;
     }
 
     public String getCode() {
@@ -83,39 +90,32 @@ public class S3Exception extends RuntimeException implements HasStatus, HasCode,
         return message;
     }
 
-    @Override
-    public HasRequestId setResource(String resource) {
-        this.resource = resource;
-        return this;
-    }
+    public static class Builder {
+        private final S3Exception s3Exception;
 
-    public String getResource() {
-        return resource;
-    }
+        public Builder(String message) {
+            s3Exception = new S3Exception(message);
+        }
 
-    @Override
-    public S3Exception setRequestId(String requestId) {
-        this.requestId = requestId;
-        return this;
-    }
+        public Builder setMessage(String message) {
+            s3Exception.message = message;
+            return this;
+        }
 
-    public String getRequestId() {
-        return requestId;
-    }
+        public Builder setStatus(HttpResponseStatus status) {
+            s3Exception.status = status;
+            return this;
+        }
 
-    @Override
-    public HasResource setMessage(String message) {
-        this.message = message;
-        return this;
-    }
+        public Builder setCode(String code) {
+            s3Exception.code = code;
+            return this;
+        }
 
-    @Override
-    public Element buildXmlRootNode(Document doc) {
-        return createElement(doc, "Error",
-                createElement(doc, "Code", doc.createTextNode(code)),
-                createElement(doc, "Message", doc.createTextNode(message)),
-                createElement(doc, "Resource", doc.createTextNode(resource)),
-                createElement(doc, "RequestId", doc.createTextNode(requestId)));
+        public S3Exception build() {
+            return s3Exception;
+        }
+
     }
 
 }

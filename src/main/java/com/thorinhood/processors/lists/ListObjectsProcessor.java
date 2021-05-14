@@ -9,11 +9,9 @@ import com.thorinhood.utils.ParsedRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -38,7 +36,8 @@ public class ListObjectsProcessor extends Processor {
                 .setMarker(parsedRequest.getQueryParam("marker", null, Function.identity()))
                 .setMaxKeys(parsedRequest.getQueryParam("max-keys", 1000, Integer::valueOf))
                 .build();
-        ListBucketResult listBucketResult = S3_DRIVER.getBucketObjects(getBucketObjects);
+        ListBucketResult listBucketResult = S3_DRIVER.getBucketObjects(parsedRequest.getS3BucketPath(),
+                getBucketObjects);
         String xml = listBucketResult.buildXmlText();
         sendResponse(context, request, OK, response -> {
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");

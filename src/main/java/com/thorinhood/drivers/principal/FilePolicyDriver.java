@@ -31,12 +31,11 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
         try {
             objectMapper.readValue(bytes, BucketPolicy.class);
         } catch (IOException exception) {
-            throw S3Exception.build("Can't parse bucket policy")
+            throw S3Exception.builder("Can't parse bucket policy")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage(exception.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         Path target = new File(s3FileBucketPath.getPathToBucketPolicyFile()).toPath();
         Path source = createPreparedTmpFile(new File(s3FileBucketPath.getPathToBucketMetadataFolder()).toPath(), target,
@@ -53,21 +52,16 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
         try {
             return Optional.of(objectMapper.readValue(file, BucketPolicy.class));
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         }
     }
 
     @Override
-    public byte[] convertBucketPolicy(BucketPolicy bucketPolicy) throws S3Exception {
+    public byte[] convertBucketPolicy(S3FileBucketPath s3FileBucketPath, BucketPolicy bucketPolicy) throws S3Exception {
         try {
             return objectMapper.writeValueAsString(bucketPolicy).getBytes(StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
-            throw S3Exception.INTERNAL_ERROR("Can't parse bucket policy to json")
-                    .setMessage("Can't parse bucket policy to json")
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Can't parse bucket policy to json");
         }
     }
 

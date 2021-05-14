@@ -52,10 +52,7 @@ public class XmlUtil {
                     .newDocumentBuilder();
             return dBuilder.parse(new InputSource(new StringReader(new String(bytes))));
         } catch (Exception exception) {
-            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
-                    .setMessage(exception.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception.getMessage());
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.thorinhood.chunks;
 
+import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.exceptions.S3Exception;
 import com.thorinhood.utils.Credential;
@@ -27,6 +28,7 @@ public class ChunkReader {
                     byte[] chunk = ChunkReader.readChunk(chunkInfo.getChunkSize(), is);
 
                     checkChunk(
+                        parsedRequest.getS3ObjectPath(),
                         chunkInfo.getSignature(),
                         prevSignature,
                         chunk,
@@ -44,26 +46,22 @@ public class ChunkReader {
                 prevSignature = chunkInfo.getSignature();
             }
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
-                    .setMessage(exception.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception.getMessage());
         }
         return result;
     }
 
-    private static void checkChunk(String chunkSignature, String prevSignature, byte[] chunkData,
-                                   FullHttpRequest request, Credential credential, String secretKey)
+    private static void checkChunk(S3FileObjectPath s3FileObjectPath, String chunkSignature, String prevSignature,
+                                   byte[] chunkData, FullHttpRequest request, Credential credential, String secretKey)
             throws S3Exception {
         String calculatedChunkSignature = SignUtil.calcPayloadSignature(request, credential, prevSignature, chunkData,
                 secretKey);
         if (!calculatedChunkSignature.equals(chunkSignature)) {
-            throw S3Exception.build("Chunk signature is incorrect")
+            throw S3Exception.builder("Chunk signature is incorrect")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.SIGNATURE_DOES_NOT_MATCH)
                     .setMessage("Chunk signature is incorrect")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
     }
 

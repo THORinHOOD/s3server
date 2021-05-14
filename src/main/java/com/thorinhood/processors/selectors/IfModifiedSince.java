@@ -2,24 +2,19 @@ package com.thorinhood.processors.selectors;
 
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
 import com.thorinhood.exceptions.S3Exception;
-import com.thorinhood.utils.DateTimeUtil;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.xml.bind.ParseConversionEvent;
-import java.text.ParseException;
 import java.util.Date;
 
 public class IfModifiedSince implements Selector<Date> {
     @Override
     public void check(Date actual, Date expected) throws S3Exception {
         if (!actual.after(expected)) {
-            throw S3Exception.build("IfModifiedSince failed")
+            throw S3Exception.builder("IfModifiedSince failed")
                     .setStatus(HttpResponseStatus.NOT_MODIFIED)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("At least one of the pre-conditions you specified did not hold")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
     }
 }

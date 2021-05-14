@@ -54,9 +54,7 @@ public class FileDriver {
         try {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         }
     }
 
@@ -74,16 +72,10 @@ public class FileDriver {
                 }
                 return tmpFile.toPath();
             } else {
-                throw S3Exception.INTERNAL_ERROR("Can't create file : " + tmpFile.getAbsolutePath())
-                        .setMessage("Internal error : can't create file")
-                        .setResource("1")
-                        .setRequestId("1");
+                throw S3Exception.INTERNAL_ERROR("Can't create file : " + tmpFile.getAbsolutePath());
             }
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception.getMessage())
-                    .setMessage(exception.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         }
     }
 
@@ -129,10 +121,7 @@ public class FileDriver {
                 parent = parent.getParent();
             }
         } catch (Exception e) {
-            throw S3Exception.INTERNAL_ERROR(e.getMessage())
-                    .setMessage(e.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(e.getMessage());
         }
     }
 
@@ -147,21 +136,17 @@ public class FileDriver {
 
     protected void exception(String msg) throws S3Exception {
         log.error(msg);
-        throw S3Exception.INTERNAL_ERROR(msg)
-                .setMessage(msg)
-                .setResource("1")
-                .setRequestId("1");
+        throw S3Exception.INTERNAL_ERROR(msg);
     }
 
     public void checkObject(S3FileObjectPath s3FileObjectPath) throws S3Exception {
         Path pathToObject = new File(s3FileObjectPath.getPathToObject()).toPath();
         if (!isFileExists(pathToObject)) {
-            throw S3Exception.build("File not found : " + pathToObject.toAbsolutePath())
+            throw S3Exception.builder("File not found : " + pathToObject.toAbsolutePath())
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         Path pathToObjectMetadataFolder = new File(s3FileObjectPath.getPathToObjectMetadataFolder()).toPath();
         Path pathToObjectMetaFile = new File(s3FileObjectPath.getPathToObjectMetaFile()).toPath();
@@ -169,31 +154,24 @@ public class FileDriver {
         if (!isFolderExists(pathToObjectMetadataFolder) || !isMetadataFolder(pathToObjectMetadataFolder) ||
             !isFileExists(pathToObjectMetaFile) || !isMetadataFile(pathToObjectMetaFile) ||
             !isFileExists(pathToObjectAclFile) || !isMetadataFile(pathToObjectAclFile)) {
-            throw S3Exception.INTERNAL_ERROR("Object is currupt")
-                    .setMessage("Object is currupt")
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Object is corrupt");
         }
     }
 
     public void checkBucket(S3FileBucketPath s3FileBucketPath) throws S3Exception {
         Path pathToBucket = new File(s3FileBucketPath.getPathToBucket()).toPath();
         if (!isFolderExists(pathToBucket) || !isBucket(pathToBucket)) {
-            throw S3Exception.build("Bucket does not exist")
+            throw S3Exception.builder("Bucket does not exist")
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_BUCKET)
                     .setMessage("The specified bucket does not exist")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         Path pathToMetadataBucket = new File(s3FileBucketPath.getPathToBucketMetadataFolder()).toPath();
         Path pathToBucketAcl = new File(s3FileBucketPath.getPathToBucketAclFile()).toPath();
         if (!isFolderExists(pathToMetadataBucket) || !isMetadataFolder(pathToMetadataBucket) ||
             !isFileExists(pathToBucketAcl) || !isMetadataFile(pathToBucketAcl)) {
-            throw S3Exception.INTERNAL_ERROR("Bucket is currupt")
-                    .setMessage("Bucket is currupt")
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Bucket is corrupt");
         }
     }
 

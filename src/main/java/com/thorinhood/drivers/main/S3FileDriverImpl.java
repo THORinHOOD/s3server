@@ -137,7 +137,7 @@ public class S3FileDriverImpl implements S3Driver {
         if (bucketPolicy.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(policyDriver.convertBucketPolicy(bucketPolicy.get()));
+        return Optional.of(policyDriver.convertBucketPolicy(s3FileBucketPath, bucketPolicy.get()));
     }
 
     @Override
@@ -252,22 +252,9 @@ public class S3FileDriverImpl implements S3Driver {
         if (bucketFile.exists() && bucketFile.isDirectory()) {
             boolean isOwner = isOwner(true, (S3FileObjectPath) s3FileBucketPath, s3User);
             if (!isOwner) {
-                throw S3Exception.build("The specified location-constraint is not valid")
-                        .setStatus(HttpResponseStatus.CONFLICT)
-                        .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_EXISTS)
-                        .setMessage("The requested bucket name is not available. " +
-                                "The bucket namespace is shared by all users of the system. " +
-                                "Please select a different name and try again.")
-                        .setResource("1")
-                        .setRequestId("1");
+                throw S3Exception.BUCKET_ALREADY_EXISTS();
             } else {
-                throw S3Exception.build("Bucket already exists : " + bucketFile.getAbsolutePath())
-                        .setStatus(HttpResponseStatus.CONFLICT)
-                        .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
-                        .setMessage("Your previous request to create the named bucket succeeded and " +
-                                    "you already own it.")
-                        .setResource(File.separatorChar + s3FileBucketPath.getBucket())
-                        .setRequestId("1");
+                throw S3Exception.BUCKET_ALREADY_OWNED_BY_YOU(bucketFile.getAbsolutePath());
             }
         }
         entityLocker.writeBucket(
@@ -357,9 +344,10 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public ListBucketV2Result getBucketObjectsV2(GetBucketObjectsV2 getBucketObjectsV2) throws S3Exception {
+    public ListBucketV2Result getBucketObjectsV2(S3FileBucketPath s3FileBucketPath,
+                                                 GetBucketObjectsV2 getBucketObjectsV2) throws S3Exception {
         ListBucketV2ResultRaw rawResult = entityDriver.getBucketObjectsV2(getBucketObjectsV2);
-        List<S3Content> s3Contents = makeContents(rawResult.getS3FileObjectsPaths());
+        List<S3Content> s3Contents = makeContents(s3FileBucketPath, rawResult.getS3FileObjectsPaths());
         return ListBucketV2Result.builder()
                 .setMaxKeys(getBucketObjectsV2.getMaxKeys())
                 .setName(getBucketObjectsV2.getBucket())
@@ -376,9 +364,10 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public ListBucketResult getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception {
+    public ListBucketResult getBucketObjects(S3FileBucketPath s3FileBucketPath, GetBucketObjects getBucketObjects)
+            throws S3Exception {
         ListBucketResultRaw rawResult = entityDriver.getBucketObjects(getBucketObjects);
-        List<S3Content> s3Contents = makeContents(rawResult.getS3FileObjectsPaths());
+        List<S3Content> s3Contents = makeContents(s3FileBucketPath, rawResult.getS3FileObjectsPaths());
         return ListBucketResult.builder()
                 .setMaxKeys(getBucketObjects.getMaxKeys())
                 .setName(getBucketObjects.getBucket())
@@ -419,9 +408,7 @@ public class S3FileDriverImpl implements S3Driver {
                             bucketWithAcl.getSecond().getSecond()));
                 }
             } catch (InterruptedException | ExecutionException e) {
-                throw S3Exception.INTERNAL_ERROR(e)
-                        .setResource("1")
-                        .setRequestId("1");
+                throw S3Exception.INTERNAL_ERROR(e);
             }
         }
         return GetBucketsResult.builder()
@@ -482,26 +469,20 @@ public class S3FileDriverImpl implements S3Driver {
     public String completeMultipartUpload(S3FileObjectPath s3FileObjectPath, String uploadId, List<Part> parts,
                                           S3User s3User) throws S3Exception {
         if (parts == null || parts.size() == 0) {
-            throw S3Exception.build("No parts to complete multipart upload")
+            throw S3Exception.builder("No parts to complete multipart upload")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("No parts to complete multipart upload")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         File file = new File(s3FileObjectPath.getPathToObject());
         if (!file.exists()) {
             try {
                 if (!file.createNewFile()) {
-                    throw S3Exception.INTERNAL_ERROR("Can't create file : " + s3FileObjectPath.getPathToObject())
-                            .setMessage("Can't create file : " + s3FileObjectPath.getPathToObject())
-                            .setResource("1")
-                            .setRequestId("1");
+                    throw S3Exception.INTERNAL_ERROR("Can't create file : " + s3FileObjectPath.getPathToObject());
                 }
             } catch (IOException exception) {
-                throw S3Exception.INTERNAL_ERROR(exception)
-                        .setResource("1")
-                        .setRequestId("1");
+                throw S3Exception.INTERNAL_ERROR(exception);
             }
         }
         return entityLocker.completeUpload(
@@ -521,7 +502,7 @@ public class S3FileDriverImpl implements S3Driver {
         return fileDriver.buildPathToObject(bucketKeyToObject);
     }
 
-    private List<S3Content> makeContents(List<S3FileObjectPath> s3FileObjectPaths) {
+    private List<S3Content> makeContents(S3FileBucketPath s3FileBucketPath, List<S3FileObjectPath> s3FileObjectPaths) {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
         List<Future<S3ObjectETag>> s3objectETagFutures = s3FileObjectPaths.stream()
                 .map(s3FileObjectPath -> executorService.submit(() -> {
@@ -539,9 +520,7 @@ public class S3FileDriverImpl implements S3Driver {
             try {
                 s3ObjectETags.add(s3ObjectETagFuture.get());
             } catch (InterruptedException | ExecutionException e) {
-                throw S3Exception.INTERNAL_ERROR(e)
-                        .setResource("1")
-                        .setRequestId("1");
+                throw S3Exception.INTERNAL_ERROR(e);
             }
         }
         List<Future<S3Content>> s3ContentFutures = s3ObjectETags.stream()
@@ -563,9 +542,7 @@ public class S3FileDriverImpl implements S3Driver {
             try {
                 s3Contents.add(s3ContentFuture.get());
             } catch (InterruptedException | ExecutionException e) {
-                throw S3Exception.INTERNAL_ERROR(e)
-                        .setResource("1")
-                        .setRequestId("1");
+                throw S3Exception.INTERNAL_ERROR(e);
             }
         }
         executorService.shutdown();

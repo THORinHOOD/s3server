@@ -35,9 +35,7 @@ public class HeadObjectProcessor extends Processor {
             try {
                 setContentTypeHeader(response, s3Object.getFile());
             } catch (IOException exception) {
-                sendError(context, request, S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1"));
+                throw S3Exception.INTERNAL_ERROR(exception);
             }
             response.headers().set("ETag", "\"" + s3Object.getETag() + "\"");
             response.headers().set("Last-Modified", s3Object.getLastModified());

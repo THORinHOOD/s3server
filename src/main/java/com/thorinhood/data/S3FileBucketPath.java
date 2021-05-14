@@ -38,6 +38,10 @@ public class S3FileBucketPath {
         return getPathToBucketMetadataFolder() + File.separatorChar + bucket + S3FileStatic.POSTFIX_POLICY_FILE;
     }
 
+    public String getKeyWithBucket() {
+        return bucket;
+    }
+
     @Override
     public String toString() {
         return "S3FileBucketPath{" +

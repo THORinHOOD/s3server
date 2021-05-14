@@ -27,13 +27,12 @@ public class CreateBucketProcessor extends Processor {
     protected void processInner(ChannelHandlerContext context, FullHttpRequest request, ParsedRequest parsedRequest,
                                 Object[] arguments) throws Exception {
         if (!isBucketNameCorrect(parsedRequest.getS3BucketPath().getBucket())) {
-            throw S3Exception.build("Illegal bucket name : " + parsedRequest.getS3BucketPath()
+            throw S3Exception.builder("Illegal bucket name : " + parsedRequest.getS3BucketPath()
                         .getBucket())
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
                     .setMessage("Illegal bucket name : " + parsedRequest.getS3BucketPath().getBucket())
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         S3_DRIVER.createBucket(parsedRequest.getS3BucketPath(), parsedRequest.getS3User());
         sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(

@@ -39,21 +39,9 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
 
     private static final Logger log = LogManager.getLogger(FileEntityDriver.class);
 
-    private static final String INVALID_PART_MESSAGE = "One or more of the specified parts could not be found. " +
-            "The part might not have been uploaded, or the specified entity tag might not " +
-            "have matched the part's entity tag.";
     private static final String ENTITY_TOO_SMALL = "Your proposed upload is smaller than the minimum allowed " +
             "object size. Each part must be at least 5 MB in size.";
     private static final long MIN_PART_SIZE = 5242880L;
-
-    private static S3Exception INVALID_PART_EXCEPTION() {
-        return S3Exception.build(INVALID_PART_MESSAGE)
-                .setStatus(HttpResponseStatus.BAD_REQUEST)
-                .setCode(S3ResponseErrorCodes.INVALID_PART)
-                .setMessage(INVALID_PART_MESSAGE)
-                .setResource("1")
-                .setRequestId("1");
-    }
 
     private final Selector<String> ifMatch;
     private final Selector<String> ifNoneMatch;
@@ -73,10 +61,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         String absolutePath = s3FileBucketPath.getPathToBucket();
         File bucketFile = new File(absolutePath);
         if (bucketFile.exists() || !bucketFile.mkdir()) {
-            throw S3Exception.INTERNAL_ERROR("Can't create bucket: " + absolutePath)
-                    .setMessage("Can't create bucket")
-                    .setResource(File.separatorChar + s3FileBucketPath.getBucket())
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Can't create bucket: " + absolutePath);
         }
     }
 
@@ -86,12 +71,11 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         String absolutePath = s3FileObjectPath.getPathToObject();
         File file = new File(absolutePath);
         if (file.isHidden() || !file.exists() || !file.isFile()) {
-            throw S3Exception.build("File not found: " + absolutePath)
+            throw S3Exception.builder("File not found: " + absolutePath)
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
-                    .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1");
+                    .build();
         }
         byte[] bytes;
         try {
@@ -111,10 +95,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setRawBytes(bytes)
                     .setLastModified(DateTimeUtil.parseDateTime(file));
         } catch (ParseException | IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                    .setMessage("Internal error : can't create object")
-                    .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath);
         }
     }
 
@@ -124,12 +105,11 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
         String absolutePath = s3FileObjectPath.getPathToObject();
         File file = new File(absolutePath);
         if (file.isHidden() || !file.exists() || !file.isFile()) {
-            throw S3Exception.build("File not found: " + absolutePath)
+            throw S3Exception.builder("File not found: " + absolutePath)
                     .setStatus(HttpResponseStatus.NOT_FOUND)
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
-                    .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1");
+                    .build();
         }
         try {
             if (httpHeaders != null && eTag != null) {
@@ -143,10 +123,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setRawBytes(null)
                     .setLastModified(DateTimeUtil.parseDateTime(file));
         } catch (ParseException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
-                    .setMessage("Internal error : can't create object")
-                    .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath);
         }
     }
 
@@ -239,9 +216,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 }
             }
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         }
         return ListBucketV2ResultRaw.builder()
                 .setIsTruncated(truncated)
@@ -292,9 +267,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                 }
             }
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         }
         return ListBucketResultRaw.builder()
                 .setIsTruncated(truncated)
@@ -319,18 +292,12 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                             return Pair.of(new S3FileBucketPath(BASE_FOLDER_PATH, bucket.getName()),
                                     DateTimeUtil.parseDateTimeISO(attr.creationTime().toMillis()));
                         } catch (IOException e) {
-                            throw S3Exception.INTERNAL_ERROR("Can't get bucket attributes :" + entity.getFileName())
-                                    .setMessage("Can't get bucket attributes : " + entity.getFileName())
-                                    .setResource("1")
-                                    .setRequestId("1");
+                            throw S3Exception.INTERNAL_ERROR("Can't get bucket attributes :" + entity.getFileName());
                         }
                     }).collect(Collectors.toList());
             }
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't list bucket objects")
-                    .setMessage("Can't list bucket objects")
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Can't list bucket objects");
         }
         return buckets;
     }
@@ -388,7 +355,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .collect(Collectors.toMap(p -> Integer.parseInt(p.getFileName().toString()), Path::toFile));
 
             if (!parts.stream().allMatch(partInfo -> partsFiles.containsKey(partInfo.getPartNumber()))) {
-                throw INVALID_PART_EXCEPTION();
+                throw S3Exception.INVALID_PART_EXCEPTION();
             }
 
             File file = new File(s3FileObjectPath.getPathToObject());
@@ -406,18 +373,17 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                         if (file.exists()) {
                             file.delete();
                         }
-                        throw S3Exception.build(ENTITY_TOO_SMALL)
+                        throw S3Exception.builder(ENTITY_TOO_SMALL)
                                 .setStatus(HttpResponseStatus.BAD_REQUEST)
                                 .setCode(S3ResponseErrorCodes.ENTITY_TOO_SMALL)
                                 .setMessage(ENTITY_TOO_SMALL)
-                                .setResource("1")
-                                .setRequestId("1");
+                                .build();
                     }
                     try (InputStream input = new BufferedInputStream(new FileInputStream(partFile))) {
                         byte[] buffer = input.readAllBytes();
                         String calculatedEtag = DigestUtils.md5Hex(buffer);
                         if (!part.getETag().replaceAll("\"", "").equals(calculatedEtag)) {
-                            throw INVALID_PART_EXCEPTION();
+                            throw S3Exception.INVALID_PART_EXCEPTION();
                         }
                         outputStream.write(buffer);
                         md.update(buffer);
@@ -427,9 +393,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             deleteFolder(currentUploadFolder);
             return DatatypeConverter.printHexBinary(md.digest()).toLowerCase();
         } catch (IOException | NoSuchAlgorithmException exception) {
-            throw S3Exception.INTERNAL_ERROR(exception)
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(exception);
         }
     }
 

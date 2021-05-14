@@ -1,6 +1,5 @@
 package com.thorinhood.utils;
 
-import com.thorinhood.data.S3FileBucketPath;
 import com.thorinhood.data.requests.S3Headers;
 import com.thorinhood.data.S3FileObjectPath;
 import com.thorinhood.data.requests.S3ResponseErrorCodes;
@@ -30,7 +29,7 @@ public class RequestUtil {
         this.BASE_FOLDER_PATH = baseFolderPath;
     }
 
-    public ParsedRequest parseRequest(FullHttpRequest request) throws Exception {
+    public ParsedRequest parseRequest(FullHttpRequest request) throws S3Exception {
         PayloadSignType payloadSignType = getPayloadSignType(request);
         byte[] bytes = convert(request.content().asReadOnly());
         Credential credential = Credential.parse(request);
@@ -41,9 +40,7 @@ public class RequestUtil {
         Map<String, String> metadata = extractMetaData(request);
         Optional<S3User> s3User = userDriver.getS3User(credential.getValue(Credential.ACCESS_KEY));
         if (s3User.isEmpty()) {
-            throw S3Exception.ACCESS_DENIED()
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.ACCESS_DENIED();
         }
         return ParsedRequest.builder()
                 .setS3ObjectPath(s3FileObjectPath)
@@ -73,24 +70,22 @@ public class RequestUtil {
         if (parsedRequest.getPayloadSignType() == PayloadSignType.SINGLE_CHUNK) {
             String calculatedPayloadHash = DigestUtils.sha256Hex(parsedRequest.getBytes());
             if (!calculatedPayloadHash.equals(parsedRequest.getHeader(S3Headers.X_AMZ_CONTENT_SHA256))) {
-                throw S3Exception.build("calculated payload hash not equals with x-amz-content-sha256")
+                throw S3Exception.builder("calculated payload hash not equals with x-amz-content-sha256")
                         .setStatus(HttpResponseStatus.BAD_REQUEST)
                         .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
                         .setMessage("x-amz-content-sha256 must be UNSIGNED-PAYLOAD, " +
                                 "STREAMING-AWS4-HMAC-SHA256-PAYLOAD, or a valid sha256 value.")
-                        .setResource("1")
-                        .setRequestId("1");
+                        .build();
             }
         }
 
         String calculatedSignature = SignUtil.calcSignature(parsedRequest);
         if (!calculatedSignature.equals(parsedRequest.getSignature())) {
-            throw S3Exception.build("calculated payload hash not equals with x-amz-content-sha256")
+            throw S3Exception.builder("calculated payload hash not equals with x-amz-content-sha256")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.SIGNATURE_DOES_NOT_MATCH)
                     .setMessage("Signature is invalid")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
     }
 
@@ -135,12 +130,11 @@ public class RequestUtil {
 
     private PayloadSignType getPayloadSignType(FullHttpRequest request) {
         if (!request.headers().contains(S3Headers.X_AMZ_CONTENT_SHA256)) {
-            throw S3Exception.build("x-amz-content-sha256 header not found")
+            throw S3Exception.builder("x-amz-content-sha256 header not found")
                     .setStatus(BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("Missing required header for this request: x-amz-content-sha256")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         String value = request.headers().get(S3Headers.X_AMZ_CONTENT_SHA256);
         if (value.compareToIgnoreCase(PayloadSignType.UNSIGNED_PAYLOAD.getValue()) == 0) {
@@ -160,12 +154,11 @@ public class RequestUtil {
     private S3FileObjectPath extractS3Path(FullHttpRequest request) throws S3Exception {
         String uri = QueryStringDecoder.decodeComponent(request.uri());
         if (uri.isEmpty() || uri.charAt(0) != '/') {
-            throw S3Exception.build("Incorrect uri path")
+            throw S3Exception.builder("Incorrect uri path")
                     .setStatus(BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("Invalid uri path")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         int paramsStart = uri.indexOf("?");
         if (paramsStart != -1) {

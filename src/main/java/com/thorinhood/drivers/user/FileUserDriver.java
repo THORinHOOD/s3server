@@ -30,10 +30,7 @@ public class FileUserDriver extends FileDriver implements UserDriver {
         try {
             objectMapper.writeValue(new File(userFolderPath + File.separatorChar + USER_FILE_NAME), s3User);
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't create user")
-                    .setMessage("Can't create user")
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Can't create user");
         }
     }
 
@@ -62,10 +59,7 @@ public class FileUserDriver extends FileDriver implements UserDriver {
         try {
             return Optional.of(objectMapper.readValue(new File(userPath), S3User.class));
         } catch (IOException exception) {
-            throw S3Exception.INTERNAL_ERROR("Can't get user")
-                    .setMessage("Can't get user")
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR("Can't get user");
         }
     }
 

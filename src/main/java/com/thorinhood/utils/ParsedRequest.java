@@ -49,26 +49,24 @@ public class ParsedRequest {
         return bytes;
     }
 
-    public S3FileBucketPath getS3BucketPath() {
+    public S3FileBucketPath getS3BucketPath() throws S3Exception {
         if (s3FileObjectPath == null) {
-            throw S3Exception.build("Not found bucket name")
+            throw S3Exception.builder("Not found bucket name")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("Not found bucket name")
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         return s3FileObjectPath;
     }
 
     public S3FileObjectPath getS3ObjectPath() {
         if (s3FileObjectPath == null || s3FileObjectPath.isBucket()) {
-            throw S3Exception.build("Incorrect path to object : " + s3FileObjectPath)
+            throw S3Exception.builder("Incorrect path to object : " + s3FileObjectPath)
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("Incorrect path to object : " + s3FileObjectPath)
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
         return s3FileObjectPath;
     }
@@ -144,12 +142,11 @@ public class ParsedRequest {
         try {
             return converter.apply(values.get(0));
         } catch (Exception exception) {
-            throw S3Exception.build("Can't parse query parameter")
+            throw S3Exception.builder("Can't parse query parameter")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
                     .setMessage("Can't parse query parameter : " + key)
-                    .setResource("1")
-                    .setRequestId("1");
+                    .build();
         }
     }
 

@@ -21,10 +21,7 @@ public interface XmlObject {
             doc.appendChild(buildXmlRootNode(doc));
             return XmlUtil.xmlDocumentToString(doc);
         } catch (ParserConfigurationException e) {
-            throw S3Exception.INTERNAL_ERROR(e.getMessage())
-                    .setMessage(e.getMessage())
-                    .setResource("1")
-                    .setRequestId("1");
+            throw S3Exception.INTERNAL_ERROR(e.getMessage());
         }
     }
 

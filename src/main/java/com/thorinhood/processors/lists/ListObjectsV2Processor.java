@@ -9,11 +9,9 @@ import com.thorinhood.utils.ParsedRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -40,7 +38,8 @@ public class ListObjectsV2Processor extends Processor {
                 .setDelimiter(parsedRequest.getQueryParam("delimiter", null, delimiter ->
                         delimiter.equals("") ? null : delimiter))
                 .build();
-        ListBucketV2Result listBucketV2Result = S3_DRIVER.getBucketObjectsV2(getBucketObjectsV2);
+        ListBucketV2Result listBucketV2Result = S3_DRIVER.getBucketObjectsV2(parsedRequest.getS3BucketPath(),
+                getBucketObjectsV2);
         String xml = listBucketV2Result.buildXmlText();
         sendResponse(context, request, OK, response -> {
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/xml");

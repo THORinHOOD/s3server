@@ -11,6 +11,6 @@ public interface PolicyDriver {
 
     void putBucketPolicy(S3FileBucketPath s3FileBucketPath, byte[] bytes) throws S3Exception;
     Optional<BucketPolicy> getBucketPolicy(S3FileBucketPath s3FileBucketPath) throws S3Exception;
-    byte[] convertBucketPolicy(BucketPolicy bucketPolicy) throws S3Exception;
+    byte[] convertBucketPolicy(S3FileBucketPath s3FileBucketPath, BucketPolicy bucketPolicy) throws S3Exception;
 
 }

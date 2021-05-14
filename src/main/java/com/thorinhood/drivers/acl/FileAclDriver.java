@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class FileAclDriver extends FileDriver implements AclDriver {
 
@@ -40,7 +41,7 @@ public class FileAclDriver extends FileDriver implements AclDriver {
 
     @Override
     public AccessControlPolicy getObjectAcl(S3FileObjectPath s3FileObjectPath) throws S3Exception {
-        return getAcl(s3FileObjectPath.getPathToObjectAclFile());
+        return getAcl(s3FileObjectPath, s3FileObjectPath::getPathToObjectAclFile);
     }
 
     @Override
@@ -54,27 +55,24 @@ public class FileAclDriver extends FileDriver implements AclDriver {
 
     @Override
     public AccessControlPolicy getBucketAcl(S3FileBucketPath s3FileBucketPath) throws S3Exception {
-        return getAcl(s3FileBucketPath.getPathToBucketAclFile());
+        return getAcl(s3FileBucketPath, s3FileBucketPath::getPathToBucketAclFile);
     }
 
-    private AccessControlPolicy getAcl(String pathToAclFile) throws S3Exception {
-            File file = new File(pathToAclFile);
-            if (!file.exists()) {
-                throw S3Exception.INTERNAL_ERROR("Can't find acl file : " + pathToAclFile)
-                        .setMessage("Can't find acl file : " + pathToAclFile)
-                        .setResource("1")
-                        .setRequestId("1");
-            }
-            byte[] bytes = null;
-            try {
-                bytes = new FileInputStream(file).readAllBytes();
-            } catch (IOException exception) {
-                throw S3Exception.INTERNAL_ERROR(exception)
-                        .setResource("1")
-                        .setRequestId("1");
-            }
-            Document document = XmlUtil.parseXmlFromBytes(bytes);
-            return AccessControlPolicy.buildFromNode(document.getDocumentElement());
+    private AccessControlPolicy getAcl(S3FileBucketPath s3FileBucketPath, Supplier<String> pathGetter)
+            throws S3Exception {
+        String pathToAclFile = pathGetter.get();
+        File file = new File(pathToAclFile);
+        if (!file.exists()) {
+            throw S3Exception.INTERNAL_ERROR("Can't find acl file : " + pathToAclFile);
+        }
+        byte[] bytes = null;
+        try {
+            bytes = new FileInputStream(file).readAllBytes();
+        } catch (IOException exception) {
+            throw S3Exception.INTERNAL_ERROR(exception);
+        }
+        Document document = XmlUtil.parseXmlFromBytes(bytes);
+        return AccessControlPolicy.buildFromNode(document.getDocumentElement());
     }
 
     public AccessControlPolicy parseFromBytes(byte[] bytes) throws S3Exception {
