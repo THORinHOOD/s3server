@@ -72,19 +72,11 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
     public void createBucket(S3FileBucketPath s3FileBucketPath, S3User s3User) throws S3Exception {
         String absolutePath = s3FileBucketPath.getPathToBucket();
         File bucketFile = new File(absolutePath);
-        if (bucketFile.exists()) {
-            throw S3Exception.build("Bucket already exists : " + absolutePath)
-                    .setStatus(HttpResponseStatus.CONFLICT)
-                    .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
-                    .setMessage("Your previous request to create the named bucket succeeded and you already own it.")
-                    .setResource(File.separatorChar + s3FileBucketPath.getBucket())
-                    .setRequestId("1"); // TODO
-        }
-        if (!bucketFile.mkdir()) {
+        if (bucketFile.exists() || !bucketFile.mkdir()) {
             throw S3Exception.INTERNAL_ERROR("Can't create bucket: " + absolutePath)
                     .setMessage("Can't create bucket")
                     .setResource(File.separatorChar + s3FileBucketPath.getBucket())
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 
@@ -99,7 +91,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
                     .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
         byte[] bytes;
         try {
@@ -122,7 +114,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
                     .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 
@@ -137,7 +129,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                     .setCode(S3ResponseErrorCodes.NO_SUCH_KEY)
                     .setMessage("The resource you requested does not exist")
                     .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
         try {
             if (httpHeaders != null && eTag != null) {
@@ -154,7 +146,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
             throw S3Exception.INTERNAL_ERROR("Can't create object: " + absolutePath)
                     .setMessage("Internal error : can't create object")
                     .setResource(File.separatorChar + s3FileObjectPath.getKeyWithBucket())
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 
@@ -330,7 +322,7 @@ public class FileEntityDriver extends FileDriver implements EntityDriver {
                             throw S3Exception.INTERNAL_ERROR("Can't get bucket attributes :" + entity.getFileName())
                                     .setMessage("Can't get bucket attributes : " + entity.getFileName())
                                     .setResource("1")
-                                    .setRequestId("1"); // TODO
+                                    .setRequestId("1");
                         }
                     }).collect(Collectors.toList());
             }

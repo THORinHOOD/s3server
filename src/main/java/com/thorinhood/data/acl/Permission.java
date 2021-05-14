@@ -10,7 +10,7 @@ public enum Permission {
             Set.of("s3:GetObject", "s3:GetObjectVersion", "s3:GetObjectTorrent")
     ),
     WRITE (
-            Set.of("s3:PutObject", "s3:DeleteObject"), // TODO s3:DeleteObjectVersion
+            Set.of("s3:PutObject", "s3:DeleteObject"),
             Set.of()
     ),
     READ_ACP (

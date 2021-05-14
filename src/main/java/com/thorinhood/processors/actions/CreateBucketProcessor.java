@@ -33,7 +33,7 @@ public class CreateBucketProcessor extends Processor {
                     .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
                     .setMessage("Illegal bucket name : " + parsedRequest.getS3BucketPath().getBucket())
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
         S3_DRIVER.createBucket(parsedRequest.getS3BucketPath(), parsedRequest.getS3User());
         sendResponseWithoutContent(context, HttpResponseStatus.OK, request, Map.of(

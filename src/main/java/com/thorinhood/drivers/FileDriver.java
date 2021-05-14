@@ -56,7 +56,7 @@ public class FileDriver {
         } catch (IOException exception) {
             throw S3Exception.INTERNAL_ERROR(exception)
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 
@@ -77,13 +77,13 @@ public class FileDriver {
                 throw S3Exception.INTERNAL_ERROR("Can't create file : " + tmpFile.getAbsolutePath())
                         .setMessage("Internal error : can't create file")
                         .setResource("1")
-                        .setRequestId("1"); // TODO
+                        .setRequestId("1");
             }
         } catch (IOException exception) {
             throw S3Exception.INTERNAL_ERROR(exception.getMessage())
                     .setMessage(exception.getMessage())
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 
@@ -132,7 +132,7 @@ public class FileDriver {
             throw S3Exception.INTERNAL_ERROR(e.getMessage())
                     .setMessage(e.getMessage())
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 
@@ -150,7 +150,7 @@ public class FileDriver {
         throw S3Exception.INTERNAL_ERROR(msg)
                 .setMessage(msg)
                 .setResource("1")
-                .setRequestId("1"); // TODO
+                .setRequestId("1");
     }
 
     public void checkObject(S3FileObjectPath s3FileObjectPath) throws S3Exception {

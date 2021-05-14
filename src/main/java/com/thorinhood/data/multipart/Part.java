@@ -37,7 +37,7 @@ public class Part {
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("Missed ETag value for one of the parts")
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
         if (partNumber < 1 || partNumber > 10000) {
             throw S3Exception.build("Part number must be an integer between 1 and 10000, inclusive")

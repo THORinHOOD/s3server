@@ -97,7 +97,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("Can't find method")
                     .setResource("1")
-                    .setRequestId("1")); // TODO
+                    .setRequestId("1"));
             }
 
             log.info(String.format("Request %s %s was processed in %d milliseconds", request.method(),

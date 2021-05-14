@@ -34,7 +34,7 @@ public class FilePolicyDriver extends FileDriver implements PolicyDriver {
             throw S3Exception.build("Can't parse bucket policy")
                     .setStatus(HttpResponseStatus.BAD_REQUEST)
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
-                    .setMessage(exception.getMessage()) // TODO
+                    .setMessage(exception.getMessage())
                     .setResource("1")
                     .setRequestId("1");
         }

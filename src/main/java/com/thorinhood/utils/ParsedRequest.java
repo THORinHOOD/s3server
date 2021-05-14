@@ -149,7 +149,7 @@ public class ParsedRequest {
                     .setCode(S3ResponseErrorCodes.INVALID_ARGUMENT)
                     .setMessage("Can't parse query parameter : " + key)
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 

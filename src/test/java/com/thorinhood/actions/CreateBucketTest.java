@@ -1,10 +1,11 @@
 package com.thorinhood.actions;
 
 import com.thorinhood.BaseTest;
+import com.thorinhood.data.requests.S3ResponseErrorCodes;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
 
@@ -33,33 +34,12 @@ public class CreateBucketTest extends BaseTest {
                 "bucket.acl");
         Assertions.assertTrue(aclBucketFile.exists() && aclBucketFile.isFile());
 
-        try {
-            s3.createBucket(request);
-            Assertions.fail("BucketAlreadyOwnedByYouException not thrown");
-        } catch (BucketAlreadyOwnedByYouException bucketAlreadyExistsException) {
-        }
+        assertException(HttpResponseStatus.CONFLICT.code(), S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU, () ->
+                s3.createBucket(request));
 
-        // TODO OTHER USER must throw BucketAlreadyExistsException
-
+        S3Client s3Client2 = getS3Client(false, ROOT_USER_2.getAccessKey(), ROOT_USER_2.getSecretKey());
+        assertException(HttpResponseStatus.CONFLICT.code(), S3ResponseErrorCodes.BUCKET_ALREADY_EXISTS, () ->
+                s3Client2.createBucket(request));
     }
 
-    @Test
-    public void incorrectName() {
-        S3Client s3Client = getS3Client(false, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
-        incorrectNameCheck(s3Client, "aa");
-        incorrectNameCheck(s3Client, IntStream.range(0, 64).mapToObj(i -> "a").collect(Collectors.joining()));
-        incorrectNameCheck(s3Client, "isBucket?");
-        incorrectNameCheck(s3Client, ".#bucket");
-        incorrectNameCheck(s3Client, "bucket_$folder$");
-    }
-
-    private void incorrectNameCheck(S3Client s3Client, String bucket) {
-        try {
-            s3Client.createBucket(CreateBucketRequest.builder()
-                    .bucket(bucket)
-                    .build());
-            Assertions.fail("Must be exception");
-        } catch (IllegalArgumentException ignored) {
-        }
-    }
 }

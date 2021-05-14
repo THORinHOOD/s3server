@@ -248,6 +248,35 @@ public class S3FileDriverImpl implements S3Driver {
 
     @Override
     public void createBucket(S3FileBucketPath s3FileBucketPath, S3User s3User) throws S3Exception {
+        File bucketFile = new File(s3FileBucketPath.getPathToBucket());
+        if (bucketFile.exists() && bucketFile.isDirectory()) {
+            AccessControlPolicy acl = entityLocker.readMeta(
+                    s3FileBucketPath.getPathToBucket(),
+                    s3FileBucketPath.getPathToBucketMetadataFolder(),
+                    s3FileBucketPath.getPathToBucketAclFile(),
+                    () -> aclDriver.getBucketAcl(s3FileBucketPath)
+            );
+            if (!acl.getOwner().getDisplayName().equals(s3User.getAccountName()) ||
+                !acl.getOwner().getId().equals(s3User.getCanonicalUserId())) {
+                throw S3Exception.build("The specified location-constraint is not valid")
+                        .setStatus(HttpResponseStatus.CONFLICT)
+                        .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_EXISTS)
+                        .setMessage("The requested bucket name is not available. " +
+                                "The bucket namespace is shared by all users of the system. " +
+                                "Please select a different name and try again.")
+                        .setResource("1")
+                        .setRequestId("1");
+            } else if (acl.getOwner().getDisplayName().equals(s3User.getAccountName()) &&
+                       acl.getOwner().getId().equals(s3User.getCanonicalUserId())) {
+                throw S3Exception.build("Bucket already exists : " + bucketFile.getAbsolutePath())
+                        .setStatus(HttpResponseStatus.CONFLICT)
+                        .setCode(S3ResponseErrorCodes.BUCKET_ALREADY_OWNED_BY_YOU)
+                        .setMessage("Your previous request to create the named bucket succeeded and " +
+                                    "you already own it.")
+                        .setResource(File.separatorChar + s3FileBucketPath.getBucket())
+                        .setRequestId("1");
+            }
+        }
         entityLocker.writeBucket(
             s3FileBucketPath,
             () -> {
@@ -561,7 +590,7 @@ public class S3FileDriverImpl implements S3Driver {
                                 .setGrantee(Grantee.builder()
                                         .setDisplayName(s3User.getAccountName())
                                         .setId(s3User.getCanonicalUserId())
-                                        .setType("Canonical User") // TODO enum (Canonical User, Group)
+                                        .setType("Canonical User")
                                         .build())
                                 .setPermission(Permission.FULL_CONTROL)
                                 .build()

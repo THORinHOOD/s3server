@@ -33,7 +33,7 @@ public class FileUserDriver extends FileDriver implements UserDriver {
             throw S3Exception.INTERNAL_ERROR("Can't create user")
                     .setMessage("Can't create user")
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 
@@ -65,7 +65,7 @@ public class FileUserDriver extends FileDriver implements UserDriver {
             throw S3Exception.INTERNAL_ERROR("Can't get user")
                     .setMessage("Can't get user")
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
     }
 

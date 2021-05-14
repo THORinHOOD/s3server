@@ -36,7 +36,7 @@ public class GetBucketPolicyProcessor extends BucketPolicyProcessor {
                     .setCode(S3ResponseErrorCodes.INVALID_REQUEST)
                     .setMessage("The bucket policy does not exist")
                     .setResource("1")
-                    .setRequestId("1"); // TODO
+                    .setRequestId("1");
         }
         sendResponse(context, request, OK, response -> {
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json");
