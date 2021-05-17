@@ -4,7 +4,7 @@ import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
-import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.EntityLockDriver;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.main.S3FileDriverImpl;
 import com.thorinhood.drivers.metadata.MetadataDriver;
@@ -41,7 +41,7 @@ public class MainServer {
             return;
         }
 
-        EntityLocker entityLocker = new EntityLocker();
+        EntityLockDriver entityLockDriver = new EntityLockDriver();
         FileDriversFactory fileFactory = new FileDriversFactory(parsedArgs.get(BASE_PATH));
         try {
             fileFactory.init();
@@ -56,7 +56,7 @@ public class MainServer {
         EntityDriver entityDriver = fileFactory.createEntityDriver();
         FileDriver fileDriver = fileFactory.createFileDriver();
         S3Driver s3Driver = new S3FileDriverImpl(metadataDriver, aclDriver, policyDriver, entityDriver, fileDriver,
-                entityLocker);
+                entityLockDriver);
         if (parsedArgs.containsKey(USERS)) {
             addAllRootUsers(userDriver, parsedArgs.get(USERS));
         }

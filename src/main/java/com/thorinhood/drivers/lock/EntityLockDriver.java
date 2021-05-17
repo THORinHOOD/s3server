@@ -19,12 +19,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class EntityLocker {
+public class EntityLockDriver {
 
     private final Map<String, ReadWriteLock> lockMap;
     private final Set<String> fileLocks;
 
-    public EntityLocker() {
+    public EntityLockDriver() {
         lockMap = new ConcurrentHashMap<>();
         fileLocks = Collections.newSetFromMap(new ConcurrentHashMap<>());
     }

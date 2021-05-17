@@ -5,7 +5,7 @@ import com.thorinhood.drivers.FileDriver;
 import com.thorinhood.drivers.FileDriversFactory;
 import com.thorinhood.drivers.acl.AclDriver;
 import com.thorinhood.drivers.entity.EntityDriver;
-import com.thorinhood.drivers.lock.EntityLocker;
+import com.thorinhood.drivers.lock.EntityLockDriver;
 import com.thorinhood.drivers.main.S3Driver;
 import com.thorinhood.drivers.main.S3FileDriverImpl;
 import com.thorinhood.drivers.metadata.FileMetadataDriver;
@@ -72,7 +72,7 @@ public class BaseTest {
         this.BASE_PATH = basePath;
         this.port = port;
         createUsers();
-        EntityLocker entityLocker = new EntityLocker();
+        EntityLockDriver entityLockDriver = new EntityLockDriver();
         FILE_DRIVERS_FACTORY = new FileDriversFactory(basePath);
         USER_DRIVER = FILE_DRIVERS_FACTORY.createUserDriver();
         ACL_DRIVER = FILE_DRIVERS_FACTORY.createAclDriver();
@@ -82,7 +82,7 @@ public class BaseTest {
         FILE_DRIVER = FILE_DRIVERS_FACTORY.createFileDriver();
         REQUEST_UTIL = new RequestUtil(USER_DRIVER, basePath);
         S3_DRIVER = new S3FileDriverImpl(METADATA_DRIVER, ACL_DRIVER, POLICY_DRIVER, ENTITY_DRIVER, FILE_DRIVER,
-                entityLocker);
+                entityLockDriver);
         SERVER = new Server(port, S3_DRIVER, REQUEST_UTIL);
     }
 
