@@ -347,7 +347,7 @@ public class S3FileDriverImpl implements S3Driver {
     public ListBucketV2Result getBucketObjectsV2(S3FileBucketPath s3FileBucketPath,
                                                  GetBucketObjectsV2 getBucketObjectsV2) throws S3Exception {
         ListBucketV2ResultRaw rawResult = entityDriver.getBucketObjectsV2(getBucketObjectsV2);
-        List<S3Content> s3Contents = makeContents(s3FileBucketPath, rawResult.getS3FileObjectsPaths());
+        List<S3Content> s3Contents = makeContents(rawResult.getS3FileObjectsPaths());
         return ListBucketV2Result.builder()
                 .setMaxKeys(getBucketObjectsV2.getMaxKeys())
                 .setName(getBucketObjectsV2.getBucket())
@@ -364,10 +364,9 @@ public class S3FileDriverImpl implements S3Driver {
     }
 
     @Override
-    public ListBucketResult getBucketObjects(S3FileBucketPath s3FileBucketPath, GetBucketObjects getBucketObjects)
-            throws S3Exception {
+    public ListBucketResult getBucketObjects(GetBucketObjects getBucketObjects) throws S3Exception {
         ListBucketResultRaw rawResult = entityDriver.getBucketObjects(getBucketObjects);
-        List<S3Content> s3Contents = makeContents(s3FileBucketPath, rawResult.getS3FileObjectsPaths());
+        List<S3Content> s3Contents = makeContents(rawResult.getS3FileObjectsPaths());
         return ListBucketResult.builder()
                 .setMaxKeys(getBucketObjects.getMaxKeys())
                 .setName(getBucketObjects.getBucket())
@@ -502,7 +501,7 @@ public class S3FileDriverImpl implements S3Driver {
         return fileDriver.buildPathToObject(bucketKeyToObject);
     }
 
-    private List<S3Content> makeContents(S3FileBucketPath s3FileBucketPath, List<S3FileObjectPath> s3FileObjectPaths) {
+    private List<S3Content> makeContents(List<S3FileObjectPath> s3FileObjectPaths) {
         ExecutorService executorService = Executors.newFixedThreadPool(3);
         List<Future<S3ObjectETag>> s3objectETagFutures = s3FileObjectPaths.stream()
                 .map(s3FileObjectPath -> executorService.submit(() -> {

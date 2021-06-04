@@ -202,6 +202,9 @@ public class FileDriver {
     }
 
     public S3FileObjectPath buildPathToObject(String bucketKey) {
-        return S3FileObjectPath.relative(BASE_FOLDER_PATH, bucketKey.substring(1));
+        if (bucketKey.startsWith("/")) {
+            bucketKey = bucketKey.substring(1);
+        }
+        return S3FileObjectPath.relative(BASE_FOLDER_PATH, bucketKey);
     }
 }

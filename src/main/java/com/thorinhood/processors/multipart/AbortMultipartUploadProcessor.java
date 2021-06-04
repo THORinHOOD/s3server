@@ -47,16 +47,19 @@ public class AbortMultipartUploadProcessor extends Processor {
                 request.getS3ObjectPathUnsafe().getKeyUnsafe(), METHOD_NAME, request.getS3User());
         if (policyCheckResult.isPresent() && !policyCheckResult.get()) {
             throw S3Exception.ACCESS_DENIED();
+        } else if (policyCheckResult.isPresent()) {
+            return;
         }
+
         String uploadId = request.getQueryParam("uploadId", "", Function.identity());
         String accessKeyInitiator = uploadId.substring(uploadId.indexOf("_") + 1);
-        if (policyCheckResult.isEmpty() && request.getS3User().isRootUser()) {
+        if (request.getS3User().isRootUser()) {
             boolean aclCheckResult = S3_DRIVER.isOwner(isBucketAcl, request.getS3ObjectPathUnsafe(),
                     request.getS3User());
             if (!aclCheckResult) {
                 throw S3Exception.ACCESS_DENIED();
             }
-        } else if (!(policyCheckResult.isEmpty() && request.getS3User().getAccessKey().equals(accessKeyInitiator))) {
+        } else if (!(request.getS3User().getAccessKey().equals(accessKeyInitiator))) {
             throw S3Exception.ACCESS_DENIED();
         }
     }

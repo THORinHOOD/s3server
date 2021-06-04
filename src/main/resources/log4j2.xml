@@ -13,7 +13,7 @@
                 <Pattern>%d{yyyy-MM-dd HH:mm:ss} %p %m%n</Pattern>
             </PatternLayout>
             <Policies>
-                <SizeBasedTriggeringPolicy size="256 MB"/>
+                <SizeBasedTriggeringPolicy size="1 MB"/>
             </Policies>
         </RollingFile>
     </Appenders>

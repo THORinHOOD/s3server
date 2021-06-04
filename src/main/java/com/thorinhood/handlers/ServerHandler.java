@@ -34,6 +34,10 @@ import org.apache.logging.log4j.Logger;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * с помощью {@link RequestUtil}
+ *
+ */
 @ChannelHandler.Sharable
 public class ServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
