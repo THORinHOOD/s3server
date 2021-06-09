@@ -87,7 +87,7 @@ public class GetObjectTest extends BaseTest {
             getObject(s3, "bucket", "folder1/file.txt", content, metadata, "aaa", null);
         });
 
-        assertException(HttpResponseStatus.NOT_MODIFIED.code(), null, () -> {
+        assertException(HttpResponseStatus.PRECONDITION_FAILED.code(), S3ResponseErrorCodes.PRECONDITION_FAILED, () -> {
             getObject(s3, "bucket", "folder1/file.txt", content, metadata, null, calcETag(content));
         });
     }

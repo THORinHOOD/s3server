@@ -327,7 +327,7 @@ public class BaseTest {
                 Map<String, String> expectedMetadata = metadata.get(j);
                 boolean contentLength = resp.response().contentLength()
                         .equals((long) expectedContent.getBytes().length);
-                boolean eTag = calcETag(expectedContent).equals(resp.response().eTag());
+                boolean eTag = ("\"" + calcETag(expectedContent) + "\"").equals(resp.response().eTag());
                 boolean meta = expectedMetadata != null ? equalsMaps(expectedMetadata, resp.response().metadata()) :
                         (resp.response().metadata() == null || resp.response().metadata().isEmpty());
                 boolean contentEq = expectedContent.equals(new String(resp.asByteArray()));

@@ -376,7 +376,7 @@ public class S3FileDriverImpl implements S3Driver {
                 .setDelimiter(getBucketObjects.getDelimiter())
                 .setCommonPrefixes(rawResult.getCommonPrefixes())
                 .setMarker(getBucketObjects.getMarker())
-                .setNextMarker(rawResult.getNextMarker())
+                .setNextMarker(rawResult.isTruncated() ? rawResult.getNextMarker() : null)
                 .build();
     }
 

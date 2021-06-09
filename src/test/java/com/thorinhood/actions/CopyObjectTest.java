@@ -96,7 +96,7 @@ public class CopyObjectTest extends BaseTest {
                 .build());
             Assertions.fail("Must be exception");
         } catch (S3Exception exception) {
-            Assertions.assertEquals(HttpResponseStatus.NOT_MODIFIED.code(), exception.statusCode());
+            Assertions.assertEquals(HttpResponseStatus.PRECONDITION_FAILED.code(), exception.statusCode());
         }
     }
 

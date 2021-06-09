@@ -20,15 +20,15 @@ public class MultithreadedTest extends BaseTest {
         super("testS3Java", 9999);
     }
 
-    @Disabled
+//    @Disabled
     @Test
     public void putGetWhileOverwrite() throws Exception {
         S3Client s3 = getS3Client(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
         S3AsyncClient s3Async = getS3AsyncClient(true, ROOT_USER.getAccessKey(), ROOT_USER.getSecretKey());
 
         createBucketRaw(s3, "bucket");
-        String firstContent = createContent(500);
-        String secondContent = createContent(1000);
+        String firstContent = createContent(200);
+        String secondContent = createContent(500);
         Map<String, String> metadataFirst = Map.of("key1", "value1");
         Map<String, String> metadataSecond = Map.of("key2", "value2");
         List<String> contents = new ArrayList<>();
@@ -42,10 +42,10 @@ public class MultithreadedTest extends BaseTest {
                 "folder1", "file.txt", contents, metadatas);
         List<CompletableFuture<ResponseBytes<GetObjectResponse>>> getFutureList = getObjectAsync(s3Async,
                 "bucket", "folder1/file.txt", null, null, 100);
-        checkGetObjectAsync(getFutureList, List.of(firstContent, secondContent),
-                List.of(metadataFirst, metadataSecond));
         checkPutObjectAsync("bucket", "folder1", "file.txt", putFutureList,
                 List.of(firstContent, secondContent), List.of(metadataFirst, metadataSecond));
+        checkGetObjectAsync(getFutureList, List.of(firstContent, secondContent),
+                List.of(metadataFirst, metadataSecond));
     }
 
 }
